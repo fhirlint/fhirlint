@@ -27,7 +27,7 @@ type Input struct {
 
 func (i *Input) Cleanup() {
 	if i.TempFile != "" {
-		os.Remove(i.TempFile)
+		_ = os.Remove(i.TempFile) // best-effort cleanup; error not actionable here
 	}
 }
 
@@ -58,11 +58,12 @@ func fromStdin() (*Input, error) {
 }
 
 func fromHTTP(rawURL string) (*Input, error) {
-	resp, err := http.Get(rawURL)
+	resp, err := http.Get(rawURL) //nolint:noctx
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", rawURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d from %s", resp.StatusCode, rawURL)
 	}
@@ -71,15 +72,14 @@ func fromHTTP(rawURL string) (*Input, error) {
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
 	ext := ".json"
-	ct := resp.Header.Get("Content-Type")
-	if strings.Contains(ct, "xml") {
+	if strings.Contains(resp.Header.Get("Content-Type"), "xml") {
 		ext = ".xml"
 	}
-	tmp, err := writeTempFile(data, "url")
+	tmp, err := writeTempFile(data, rawURL)
 	if err != nil {
 		return nil, err
 	}
-	// rename temp file to correct extension
+	// Rename temp file to the correct extension for the validator.
 	newPath := strings.TrimSuffix(tmp.Path, filepath.Ext(tmp.Path)) + ext
 	if err := os.Rename(tmp.Path, newPath); err != nil {
 		return nil, err
@@ -95,12 +95,16 @@ func writeTempFile(data []byte, label string) (*Input, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return nil, err
+	_, writeErr := f.Write(data)
+	closeErr := f.Close()
+	if writeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, writeErr
 	}
-	f.Close()
+	if closeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
 	return &Input{
 		Source:   SourceStdin,
 		Path:     f.Name(),

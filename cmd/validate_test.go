@@ -113,9 +113,13 @@ func tempJSONFile(t *testing.T, content string) *input.Input {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString(content)
-	f.Close()
-	t.Cleanup(func() { os.Remove(f.Name()) })
+	if _, err := f.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(f.Name()) })
 	return &input.Input{Path: f.Name(), Label: f.Name()}
 }
 
@@ -129,7 +133,10 @@ func TestPreprocessJSON_Extract(t *testing.T) {
 		t.Fatalf("preprocessJSON() error: %v", err)
 	}
 
-	data, _ := os.ReadFile(in.Path)
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
 	var result map[string]interface{}
 	if err := json.Unmarshal(data, &result); err != nil {
 		t.Fatalf("result is not valid JSON after extract: %v", err)
@@ -152,9 +159,14 @@ func TestPreprocessJSON_Ignore(t *testing.T) {
 		t.Fatalf("preprocessJSON() error: %v", err)
 	}
 
-	data, _ := os.ReadFile(in.Path)
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
 	var result map[string]interface{}
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("result is not valid JSON: %v", err)
+	}
 	if _, ok := result["meta"]; ok {
 		t.Error("expected 'meta' to be removed by --ignore")
 	}
@@ -184,9 +196,14 @@ func TestPreprocessJSON_IgnoreMultipleFields(t *testing.T) {
 		t.Fatalf("preprocessJSON() error: %v", err)
 	}
 
-	data, _ := os.ReadFile(in.Path)
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
 	var result map[string]interface{}
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("result is not valid JSON: %v", err)
+	}
 	if _, ok := result["meta"]; ok {
 		t.Error("expected 'meta' removed")
 	}
@@ -208,9 +225,14 @@ func TestPreprocessJSON_ExtractThenImplicitNoIgnore(t *testing.T) {
 		t.Fatalf("preprocessJSON() error: %v", err)
 	}
 
-	data, _ := os.ReadFile(in.Path)
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
 	var result map[string]interface{}
-	json.Unmarshal(data, &result)
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("result is not valid JSON: %v", err)
+	}
 	if result["resourceType"] != "Observation" {
 		t.Errorf("expected resourceType=Observation, got %v", result["resourceType"])
 	}

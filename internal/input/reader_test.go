@@ -13,9 +13,13 @@ func TestResolve_ExistingFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString(`{"resourceType":"Patient"}`)
-	f.Close()
-	defer os.Remove(f.Name())
+	if _, err := f.WriteString(`{"resourceType":"Patient"}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
 
 	in, err := Resolve(f.Name(), "")
 	if err != nil {
@@ -39,7 +43,7 @@ func TestResolve_ExistingDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	in, err := Resolve(dir, "")
 	if err != nil {
@@ -64,7 +68,7 @@ func TestResolve_NonExistentPath_ReturnsError(t *testing.T) {
 func TestResolve_URL_FetchesAndWritesTempFile(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"resourceType":"Patient","id":"test"}`))
+		_, _ = w.Write([]byte(`{"resourceType":"Patient","id":"test"}`))
 	}))
 	defer srv.Close()
 
@@ -93,7 +97,7 @@ func TestResolve_URL_FetchesAndWritesTempFile(t *testing.T) {
 func TestResolve_URL_XMLContentType_GetsXMLExtension(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(`<Patient xmlns="http://hl7.org/fhir"/>`))
+		_, _ = w.Write([]byte(`<Patient xmlns="http://hl7.org/fhir"/>`))
 	}))
 	defer srv.Close()
 
@@ -125,7 +129,9 @@ func TestCleanup_RemovesTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	path := f.Name()
 
 	in := &Input{TempFile: path, Path: path}

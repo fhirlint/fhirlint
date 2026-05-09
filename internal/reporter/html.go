@@ -106,6 +106,6 @@ func HTML(results []*validator.Result, minSeverity, fhirVersion, dest string) er
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return tmpl.Execute(f, data)
 }

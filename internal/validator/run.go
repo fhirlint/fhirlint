@@ -67,8 +67,10 @@ func Run(inputPath string, opts Options) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating temp output file: %w", err)
 	}
-	tmpFile.Close()
-	defer os.Remove(tmpFile.Name())
+	if err := tmpFile.Close(); err != nil {
+		return nil, fmt.Errorf("closing temp output file: %w", err)
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	args := []string{"-jar", jarPath, inputPath,
 		"-version", opts.FHIRVersion,
