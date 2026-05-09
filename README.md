@@ -17,15 +17,43 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 ## Requirements
 
 - **Java 11+** — `fhirlint` calls the official HL7 validator under the hood
-- Go 1.22+ (only for building from source)
 
 ## Installation
+
+### Pre-built binary (recommended)
+
+Download the latest binary for your platform from the [releases page](https://github.com/fhirlint/fhirlint/releases), extract, and move it to a directory on your `PATH`:
+
+```bash
+# Linux (amd64)
+curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_linux_amd64.tar.gz | tar xz
+sudo mv fhirlint /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_darwin_arm64.tar.gz | tar xz
+sudo mv fhirlint /usr/local/bin/
+
+# macOS (Intel)
+curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_darwin_amd64.tar.gz | tar xz
+sudo mv fhirlint /usr/local/bin/
+```
+
+Windows: download the `.zip` from the releases page and add the extracted `fhirlint.exe` to your `PATH`.
+
+### go install
 
 ```bash
 go install github.com/fhirlint/fhirlint@latest
 ```
 
-Or download a pre-built binary from the [releases page](https://github.com/fhirlint/fhirlint/releases).
+### GitHub Actions
+
+```yaml
+- name: Install fhirlint
+  run: |
+    curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_linux_amd64.tar.gz | tar xz
+    sudo mv fhirlint /usr/local/bin/
+```
 
 ## Usage
 
