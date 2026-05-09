@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="fhirlint" width="120"/>
+  <img src="assets/logo.png" alt="fhirlint" width="180"/>
 </p>
 
 # fhirlint
