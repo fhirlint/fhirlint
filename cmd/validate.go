@@ -141,6 +141,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	printUpdateNotice()
 	return checkExitCode(results)
 }
 
@@ -282,6 +283,12 @@ func outputFile(ext string) string {
 		return flagOutput + "." + ext
 	}
 	return flagOutput
+}
+
+func printUpdateNotice() {
+	if newer := validator.CheckForUpdate(); newer != "" {
+		fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
+	}
 }
 
 func checkExitCode(results []*validator.Result) error {

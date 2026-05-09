@@ -29,3 +29,11 @@ func ValidatorVersionPath() (string, error) {
 	}
 	return filepath.Join(dir, "validator_version.txt"), nil
 }
+
+func UpdateCheckPath() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "update_check.json"), nil
+}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"runtime/debug"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
@@ -17,6 +18,9 @@ var versionCmd = &cobra.Command{
 			validator.ValidatorVersion(),
 			validator.JARReleasesURL(),
 		)
+		if newer := validator.CheckForUpdate(); newer != "" {
+			fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
+		}
 	},
 }
 
