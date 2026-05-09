@@ -1,0 +1,51 @@
+name: JAR Security Monitor
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Weekly, Monday 07:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check-advisories:
+    name: Check hapifhir advisories
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Query GitHub Security Advisories
+        id: advisories
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          count=$(gh api repos/hapifhir/org.hl7.fhir.core/security-advisories --jq 'length' 2>/dev/null || echo "0")
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Open issue if advisories found
+        if: steps.advisories.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          count="${{ steps.advisories.outputs.count }}"
+          existing=$(gh issue list --label "security,jar" --state open --json number --jq 'length')
+          if [ "$existing" -gt "0" ]; then
+            echo "Issue already open, skipping."
+            exit 0
+          fi
+          gh issue create \
+            --title "Security: $count advisory/advisories found for hapifhir/org.hl7.fhir.core" \
+            --label "security" \
+            --body "$(cat <<'EOF'
+The GitHub Security Advisory database lists **$count** advisory/advisories for [hapifhir/org.hl7.fhir.core](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories).
+
+**Action required:**
+1. Review the advisories at the link above.
+2. Check whether the current latest JAR release includes a fix.
+3. Update the README / SECURITY.md if the minimum safe version changes.
+4. Close this issue once resolved.
+
+Users can check their installation with: \`fhirlint audit\`
+Users can update with: \`fhirlint update\`
+EOF
+)"

@@ -29,6 +29,7 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(auditCmd)
 	rootCmd.AddCommand(profilesCmd)
 	rootCmd.AddCommand(versionCmd)
 }

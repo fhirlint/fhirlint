@@ -37,7 +37,7 @@ func CheckForUpdate() string {
 		return ""
 	}
 
-	latest, err := fetchLatestVersion()
+	latest, err := FetchLatestVersion()
 	if err != nil {
 		return "" // network unavailable — fail silently
 	}
@@ -53,7 +53,8 @@ func CheckForUpdate() string {
 	return ""
 }
 
-func fetchLatestVersion() (string, error) {
+// FetchLatestVersion queries the GitHub API for the latest JAR release version.
+func FetchLatestVersion() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
 	defer cancel()
 
