@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="fhirlint" width="120"/>
+</p>
+
 # fhirlint
 
 [![Tests](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml)
