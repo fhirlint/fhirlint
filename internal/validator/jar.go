@@ -49,7 +49,7 @@ func downloadJAR(dest string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, jarURL)
 	}
-	f, err := os.Create(dest)
+	f, err := os.Create(dest) //nolint:gosec // intentional: dest is our own cache path
 	if err != nil {
 		return err
 	}

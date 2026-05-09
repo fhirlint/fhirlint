@@ -31,7 +31,7 @@ func JSON(results []*validator.Result, minSeverity string, dest string) error {
 		fmt.Println(string(data))
 		return nil
 	}
-	return os.WriteFile(dest, data, 0644)
+	return os.WriteFile(dest, data, 0600)
 }
 
 func buildJSONReport(results []*validator.Result, minSeverity string) JSONReport {

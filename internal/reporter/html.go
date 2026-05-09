@@ -102,7 +102,7 @@ func HTML(results []*validator.Result, minSeverity, fhirVersion, dest string) er
 	if dest == "" {
 		return tmpl.Execute(os.Stdout, data)
 	}
-	f, err := os.Create(dest)
+	f, err := os.Create(dest) //nolint:gosec // intentional: user-supplied output path
 	if err != nil {
 		return err
 	}

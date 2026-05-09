@@ -11,7 +11,7 @@ func Dir() (string, error) {
 		return "", err
 	}
 	dir := filepath.Join(home, ".fhirlint")
-	return dir, os.MkdirAll(dir, 0755)
+	return dir, os.MkdirAll(dir, 0750)
 }
 
 func JARPath() (string, error) {

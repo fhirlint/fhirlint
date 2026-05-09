@@ -13,7 +13,7 @@ func fixtureOO(t *testing.T, name string) operationOutcome {
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Join(filepath.Dir(file), "..", "..", "testdata", "fixtures", name)
-	data, err := os.ReadFile(root)
+	data, err := os.ReadFile(root) //nolint:gosec // test fixture path
 	if err != nil {
 		t.Fatalf("reading fixture %s: %v", name, err)
 	}

@@ -203,7 +203,7 @@ func preprocessJSON(in *input.Input) error {
 		raw = deleteJSONPath(raw, gjsonPath(ignore))
 	}
 
-	return os.WriteFile(in.Path, []byte(raw), 0644)
+	return os.WriteFile(in.Path, []byte(raw), 0600) //nolint:gosec // intentional: writing back to the user-supplied input path after preprocessing
 }
 
 // gjsonPath converts a simple JSONPath ($.foo.bar[0]) to gjson syntax (foo.bar.0).

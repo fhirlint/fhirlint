@@ -58,7 +58,7 @@ func fromStdin() (*Input, error) {
 }
 
 func fromHTTP(rawURL string) (*Input, error) {
-	resp, err := http.Get(rawURL) //nolint:noctx
+	resp, err := http.Get(rawURL) //nolint:gosec,noctx // intentional: user-supplied URL
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", rawURL, err)
 	}

@@ -2,7 +2,8 @@ version: "2"
 
 linters:
   enable:
-    - bodyclose  # HTTP response body leak detection
+    - bodyclose
+    - gosec
 
 issues:
   exclude-rules:

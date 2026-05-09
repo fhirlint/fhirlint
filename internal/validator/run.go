@@ -84,7 +84,7 @@ func Run(inputPath string, opts Options) (*Result, error) {
 		args = append(args, "-profile", p)
 	}
 
-	cmd := exec.Command("java", args...)
+	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input path
 	// Discard validator progress/log output — results go to the temp file.
 	cmd.Stdout = nil
 	cmd.Stderr = nil
