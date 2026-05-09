@@ -1,0 +1,16 @@
+{
+  "resourceType": "Patient",
+  "id": "example",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/StructureDefinition/Patient"]
+  },
+  "name": [
+    {
+      "use": "official",
+      "family": "Müller",
+      "given": ["Hans"]
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1985-03-22"
+}
