@@ -147,10 +147,13 @@ fhirlint profiles
 
 ## JAR management
 
-The HL7 FHIR Validator JAR (~250 MB) is cached at `~/.fhirlint/validator_cli.jar`.
+`fhirlint` uses the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core/releases) maintained by HAPI FHIR. The JAR (~250 MB) is downloaded automatically on first use and cached at `~/.fhirlint/validator_cli.jar`.
 
 ```bash
-# Update to the latest validator version
+# Show fhirlint version and the cached validator JAR version
+fhirlint version
+
+# Update the cached JAR to the latest release
 fhirlint update
 ```
 

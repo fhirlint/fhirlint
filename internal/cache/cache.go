@@ -21,3 +21,11 @@ func JARPath() (string, error) {
 	}
 	return filepath.Join(dir, "validator_cli.jar"), nil
 }
+
+func ValidatorVersionPath() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "validator_version.txt"), nil
+}

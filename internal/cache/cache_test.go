@@ -63,6 +63,27 @@ func TestJARPath_InsideCacheDir(t *testing.T) {
 	}
 }
 
+func TestValidatorVersionPath_CorrectFilename(t *testing.T) {
+	path, err := ValidatorVersionPath()
+	if err != nil {
+		t.Fatalf("ValidatorVersionPath() error: %v", err)
+	}
+	if filepath.Base(path) != "validator_version.txt" {
+		t.Errorf("ValidatorVersionPath() base = %q, want validator_version.txt", filepath.Base(path))
+	}
+}
+
+func TestValidatorVersionPath_InsideCacheDir(t *testing.T) {
+	dir, _ := Dir()
+	path, err := ValidatorVersionPath()
+	if err != nil {
+		t.Fatalf("ValidatorVersionPath() error: %v", err)
+	}
+	if filepath.Dir(path) != dir {
+		t.Errorf("ValidatorVersionPath() dir = %q, want %q", filepath.Dir(path), dir)
+	}
+}
+
 func TestDir_IdempotentCalls(t *testing.T) {
 	dir1, err1 := Dir()
 	dir2, err2 := Dir()

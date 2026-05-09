@@ -5,11 +5,19 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/cache"
 )
 
-const jarURL = "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar"
+const (
+	jarURL        = "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar"
+	jarSourceRepo = "https://github.com/hapifhir/org.hl7.fhir.core"
+)
+
+var versionFromURL = regexp.MustCompile(`/releases/download/([^/]+)/`)
 
 func EnsureJAR() (string, error) {
 	jarPath, err := cache.JARPath()
@@ -40,8 +48,21 @@ func UpdateJAR() error {
 	return nil
 }
 
+// ValidatorVersion returns the cached JAR version, or "unknown" if not available.
+func ValidatorVersion() string {
+	versionPath, err := cache.ValidatorVersionPath()
+	if err != nil {
+		return "unknown"
+	}
+	data, err := os.ReadFile(versionPath) //nolint:gosec // known cache path
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(data))
+}
+
 func downloadJAR(dest string) error {
-	resp, err := http.Get(jarURL) //nolint:noctx
+	resp, err := http.Get(jarURL) //nolint:gosec,noctx // known URL, no user input
 	if err != nil {
 		return err
 	}
@@ -49,6 +70,12 @@ func downloadJAR(dest string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, jarURL)
 	}
+
+	// Extract version from the final URL after redirect (e.g. .../releases/download/6.9.7/...)
+	if m := versionFromURL.FindStringSubmatch(resp.Request.URL.String()); len(m) == 2 {
+		_ = saveValidatorVersion(m[1])
+	}
+
 	f, err := os.Create(dest) //nolint:gosec // intentional: dest is our own cache path
 	if err != nil {
 		return err
@@ -56,4 +83,22 @@ func downloadJAR(dest string) error {
 	defer func() { _ = f.Close() }()
 	_, err = io.Copy(f, resp.Body)
 	return err
+}
+
+func saveValidatorVersion(version string) error {
+	versionPath, err := cache.ValidatorVersionPath()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(versionPath, []byte(version), 0600)
+}
+
+// JARSourceRepo returns the upstream repository URL for the validator JAR.
+func JARSourceRepo() string {
+	return jarSourceRepo
+}
+
+// JARReleasesURL returns the releases page for the validator JAR.
+func JARReleasesURL() string {
+	return filepath.ToSlash(jarSourceRepo + "/releases")
 }
