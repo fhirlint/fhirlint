@@ -1,0 +1,13 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [{
+    "extension": [
+      { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line", "valueInteger": 10 },
+      { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col", "valueInteger": 5 }
+    ],
+    "severity": "error",
+    "code": "invalid",
+    "details": { "text": "Slice does not match any defined slices" },
+    "expression": ["Bundle.entry[2].resource", "Observation"]
+  }]
+}

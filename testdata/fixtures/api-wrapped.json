@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "data": {
+    "fhir": {
+      "resourceType": "Patient",
+      "id": "123",
+      "name": [{ "family": "Test", "given": ["User"] }],
+      "gender": "female",
+      "birthDate": "1990-01-01"
+    }
+  }
+}

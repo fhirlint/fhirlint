@@ -1,0 +1,31 @@
+{
+  "resourceType": "OperationOutcome",
+  "extension": [{
+    "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-file",
+    "valueString": "patient.json"
+  }],
+  "issue": [
+    {
+      "extension": [
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line", "valueInteger": 5 },
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col", "valueInteger": 14 },
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id", "valueCode": "type-check" }
+      ],
+      "severity": "error",
+      "code": "invalid",
+      "details": { "text": "The value 'unknown' is not valid for element Patient.gender" },
+      "expression": ["Patient.gender"]
+    },
+    {
+      "extension": [
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line", "valueInteger": 1 },
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col", "valueInteger": 2 },
+        { "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id", "valueCode": "dom-6" }
+      ],
+      "severity": "warning",
+      "code": "invariant",
+      "details": { "text": "A resource should have narrative for robust management" },
+      "expression": ["Patient"]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "resourceType": "OperationOutcome",
+  "extension": [{
+    "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-file",
+    "valueString": "patient.json"
+  }],
+  "issue": []
+}

@@ -1,0 +1,9 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [{
+    "severity": "fatal",
+    "code": "invalid",
+    "details": { "text": "The document is not valid JSON" },
+    "expression": []
+  }]
+}
