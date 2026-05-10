@@ -26,19 +26,19 @@ Download the latest binary for your platform from the [releases page](https://gi
 
 ```bash
 # Linux (amd64)
-curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_linux_amd64.tar.gz | tar xz
-sudo mv fhirlint /usr/local/bin/
+gh release download --repo fhirlint/fhirlint --pattern "*linux_amd64.tar.gz"
+tar xzf fhirlint_*_linux_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_darwin_arm64.tar.gz | tar xz
-sudo mv fhirlint /usr/local/bin/
+gh release download --repo fhirlint/fhirlint --pattern "*darwin_arm64.tar.gz"
+tar xzf fhirlint_*_darwin_arm64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 # macOS (Intel)
-curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_darwin_amd64.tar.gz | tar xz
-sudo mv fhirlint /usr/local/bin/
+gh release download --repo fhirlint/fhirlint --pattern "*darwin_amd64.tar.gz"
+tar xzf fhirlint_*_darwin_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 ```
 
-Windows: download the `.zip` from the releases page and add the extracted `fhirlint.exe` to your `PATH`.
+Windows: download the `.zip` from the [releases page](https://github.com/fhirlint/fhirlint/releases) and add the extracted `fhirlint.exe` to your `PATH`.
 
 ### go install
 
@@ -50,9 +50,13 @@ go install github.com/fhirlint/fhirlint@latest
 
 ```yaml
 - name: Install fhirlint
+  env:
+    GH_TOKEN: ${{ github.token }}
   run: |
-    curl -sL https://github.com/fhirlint/fhirlint/releases/latest/download/fhirlint_linux_amd64.tar.gz | tar xz
+    gh release download --repo fhirlint/fhirlint --pattern "*linux_amd64.tar.gz"
+    tar xzf fhirlint_*_linux_amd64.tar.gz
     sudo mv fhirlint /usr/local/bin/
+    rm fhirlint_*_linux_amd64.tar.gz
 ```
 
 ## Usage
