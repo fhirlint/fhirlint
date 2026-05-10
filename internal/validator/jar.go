@@ -38,16 +38,15 @@ func EnsureJAR(override string) (string, error) {
 		fmt.Fprintln(os.Stderr, "Downloading FHIR validator JAR (first run, ~250 MB)...")
 		if err := downloadJAR(jarPath); err != nil {
 			_ = os.Remove(jarPath)
-			return "", fmt.Errorf(
-				"JAR download failed: %w\n\n"+
-					"  URL attempted: %s\n"+
-					"  To work around firewall or proxy restrictions, download the JAR manually\n"+
-					"  from %s/releases\n"+
-					"  and point fhirlint to it:\n"+
-					"    --jar /path/to/validator_cli.jar\n"+
-					"    FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate ...",
-				err, jarURL, jarSourceRepo,
+			fmt.Fprintf(os.Stderr,
+				"\nJAR download failed (URL: %s).\n"+
+					"To work around firewall or proxy restrictions, download the JAR manually\n"+
+					"from %s/releases and use:\n"+
+					"  --jar /path/to/validator_cli.jar\n"+
+					"  FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate\n\n",
+				jarURL, jarSourceRepo,
 			)
+			return "", fmt.Errorf("downloading JAR: %w", err)
 		}
 		fmt.Fprintln(os.Stderr, "Download complete.")
 	}
