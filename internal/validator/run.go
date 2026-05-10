@@ -57,6 +57,7 @@ type Options struct {
 	IGs                 []string
 	NoTerminologyServer bool
 	TerminologyServer   string
+	BestPractice        string // ignore | hint | warning | error (empty = JAR default)
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -80,6 +81,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 		args = append(args, "-tx", "n/a")
 	case opts.TerminologyServer != "":
 		args = append(args, "-tx", opts.TerminologyServer)
+	}
+	if opts.BestPractice != "" {
+		args = append(args, "-best-practice", opts.BestPractice)
 	}
 	return args
 }

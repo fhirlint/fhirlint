@@ -34,3 +34,10 @@ format:
 ignore:
   # - "$.meta.tag"
   # - "$.text"
+
+# Best-practice constraint handling: ignore | hint | warning | error
+# ignore  — silences dom-6 and all other best-practice constraints
+# hint    — reported as informational hints
+# warning — JAR default
+# error   — escalates to errors, fails build with fail-on: error
+# best-practice: ignore
