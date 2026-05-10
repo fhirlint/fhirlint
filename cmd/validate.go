@@ -208,9 +208,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	return checkExitCode(results)
 }
 
-// validateDir finds all .json/.xml files and validates each individually.
+// validateDir finds all .json/.xml files and validates them in a single JVM invocation.
 func validateDir(dir string, opts validator.Options) ([]*validator.Result, error) {
-	var results []*validator.Result
+	var paths []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -222,15 +222,23 @@ func validateDir(dir string, opts validator.Options) ([]*validator.Result, error
 		if ext != ".json" && ext != ".xml" {
 			return nil
 		}
-		result, err := validator.Run(path, opts)
-		if err != nil {
-			return fmt.Errorf("validating %s: %w", path, err)
-		}
-		result.Label = path
-		results = append(results, result)
+		paths = append(paths, path)
 		return nil
 	})
-	return results, err
+	if err != nil {
+		return nil, err
+	}
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	results, err := validator.RunMultiple(paths, opts)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range results {
+		r.Label = r.Filename
+	}
+	return results, nil
 }
 
 // preprocessJSON applies --extract and --ignore to the input file in-place.

@@ -59,14 +59,16 @@ type Options struct {
 	TerminologyServer   string
 }
 
-// buildArgs constructs the java -jar argument list for the given input and options.
+// buildArgs constructs the java -jar argument list for the given inputs and options.
 // Separated from Run() so it can be unit-tested without invoking the JAR.
-func buildArgs(jarPath, inputPath, outputPath string, opts Options) []string {
-	args := []string{"-jar", jarPath, inputPath,
+func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Options) []string {
+	args := []string{"-jar", jarPath}
+	args = append(args, inputPaths...)
+	args = append(args,
 		"-version", opts.FHIRVersion,
 		"-output-style", "json",
 		"-output", outputPath,
-	}
+	)
 	for _, ig := range opts.IGs {
 		args = append(args, "-ig", ig)
 	}
@@ -82,7 +84,25 @@ func buildArgs(jarPath, inputPath, outputPath string, opts Options) []string {
 	return args
 }
 
+// Run validates a single file and returns its result.
 func Run(inputPath string, opts Options) (*Result, error) {
+	results, err := RunMultiple([]string{inputPath}, opts)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, fmt.Errorf("validator produced no result for %s", inputPath)
+	}
+	return results[0], nil
+}
+
+// RunMultiple validates all inputPaths in a single JVM invocation.
+// For directories, this avoids repeated JVM startup and terminology load overhead.
+func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
+	if len(inputPaths) == 0 {
+		return nil, nil
+	}
+
 	jarPath, err := EnsureJAR()
 	if err != nil {
 		return nil, err
@@ -98,11 +118,10 @@ func Run(inputPath string, opts Options) (*Result, error) {
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
-	args := buildArgs(jarPath, inputPath, tmpFile.Name(), opts)
+	args := buildArgs(jarPath, inputPaths, tmpFile.Name(), opts)
 
 	var stderrBuf bytes.Buffer
-	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input path
-	// Discard stdout — results go to the temp file. Capture stderr for diagnostics.
+	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input paths
 	cmd.Stdout = nil
 	cmd.Stderr = &stderrBuf
 	// Non-zero exit is expected when validation finds errors — not a tool failure.
@@ -114,15 +133,59 @@ func Run(inputPath string, opts Options) (*Result, error) {
 	}
 
 	if len(jsonBytes) == 0 {
-		return nil, fmt.Errorf("validator produced no output for %s — JAR may have crashed\nstderr: %s", inputPath, stderrBuf.String())
+		return nil, fmt.Errorf("validator produced no output — JAR may have crashed\nfiles: %v\nstderr: %s", inputPaths, stderrBuf.String())
 	}
 
-	var oo operationOutcome
-	if err := json.Unmarshal(jsonBytes, &oo); err != nil {
-		return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s\nstderr: %s", err, jsonBytes, stderrBuf.String())
+	return parseOutput(jsonBytes, inputPaths, stderrBuf.String())
+}
+
+// parseOutput handles both single OperationOutcome (one file) and Bundle (multiple files).
+func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, error) {
+	var peek struct {
+		ResourceType string `json:"resourceType"`
+	}
+	if err := json.Unmarshal(data, &peek); err != nil {
+		return nil, fmt.Errorf("parsing validator output: %w\nraw: %s\nstderr: %s", err, data, stderr)
 	}
 
-	return toResult(oo, inputPath), nil
+	switch peek.ResourceType {
+	case "OperationOutcome":
+		var oo operationOutcome
+		if err := json.Unmarshal(data, &oo); err != nil {
+			return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s\nstderr: %s", err, data, stderr)
+		}
+		filename := ""
+		if len(inputPaths) > 0 {
+			filename = inputPaths[0]
+		}
+		return []*Result{toResult(oo, filename)}, nil
+
+	case "Bundle":
+		var bundle struct {
+			Entry []struct {
+				FullURL  string           `json:"fullUrl"`
+				Resource operationOutcome `json:"resource"`
+			} `json:"entry"`
+		}
+		if err := json.Unmarshal(data, &bundle); err != nil {
+			return nil, fmt.Errorf("parsing Bundle: %w\nraw: %s\nstderr: %s", err, data, stderr)
+		}
+		results := make([]*Result, len(bundle.Entry))
+		for i, entry := range bundle.Entry {
+			// Use positional mapping: entry[i] corresponds to inputPaths[i].
+			filename := ""
+			if i < len(inputPaths) {
+				filename = inputPaths[i]
+			} else {
+				filename = strings.TrimPrefix(entry.FullURL, "file://")
+			}
+			results[i] = toResult(entry.Resource, filename)
+		}
+		return results, nil
+
+	default:
+		return nil, fmt.Errorf("unexpected resourceType %q in validator output\nstderr: %s", peek.ResourceType, stderr)
+	}
 }
 
 
