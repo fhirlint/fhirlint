@@ -158,6 +158,18 @@ func TestBuildArgs_AllowExampleURLsFalseOmitted(t *testing.T) {
 	mustNotContain(t, args, "-allow-example-urls")
 }
 
+func TestBuildArgs_EmptyOutputPath_OmitsOutputFlags(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-output-style")
+	mustNotContain(t, args, "-output")
+}
+
+func TestBuildArgs_WithOutputPath_IncludesOutputFlags(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "/tmp/out.json", Options{FHIRVersion: "4.0.1"})
+	mustContainPair(t, args, "-output-style", "json")
+	mustContainPair(t, args, "-output", "/tmp/out.json")
+}
+
 func TestBuildArgs_MultipleInputPaths(t *testing.T) {
 	paths := []string{"/tmp/a.json", "/tmp/b.json", "/tmp/c.json"}
 	args := buildArgs("jar", paths, "out", Options{FHIRVersion: "4.0.1"})
