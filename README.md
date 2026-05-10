@@ -197,6 +197,10 @@ fhirlint version
 fhirlint update
 ```
 
+## Examples
+
+- [example-fhir-medication-api](https://github.com/fhirlint/example-fhir-medication-api) — Symfony REST API serving FHIR R4 Medication and MedicationRequest resources, with fhirlint validating all fixtures in CI
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
