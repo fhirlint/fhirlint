@@ -25,7 +25,7 @@ var (
 	flagOutput              string
 	flagSeverity            string
 	flagFailOn              string
-	flagURL                 string
+	flagURLs                []string
 	flagExtract             string
 	flagIgnore              []string
 	flagNoTerminologyServer bool
@@ -44,10 +44,11 @@ var validateCmd = &cobra.Command{
 	Long: `Validate one or more FHIR resources against profiles and implementation guides.
 
 Input sources (pick one):
-  validate patient.json          file
-  validate ./fhir/               directory (all .json/.xml files)
-  cat patient.json | validate    stdin
-  validate --url https://...     HTTP endpoint`,
+  validate patient.json                   file
+  validate ./fhir/                        directory (all .json/.xml files)
+  cat patient.json | validate             stdin
+  validate --url https://...             HTTP endpoint (repeatable)
+  validate --url https://... --url ...   multiple HTTP endpoints`,
 	Args:         cobra.MaximumNArgs(1),
 	RunE:         runValidate,
 	SilenceUsage: true,
@@ -68,8 +69,8 @@ func init() {
 		"Minimum severity to show: information, warning, error")
 	validateCmd.Flags().StringVar(&flagFailOn, "fail-on", "error",
 		"Exit non-zero when issues at this level or above are found: error, warning, never")
-	validateCmd.Flags().StringVar(&flagURL, "url", "",
-		"Fetch and validate a resource from an HTTP endpoint")
+	validateCmd.Flags().StringArrayVar(&flagURLs, "url", nil,
+		"Fetch and validate a resource from an HTTP endpoint (repeatable)")
 	validateCmd.Flags().StringVar(&flagExtract, "extract", "",
 		"JSONPath to extract from the response before validating (e.g. $.entry[0].resource)")
 	validateCmd.Flags().StringArrayVar(&flagIgnore, "ignore", nil,
@@ -149,7 +150,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		flagExtract = viper.GetString("extract")
 	}
 	if !cmd.Flags().Changed("url") && viper.IsSet("url") {
-		flagURL = viper.GetString("url")
+		flagURLs = viper.GetStringSlice("url")
 	}
 	if !cmd.Flags().Changed("no-terminology-server") && viper.IsSet("no-terminology-server") {
 		flagNoTerminologyServer = viper.GetBool("no-terminology-server")
@@ -181,19 +182,6 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		arg = args[0]
 	}
 
-	in, err := input.Resolve(arg, flagURL)
-	if err != nil {
-		return err
-	}
-	defer in.Cleanup()
-
-	// Apply --extract and --ignore on JSON input
-	if in.Source != input.SourceDir && (flagExtract != "" || len(flagIgnore) > 0) {
-		if err := preprocessJSON(in); err != nil {
-			return err
-		}
-	}
-
 	// Resolve profile aliases
 	resolvedProfiles := make([]string, 0, len(flagProfile))
 	for _, p := range flagProfile {
@@ -215,11 +203,19 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
 	if flagWatch != "" {
+		if len(flagURLs) > 0 {
+			return fmt.Errorf("--watch is not compatible with --url")
+		}
 		for _, format := range flagFormat {
 			if (format == "json" || format == "html") && flagOutput != "" {
 				return fmt.Errorf("--watch is not compatible with --format %s --output; use terminal output only", format)
 			}
 		}
+		in, werr := input.Resolve(arg, "")
+		if werr != nil {
+			return werr
+		}
+		defer in.Cleanup()
 		paths, werr := collectFHIRPaths(in)
 		if werr != nil {
 			return werr
@@ -228,17 +224,40 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return validator.RunWatch(paths, opts, flagWatch, flagWatchInterval)
 	}
 
-	var results []*validator.Result
+	var (
+		results []*validator.Result
+		err     error
+	)
 
-	if in.Source == input.SourceDir {
-		results, err = validateDir(in.Path, opts)
+	if len(flagURLs) > 0 {
+		if arg != "" {
+			return fmt.Errorf("cannot combine a file argument with --url; pick one input source")
+		}
+		results, err = validateURLs(flagURLs, opts)
 	} else {
-		result, rerr := validator.Run(in.Path, opts)
+		in, rerr := input.Resolve(arg, "")
 		if rerr != nil {
 			return rerr
 		}
-		result.Label = in.Label
-		results = []*validator.Result{result}
+		defer in.Cleanup()
+
+		// Apply --extract and --ignore on JSON input
+		if in.Source != input.SourceDir && (flagExtract != "" || len(flagIgnore) > 0) {
+			if err := preprocessJSON(in); err != nil {
+				return err
+			}
+		}
+
+		if in.Source == input.SourceDir {
+			results, err = validateDir(in.Path, opts)
+		} else {
+			result, rerr2 := validator.Run(in.Path, opts)
+			if rerr2 != nil {
+				return rerr2
+			}
+			result.Label = in.Label
+			results = []*validator.Result{result}
+		}
 	}
 	if err != nil {
 		return err
@@ -292,6 +311,50 @@ func collectFHIRPaths(in *input.Input) ([]string, error) {
 		return nil
 	})
 	return paths, err
+}
+
+// validateURLs fetches all URLs, applies --extract/--ignore to each response, and validates
+// them in a single JVM invocation.
+func validateURLs(urls []string, opts validator.Options) ([]*validator.Result, error) {
+	ins := make([]*input.Input, 0, len(urls))
+	defer func() {
+		for _, in := range ins {
+			in.Cleanup()
+		}
+	}()
+
+	for _, u := range urls {
+		in, err := input.Resolve("", u)
+		if err != nil {
+			return nil, err
+		}
+		ins = append(ins, in)
+	}
+
+	if flagExtract != "" || len(flagIgnore) > 0 {
+		for _, in := range ins {
+			if err := preprocessJSON(in); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	paths := make([]string, len(ins))
+	for i, in := range ins {
+		paths[i] = in.Path
+	}
+
+	results, err := validator.RunMultiple(paths, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, r := range results {
+		if i < len(ins) {
+			r.Label = ins[i].Label
+		}
+	}
+	return results, nil
 }
 
 // validateDir finds all .json/.xml files and validates them in a single JVM invocation.
