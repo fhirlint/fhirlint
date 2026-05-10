@@ -27,7 +27,7 @@ func TestPackageDir_CreatesPackageJSON(t *testing.T) {
 	defer cleanup()
 
 	pkgPath := filepath.Join(dir, "package.json")
-	data, err := os.ReadFile(pkgPath)
+	data, err := os.ReadFile(pkgPath) //nolint:gosec // reading from test-controlled temp dir
 	if err != nil {
 		t.Fatalf("reading package.json: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestPackageDir_FHIRVersionR4B(t *testing.T) {
 	}
 	defer cleanup()
 
-	data, _ := os.ReadFile(filepath.Join(dir, "package.json"))
+	data, _ := os.ReadFile(filepath.Join(dir, "package.json")) //nolint:gosec // reading from test-controlled temp dir
 	var pkg map[string]interface{}
 	_ = json.Unmarshal(data, &pkg)
 	deps := pkg["dependencies"].(map[string]interface{})
