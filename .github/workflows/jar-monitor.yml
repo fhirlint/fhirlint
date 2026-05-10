@@ -33,19 +33,9 @@ jobs:
             echo "Issue already open, skipping."
             exit 0
           fi
+          printf 'The GitHub Security Advisory database lists **%s** advisory/advisories for [hapifhir/org.hl7.fhir.core](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories).\n\n**Action required:**\n1. Review the advisories at the link above.\n2. Check whether the current latest JAR release includes a fix.\n3. Update the README / SECURITY.md if the minimum safe version changes.\n4. Close this issue once resolved.\n\nUsers can check their installation with: `fhirlint audit`\nUsers can update with: `fhirlint update`\n' \
+            "$count" > /tmp/issue-body.txt
           gh issue create \
             --title "Security: $count advisory/advisories found for hapifhir/org.hl7.fhir.core" \
             --label "security" \
-            --body "$(cat <<'EOF'
-The GitHub Security Advisory database lists **$count** advisory/advisories for [hapifhir/org.hl7.fhir.core](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories).
-
-**Action required:**
-1. Review the advisories at the link above.
-2. Check whether the current latest JAR release includes a fix.
-3. Update the README / SECURITY.md if the minimum safe version changes.
-4. Close this issue once resolved.
-
-Users can check their installation with: \`fhirlint audit\`
-Users can update with: \`fhirlint update\`
-EOF
-)"
+            --body-file /tmp/issue-body.txt
