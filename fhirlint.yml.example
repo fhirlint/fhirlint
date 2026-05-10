@@ -23,6 +23,14 @@ ig:
   # - kbv.basis#1.5.0
   # - de.medizininformatikinitiative.kerndatensatz#2024.0.0
 
+# Local FHIR CodeSystem files to load without a full IG package (repeatable)
+# codesystem:
+#   - ./codesystems/internal-drugs.json
+
+# Local FHIR ValueSet files to load without a full IG package (repeatable)
+# valueset:
+#   - ./valuesets/internal-drug-valueset.json
+
 # Output format: terminal | json | html (repeatable)
 format:
   - terminal

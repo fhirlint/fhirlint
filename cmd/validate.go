@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/suppress"
@@ -40,6 +41,8 @@ var (
 	flagSuppress            []string
 	flagShowSuppressed      bool
 	flagExtractEach         string
+	flagCodeSystem          []string
+	flagValueSet            []string
 )
 
 var validateCmd = &cobra.Command{
@@ -63,6 +66,10 @@ func init() {
 		"Profile alias or URL (repeatable). See: fhirlint profiles")
 	validateCmd.Flags().StringArrayVar(&flagIG, "ig", nil,
 		"Implementation guide package, e.g. kbv.basis#1.5.0 (repeatable)")
+	validateCmd.Flags().StringArrayVar(&flagCodeSystem, "codesystem", nil,
+		"Local FHIR CodeSystem JSON file to load without a full IG package (repeatable)")
+	validateCmd.Flags().StringArrayVar(&flagValueSet, "valueset", nil,
+		"Local FHIR ValueSet JSON file to load without a full IG package (repeatable)")
 	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", "4.0.1",
 		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
@@ -200,6 +207,17 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	arg := ""
 	if len(args) > 0 {
 		arg = args[0]
+	}
+
+	// Bundle any --codesystem / --valueset files into a temporary local IG package.
+	localFiles := append(flagCodeSystem, flagValueSet...)
+	if len(localFiles) > 0 {
+		igDir, igCleanup, igErr := localig.PackageDir(localFiles, flagFHIRVersion)
+		if igErr != nil {
+			return igErr
+		}
+		defer igCleanup()
+		flagIG = append(flagIG, igDir)
 	}
 
 	// Resolve profile aliases
