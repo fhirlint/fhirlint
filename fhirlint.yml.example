@@ -59,3 +59,13 @@ ignore:
 
 # Polling interval for watch mode in milliseconds (default: JAR default ~1000ms)
 # watch-interval: 500
+
+# Suppression rules — silence known/accepted validation issues
+# Each rule silences matching issues from output and exit-code calculation.
+# Use --show-suppressed to display them with a muted label instead of hiding.
+# suppress:
+#   - messageId: Measure_M_POPULATIONIDENTIFIER   # suppress by HL7 message ID
+#   - constraint: dom-6                           # suppress by FHIR constraint ID
+#   - expression: MedicationRequest.intent        # suppress all issues on a field path
+#   - expression: Patient.text
+#     severity: warning                           # optional: only suppress at this severity
