@@ -1,0 +1,8 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "incomplete-001",
+  "status": "active",
+  "subject": {
+    "reference": "Patient/example"
+  }
+}
