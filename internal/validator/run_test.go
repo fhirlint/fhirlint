@@ -159,7 +159,7 @@ func TestRun_Integration(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	patient := filepath.Join(filepath.Dir(file), "..", "..", "testdata", "patient.json")
 
-	result, err := Run(patient, Options{FHIRVersion: "4.0.1"})
+	result, err := Run(patient, Options{FHIRVersion: "4.0.1", NoTerminologyServer: true})
 	if err != nil {
 		t.Fatalf("Run() error: %v", err)
 	}
