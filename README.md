@@ -486,6 +486,13 @@ The library requires Java 11+ and downloads the validator JAR on first use (~250
 
 ---
 
+## Guides
+
+Detailed guides for common workflows:
+
+- [CI/CD Integration](docs/ci.md) — GitHub Actions & GitLab CI setup, JAR and terminology caching, report artifacts
+- [Validating partial JSON](docs/extract.md) — `--extract` and `--extract-each` for non-FHIR API wrappers and array responses
+
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, the PR checklist, and how to add new flags.
