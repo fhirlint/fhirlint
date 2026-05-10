@@ -146,3 +146,39 @@ func TestCleanup_NoTempFile_DoesNotPanic(t *testing.T) {
 	in := &Input{Source: SourceFile, Path: "/some/real/file.json"}
 	in.Cleanup() // should not panic
 }
+
+func TestWriteTempFileDetectExt_JSON(t *testing.T) {
+	in, err := writeTempFileDetectExt([]byte(`{"resourceType":"Patient"}`), "stdin")
+	if err != nil {
+		t.Fatalf("writeTempFileDetectExt error: %v", err)
+	}
+	defer in.Cleanup()
+
+	if filepath.Ext(in.Path) != ".json" {
+		t.Errorf("expected .json extension for JSON input, got %q", filepath.Ext(in.Path))
+	}
+}
+
+func TestWriteTempFileDetectExt_XML(t *testing.T) {
+	in, err := writeTempFileDetectExt([]byte(`<Patient xmlns="http://hl7.org/fhir"/>`), "stdin")
+	if err != nil {
+		t.Fatalf("writeTempFileDetectExt error: %v", err)
+	}
+	defer in.Cleanup()
+
+	if filepath.Ext(in.Path) != ".xml" {
+		t.Errorf("expected .xml extension for XML input, got %q", filepath.Ext(in.Path))
+	}
+}
+
+func TestWriteTempFileDetectExt_XMLWithLeadingWhitespace(t *testing.T) {
+	in, err := writeTempFileDetectExt([]byte("  \n  <Patient/>"), "stdin")
+	if err != nil {
+		t.Fatalf("writeTempFileDetectExt error: %v", err)
+	}
+	defer in.Cleanup()
+
+	if filepath.Ext(in.Path) != ".xml" {
+		t.Errorf("expected .xml for XML with leading whitespace, got %q", filepath.Ext(in.Path))
+	}
+}

@@ -1,11 +1,11 @@
 package input
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -54,7 +54,7 @@ func fromStdin() (*Input, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading stdin: %w", err)
 	}
-	return writeTempFile(data, "stdin")
+	return writeTempFileDetectExt(data, "stdin")
 }
 
 func fromHTTP(rawURL string) (*Input, error) {
@@ -71,27 +71,30 @@ func fromHTTP(rawURL string) (*Input, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
-	ext := ".json"
+	ext := "json"
 	if strings.Contains(resp.Header.Get("Content-Type"), "xml") {
-		ext = ".xml"
+		ext = "xml"
 	}
-	tmp, err := writeTempFile(data, rawURL)
+	tmp, err := writeTempFile(data, rawURL, ext)
 	if err != nil {
 		return nil, err
 	}
-	// Rename temp file to the correct extension for the validator.
-	newPath := strings.TrimSuffix(tmp.Path, filepath.Ext(tmp.Path)) + ext
-	if err := os.Rename(tmp.Path, newPath); err != nil {
-		return nil, err
-	}
-	tmp.Path = newPath
-	tmp.TempFile = newPath
 	tmp.Label = rawURL
 	return tmp, nil
 }
 
-func writeTempFile(data []byte, label string) (*Input, error) {
-	f, err := os.CreateTemp("", "fhirlint-*.json")
+// writeTempFileDetectExt creates a temp file with .xml or .json extension based on content.
+// The HL7 validator uses the file extension to determine the input format.
+func writeTempFileDetectExt(data []byte, label string) (*Input, error) {
+	ext := "json"
+	if bytes.HasPrefix(bytes.TrimSpace(data), []byte("<")) {
+		ext = "xml"
+	}
+	return writeTempFile(data, label, ext)
+}
+
+func writeTempFile(data []byte, label, ext string) (*Input, error) {
+	f, err := os.CreateTemp("", "fhirlint-*."+ext)
 	if err != nil {
 		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
