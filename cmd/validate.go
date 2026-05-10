@@ -39,6 +39,7 @@ var (
 	flagWatchInterval       int
 	flagSuppress            []string
 	flagShowSuppressed      bool
+	flagExtractEach         string
 )
 
 var validateCmd = &cobra.Command{
@@ -47,11 +48,11 @@ var validateCmd = &cobra.Command{
 	Long: `Validate one or more FHIR resources against profiles and implementation guides.
 
 Input sources (pick one):
-  validate patient.json                   file
-  validate ./fhir/                        directory (all .json/.xml files)
-  cat patient.json | validate             stdin
-  validate --url https://...             HTTP endpoint (repeatable)
-  validate --url https://... --url ...   multiple HTTP endpoints`,
+  validate patient.json                              file
+  validate ./fhir/                                   directory (all .json/.xml files)
+  cat patient.json | validate                        stdin
+  validate --url https://...                         HTTP endpoint (repeatable)
+  validate api.json --extract-each "$.medications"   each element of a JSON array`,
 	Args:         cobra.MaximumNArgs(1),
 	RunE:         runValidate,
 	SilenceUsage: true,
@@ -76,6 +77,8 @@ func init() {
 		"Fetch and validate a resource from an HTTP endpoint (repeatable)")
 	validateCmd.Flags().StringVar(&flagExtract, "extract", "",
 		"JSONPath to extract from the response before validating (e.g. $.entry[0].resource)")
+	validateCmd.Flags().StringVar(&flagExtractEach, "extract-each", "",
+		"JSONPath to an array — validates each element as a separate FHIR resource (mutually exclusive with --extract)")
 	validateCmd.Flags().StringArrayVar(&flagIgnore, "ignore", nil,
 		"JSONPath field(s) to remove before validating (repeatable, e.g. $.meta.tag)")
 	validateCmd.Flags().BoolVar(&flagNoTerminologyServer, "no-terminology-server", false,
@@ -156,6 +159,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("extract") && viper.IsSet("extract") {
 		flagExtract = viper.GetString("extract")
 	}
+	if !cmd.Flags().Changed("extract-each") && viper.IsSet("extract-each") {
+		flagExtractEach = viper.GetString("extract-each")
+	}
 	if !cmd.Flags().Changed("url") && viper.IsSet("url") {
 		flagURLs = viper.GetStringSlice("url")
 	}
@@ -185,6 +191,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("show-suppressed") && viper.IsSet("show-suppressed") {
 		flagShowSuppressed = viper.GetBool("show-suppressed")
+	}
+
+	if flagExtract != "" && flagExtractEach != "" {
+		return fmt.Errorf("--extract and --extract-each are mutually exclusive")
 	}
 
 	arg := ""
@@ -243,7 +253,24 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		if arg != "" {
 			return fmt.Errorf("cannot combine a file argument with --url; pick one input source")
 		}
-		results, err = validateURLs(flagURLs, opts)
+		if flagExtractEach != "" {
+			if len(flagURLs) > 1 {
+				return fmt.Errorf("--extract-each can only be used with a single --url")
+			}
+			in, rerr := input.Resolve("", flagURLs[0])
+			if rerr != nil {
+				return rerr
+			}
+			defer in.Cleanup()
+			if len(flagIgnore) > 0 {
+				if err := preprocessJSON(in); err != nil {
+					return err
+				}
+			}
+			results, err = extractEachAndValidate(in, opts)
+		} else {
+			results, err = validateURLs(flagURLs, opts)
+		}
 	} else {
 		in, rerr := input.Resolve(arg, "")
 		if rerr != nil {
@@ -251,16 +278,27 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 		defer in.Cleanup()
 
-		// Apply --extract and --ignore on JSON input
-		if in.Source != input.SourceDir && (flagExtract != "" || len(flagIgnore) > 0) {
-			if err := preprocessJSON(in); err != nil {
-				return err
-			}
-		}
-
 		if in.Source == input.SourceDir {
+			if flagExtractEach != "" {
+				return fmt.Errorf("--extract-each cannot be used with a directory")
+			}
+			// Apply --ignore on directory inputs (--extract not supported for dirs)
 			results, err = validateDir(in.Path, opts)
+		} else if flagExtractEach != "" {
+			// Apply --ignore to outer document before extracting elements
+			if len(flagIgnore) > 0 {
+				if err := preprocessJSON(in); err != nil {
+					return err
+				}
+			}
+			results, err = extractEachAndValidate(in, opts)
 		} else {
+			// Apply --extract and --ignore on JSON input
+			if flagExtract != "" || len(flagIgnore) > 0 {
+				if err := preprocessJSON(in); err != nil {
+					return err
+				}
+			}
 			result, rerr2 := validator.Run(in.Path, opts)
 			if rerr2 != nil {
 				return rerr2
@@ -373,6 +411,95 @@ func validateURLs(urls []string, opts validator.Options) ([]*validator.Result, e
 		return nil, err
 	}
 
+	for i, r := range results {
+		if i < len(ins) {
+			r.Label = ins[i].Label
+		}
+	}
+	return results, nil
+}
+
+// extractEachElements reads the input file, extracts the array at jsonPath, and writes
+// each element to its own temp file. Returns one Input per element (caller must Cleanup).
+func extractEachElements(in *input.Input, jsonPath string) ([]*input.Input, error) {
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	arr := gjson.Get(string(data), gjsonPath(jsonPath))
+	if !arr.Exists() {
+		return nil, fmt.Errorf("--extract-each: path %q not found in input", jsonPath)
+	}
+	if !arr.IsArray() {
+		return nil, fmt.Errorf("--extract-each: path %q is not an array", jsonPath)
+	}
+	elements := arr.Array()
+	if len(elements) == 0 {
+		return nil, fmt.Errorf("--extract-each: array at %q is empty", jsonPath)
+	}
+
+	var ins []*input.Input
+	for i, elem := range elements {
+		label := fmt.Sprintf("%s[%d]", in.Label, i)
+		if rt := elem.Get("resourceType"); rt.Exists() {
+			if id := elem.Get("id"); id.Exists() {
+				label = fmt.Sprintf("%s[%d] (%s/%s)", in.Label, i, rt.String(), id.String())
+			}
+		}
+
+		f, ferr := os.CreateTemp("", "fhirlint-extract-*.json")
+		if ferr != nil {
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			return nil, fmt.Errorf("creating temp file for element %d: %w", i, ferr)
+		}
+		_, werr := f.WriteString(elem.Raw)
+		cerr := f.Close()
+		if werr != nil || cerr != nil {
+			_ = os.Remove(f.Name())
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			if werr != nil {
+				return nil, werr
+			}
+			return nil, cerr
+		}
+
+		ins = append(ins, &input.Input{
+			Source:   input.SourceFile,
+			Path:     f.Name(),
+			TempFile: f.Name(),
+			Label:    label,
+		})
+	}
+	return ins, nil
+}
+
+// extractEachAndValidate extracts array elements from in, validates them in one JVM call,
+// and sets each result's label to the element label (filename[i] or filename[i] (Type/id)).
+func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validator.Result, error) {
+	ins, err := extractEachElements(in, flagExtractEach)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		for _, t := range ins {
+			t.Cleanup()
+		}
+	}()
+
+	paths := make([]string, len(ins))
+	for i, t := range ins {
+		paths[i] = t.Path
+	}
+
+	results, err := validator.RunMultiple(paths, opts)
+	if err != nil {
+		return nil, err
+	}
 	for i, r := range results {
 		if i < len(ins) {
 			r.Label = ins[i].Label
