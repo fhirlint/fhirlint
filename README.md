@@ -201,6 +201,36 @@ fhirlint update
 
 - [example-fhir-medication-api](https://github.com/fhirlint/example-fhir-medication-api) — Symfony REST API serving FHIR R4 Medication and MedicationRequest resources, with fhirlint validating all fixtures in CI
 
+## Go library
+
+fhirlint can be embedded as a Go library via `pkg/fhirlint`:
+
+```bash
+go get github.com/fhirlint/fhirlint/pkg/fhirlint
+```
+
+```go
+import "github.com/fhirlint/fhirlint/pkg/fhirlint"
+
+// Validate from bytes (JSON or XML detected automatically)
+result, err := fhirlint.Validate(patientJSON, fhirlint.Options{
+    FHIRVersion:         "4.0.1",
+    NoTerminologyServer: true,
+})
+
+// Validate all files in a directory (single JVM invocation)
+results, err := fhirlint.ValidateDir("./fhir/", fhirlint.Options{
+    FHIRVersion: "4.0.1",
+})
+
+// Validate from an HTTP endpoint
+result, err := fhirlint.ValidateURL("https://hapi.fhir.org/baseR4/Patient/1", fhirlint.Options{
+    FHIRVersion: "4.0.1",
+})
+```
+
+The library requires Java 11+ and downloads the validator JAR on first use (~250 MB). Use `JARPath` to provide a pre-downloaded JAR.
+
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, the PR checklist, and how to add new flags.
