@@ -58,6 +58,7 @@ type Options struct {
 	NoTerminologyServer bool
 	TerminologyServer   string
 	BestPractice        string // ignore | hint | warning | error (empty = JAR default)
+	JARPath             string // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -107,7 +108,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, nil
 	}
 
-	jarPath, err := EnsureJAR()
+	jarPath, err := EnsureJAR(opts.JARPath)
 	if err != nil {
 		return nil, err
 	}

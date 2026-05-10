@@ -97,6 +97,30 @@ func TestValidatorVersion_ReturnsCachedVersion(t *testing.T) {
 	}
 }
 
+func TestEnsureJAR_Override_ExistingFile(t *testing.T) {
+	f, err := os.CreateTemp("", "fake-validator-*.jar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
+
+	got, err := EnsureJAR(f.Name())
+	if err != nil {
+		t.Fatalf("EnsureJAR() error: %v", err)
+	}
+	if got != f.Name() {
+		t.Errorf("expected %q, got %q", f.Name(), got)
+	}
+}
+
+func TestEnsureJAR_Override_MissingFile_ReturnsError(t *testing.T) {
+	_, err := EnsureJAR("/nonexistent/validator_cli.jar")
+	if err == nil {
+		t.Error("expected error for non-existent JAR path, got nil")
+	}
+}
+
 func TestJARSourceRepo_NotEmpty(t *testing.T) {
 	if JARSourceRepo() == "" {
 		t.Error("JARSourceRepo() should not be empty")

@@ -19,7 +19,17 @@ const (
 
 var versionFromURL = regexp.MustCompile(`/releases/download/([^/]+)/`)
 
-func EnsureJAR() (string, error) {
+// EnsureJAR returns the path to the validator JAR.
+// If override is non-empty (from --jar flag or FHIRLINT_JAR env var), that path is used directly.
+// Otherwise the JAR is auto-downloaded to the cache directory on first use.
+func EnsureJAR(override string) (string, error) {
+	if override != "" {
+		if _, err := os.Stat(override); err != nil {
+			return "", fmt.Errorf("JAR not found at %q (set via --jar or FHIRLINT_JAR): %w", override, err)
+		}
+		return override, nil
+	}
+
 	jarPath, err := cache.JARPath()
 	if err != nil {
 		return "", err
@@ -28,6 +38,14 @@ func EnsureJAR() (string, error) {
 		fmt.Fprintln(os.Stderr, "Downloading FHIR validator JAR (first run, ~250 MB)...")
 		if err := downloadJAR(jarPath); err != nil {
 			_ = os.Remove(jarPath)
+			fmt.Fprintf(os.Stderr,
+				"\nJAR download failed (URL: %s).\n"+
+					"To work around firewall or proxy restrictions, download the JAR manually\n"+
+					"from %s/releases and use:\n"+
+					"  --jar /path/to/validator_cli.jar\n"+
+					"  FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate\n\n",
+				jarURL, jarSourceRepo,
+			)
 			return "", fmt.Errorf("downloading JAR: %w", err)
 		}
 		fmt.Fprintln(os.Stderr, "Download complete.")

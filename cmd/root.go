@@ -33,7 +33,10 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().String("config", "", "Config file (default: fhirlint.yml or .fhirlint.yml in project root)")
+	rootCmd.PersistentFlags().String("jar", "", "Path to a local validator_cli.jar (overrides auto-download, also: FHIRLINT_JAR env var)")
 	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	_ = viper.BindPFlag("jar", rootCmd.PersistentFlags().Lookup("jar"))
+	_ = viper.BindEnv("jar", "FHIRLINT_JAR")
 
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(updateCmd)
