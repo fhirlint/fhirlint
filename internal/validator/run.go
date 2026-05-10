@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -84,10 +85,11 @@ func Run(inputPath string, opts Options) (*Result, error) {
 		args = append(args, "-profile", p)
 	}
 
+	var stderrBuf bytes.Buffer
 	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input path
-	// Discard validator progress/log output — results go to the temp file.
+	// Discard stdout — results go to the temp file. Capture stderr for diagnostics.
 	cmd.Stdout = nil
-	cmd.Stderr = nil
+	cmd.Stderr = &stderrBuf
 	// Non-zero exit is expected when validation finds errors — not a tool failure.
 	_ = cmd.Run()
 
@@ -96,9 +98,13 @@ func Run(inputPath string, opts Options) (*Result, error) {
 		return nil, fmt.Errorf("reading validator output: %w", err)
 	}
 
+	if len(jsonBytes) == 0 {
+		return nil, fmt.Errorf("validator produced no output for %s — JAR may have crashed\nstderr: %s", inputPath, stderrBuf.String())
+	}
+
 	var oo operationOutcome
 	if err := json.Unmarshal(jsonBytes, &oo); err != nil {
-		return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s", err, jsonBytes)
+		return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s\nstderr: %s", err, jsonBytes, stderrBuf.String())
 	}
 
 	return toResult(oo, inputPath), nil
