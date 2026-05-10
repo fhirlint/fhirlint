@@ -1,0 +1,35 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'   # Weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  integration:
+    name: Integration tests (real JAR)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache validator JAR
+        uses: actions/cache@v4
+        with:
+          path: ~/.fhirlint
+          key: fhirlint-jar-${{ hashFiles('internal/validator/jar.go') }}
+
+      - name: Run integration tests
+        run: go test -v -tags integration -count=1 -timeout 10m ./internal/validator/...

@@ -59,6 +59,29 @@ type Options struct {
 	TerminologyServer   string
 }
 
+// buildArgs constructs the java -jar argument list for the given input and options.
+// Separated from Run() so it can be unit-tested without invoking the JAR.
+func buildArgs(jarPath, inputPath, outputPath string, opts Options) []string {
+	args := []string{"-jar", jarPath, inputPath,
+		"-version", opts.FHIRVersion,
+		"-output-style", "json",
+		"-output", outputPath,
+	}
+	for _, ig := range opts.IGs {
+		args = append(args, "-ig", ig)
+	}
+	for _, p := range opts.Profiles {
+		args = append(args, "-profile", p)
+	}
+	switch {
+	case opts.NoTerminologyServer:
+		args = append(args, "-tx", "n/a")
+	case opts.TerminologyServer != "":
+		args = append(args, "-tx", opts.TerminologyServer)
+	}
+	return args
+}
+
 func Run(inputPath string, opts Options) (*Result, error) {
 	jarPath, err := EnsureJAR()
 	if err != nil {
@@ -75,23 +98,7 @@ func Run(inputPath string, opts Options) (*Result, error) {
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
-	args := []string{"-jar", jarPath, inputPath,
-		"-version", opts.FHIRVersion,
-		"-output-style", "json",
-		"-output", tmpFile.Name(),
-	}
-	for _, ig := range opts.IGs {
-		args = append(args, "-ig", ig)
-	}
-	for _, p := range opts.Profiles {
-		args = append(args, "-profile", p)
-	}
-	switch {
-	case opts.NoTerminologyServer:
-		args = append(args, "-tx", "n/a")
-	case opts.TerminologyServer != "":
-		args = append(args, "-tx", opts.TerminologyServer)
-	}
+	args := buildArgs(jarPath, inputPath, tmpFile.Name(), opts)
 
 	var stderrBuf bytes.Buffer
 	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input path
