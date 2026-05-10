@@ -52,9 +52,11 @@ type extItem struct {
 }
 
 type Options struct {
-	FHIRVersion string
-	Profiles    []string
-	IGs         []string
+	FHIRVersion         string
+	Profiles            []string
+	IGs                 []string
+	NoTerminologyServer bool
+	TerminologyServer   string
 }
 
 func Run(inputPath string, opts Options) (*Result, error) {
@@ -83,6 +85,12 @@ func Run(inputPath string, opts Options) (*Result, error) {
 	}
 	for _, p := range opts.Profiles {
 		args = append(args, "-profile", p)
+	}
+	switch {
+	case opts.NoTerminologyServer:
+		args = append(args, "-tx", "n/a")
+	case opts.TerminologyServer != "":
+		args = append(args, "-tx", opts.TerminologyServer)
 	}
 
 	var stderrBuf bytes.Buffer

@@ -13,20 +13,23 @@ import (
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 )
 
 var (
-	flagProfile     []string
-	flagIG          []string
-	flagFHIRVersion string
-	flagFormat      []string
-	flagOutput      string
-	flagSeverity    string
-	flagFailOn      string
-	flagURL         string
-	flagExtract     string
-	flagIgnore      []string
+	flagProfile             []string
+	flagIG                  []string
+	flagFHIRVersion         string
+	flagFormat              []string
+	flagOutput              string
+	flagSeverity            string
+	flagFailOn              string
+	flagURL                 string
+	flagExtract             string
+	flagIgnore              []string
+	flagNoTerminologyServer bool
+	flagTerminologyServer   string
 )
 
 var validateCmd = &cobra.Command{
@@ -65,11 +68,69 @@ func init() {
 		"JSONPath to extract from the response before validating (e.g. $.entry[0].resource)")
 	validateCmd.Flags().StringArrayVar(&flagIgnore, "ignore", nil,
 		"JSONPath field(s) to remove before validating (repeatable, e.g. $.meta.tag)")
+	validateCmd.Flags().BoolVar(&flagNoTerminologyServer, "no-terminology-server", false,
+		"Disable terminology server — no data is sent to tx.fhir.org")
+	validateCmd.Flags().StringVar(&flagTerminologyServer, "terminology-server", "",
+		"Custom terminology server URL (default: https://tx.fhir.org)")
+
+	// Bind all flags to viper so fhirlint.yml values are used as defaults.
+	// CLI flags always take precedence over config file values.
+	_ = viper.BindPFlag("profile", validateCmd.Flags().Lookup("profile"))
+	_ = viper.BindPFlag("ig", validateCmd.Flags().Lookup("ig"))
+	_ = viper.BindPFlag("fhir-version", validateCmd.Flags().Lookup("fhir-version"))
+	_ = viper.BindPFlag("format", validateCmd.Flags().Lookup("format"))
+	_ = viper.BindPFlag("output", validateCmd.Flags().Lookup("output"))
+	_ = viper.BindPFlag("severity", validateCmd.Flags().Lookup("severity"))
+	_ = viper.BindPFlag("fail-on", validateCmd.Flags().Lookup("fail-on"))
+	_ = viper.BindPFlag("url", validateCmd.Flags().Lookup("url"))
+	_ = viper.BindPFlag("extract", validateCmd.Flags().Lookup("extract"))
+	_ = viper.BindPFlag("ignore", validateCmd.Flags().Lookup("ignore"))
+	_ = viper.BindPFlag("no-terminology-server", validateCmd.Flags().Lookup("no-terminology-server"))
+	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
 	if err := validator.CheckJava(); err != nil {
 		return err
+	}
+
+	// Merge config file values: use CLI flag if explicitly set, otherwise fall
+	// back to fhirlint.yml value, then the flag default.
+	if !cmd.Flags().Changed("severity") && viper.IsSet("severity") {
+		flagSeverity = viper.GetString("severity")
+	}
+	if !cmd.Flags().Changed("fail-on") && viper.IsSet("fail-on") {
+		flagFailOn = viper.GetString("fail-on")
+	}
+	if !cmd.Flags().Changed("fhir-version") && viper.IsSet("fhir-version") {
+		flagFHIRVersion = viper.GetString("fhir-version")
+	}
+	if !cmd.Flags().Changed("profile") && viper.IsSet("profile") {
+		flagProfile = viper.GetStringSlice("profile")
+	}
+	if !cmd.Flags().Changed("ig") && viper.IsSet("ig") {
+		flagIG = viper.GetStringSlice("ig")
+	}
+	if !cmd.Flags().Changed("format") && viper.IsSet("format") {
+		flagFormat = viper.GetStringSlice("format")
+	}
+	if !cmd.Flags().Changed("output") && viper.IsSet("output") {
+		flagOutput = viper.GetString("output")
+	}
+	if !cmd.Flags().Changed("ignore") && viper.IsSet("ignore") {
+		flagIgnore = viper.GetStringSlice("ignore")
+	}
+	if !cmd.Flags().Changed("extract") && viper.IsSet("extract") {
+		flagExtract = viper.GetString("extract")
+	}
+	if !cmd.Flags().Changed("url") && viper.IsSet("url") {
+		flagURL = viper.GetString("url")
+	}
+	if !cmd.Flags().Changed("no-terminology-server") && viper.IsSet("no-terminology-server") {
+		flagNoTerminologyServer = viper.GetBool("no-terminology-server")
+	}
+	if !cmd.Flags().Changed("terminology-server") && viper.IsSet("terminology-server") {
+		flagTerminologyServer = viper.GetString("terminology-server")
 	}
 
 	arg := ""
@@ -97,9 +158,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	opts := validator.Options{
-		FHIRVersion: flagFHIRVersion,
-		Profiles:    resolvedProfiles,
-		IGs:         flagIG,
+		FHIRVersion:         flagFHIRVersion,
+		Profiles:            resolvedProfiles,
+		IGs:                 flagIG,
+		NoTerminologyServer: flagNoTerminologyServer,
+		TerminologyServer:   flagTerminologyServer,
 	}
 
 	var results []*validator.Result

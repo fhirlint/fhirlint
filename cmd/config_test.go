@@ -1,0 +1,151 @@
+package cmd
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/spf13/viper"
+)
+
+func writeConfigFile(t *testing.T, dir, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "fhirlint.yml"), []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func resetViper(t *testing.T) {
+	t.Helper()
+	viper.Reset()
+	t.Cleanup(func() { viper.Reset() })
+}
+
+func TestConfigFile_SeverityFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "severity: warning\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if got := viper.GetString("severity"); got != "warning" {
+		t.Errorf("severity = %q, want %q", got, "warning")
+	}
+}
+
+func TestConfigFile_FailOnFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "fail-on: warning\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	if got := viper.GetString("fail-on"); got != "warning" {
+		t.Errorf("fail-on = %q, want %q", got, "warning")
+	}
+}
+
+func TestConfigFile_ProfilesFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "profile:\n  - kbv-basis\n  - mii\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	profiles := viper.GetStringSlice("profile")
+	if len(profiles) != 2 || profiles[0] != "kbv-basis" || profiles[1] != "mii" {
+		t.Errorf("profile = %v, want [kbv-basis mii]", profiles)
+	}
+}
+
+func TestConfigFile_IGsFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "ig:\n  - kbv.basis#1.5.0\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	igs := viper.GetStringSlice("ig")
+	if len(igs) != 1 || igs[0] != "kbv.basis#1.5.0" {
+		t.Errorf("ig = %v, want [kbv.basis#1.5.0]", igs)
+	}
+}
+
+func TestConfigFile_MissingFileIsIgnored(t *testing.T) {
+	resetViper(t)
+	viper.SetConfigFile("/nonexistent/fhirlint.yml")
+
+	// Must not panic or return a hard error — missing config is optional
+	err := viper.ReadInConfig()
+	if err == nil {
+		t.Skip("unexpected: config file found at /nonexistent/fhirlint.yml")
+	}
+	// As long as it doesn't panic, the test passes
+}
+
+func TestConfigFile_FHIRVersionFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "fhir-version: 4.3.0\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	if got := viper.GetString("fhir-version"); got != "4.3.0" {
+		t.Errorf("fhir-version = %q, want %q", got, "4.3.0")
+	}
+}
+
+func TestConfigFile_IgnoreFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "ignore:\n  - \"$.meta.tag\"\n  - \"$.text\"\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	ignore := viper.GetStringSlice("ignore")
+	if len(ignore) != 2 {
+		t.Errorf("ignore = %v, want 2 entries", ignore)
+	}
+}
+
+func TestConfigFile_AllSupportedKeys(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, `
+severity: warning
+fail-on: error
+fhir-version: 4.0.1
+profile:
+  - kbv-basis
+ig:
+  - kbv.basis#1.5.0
+format:
+  - terminal
+ignore:
+  - "$.meta.tag"
+`)
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	checks := map[string]string{
+		"severity":     "warning",
+		"fail-on":      "error",
+		"fhir-version": "4.0.1",
+	}
+	for key, want := range checks {
+		if got := viper.GetString(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}

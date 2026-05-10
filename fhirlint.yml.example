@@ -1,0 +1,36 @@
+# fhirlint.yml — project-level configuration for fhirlint
+# Place this file in your project root as fhirlint.yml or .fhirlint.yml
+# CLI flags always take precedence over values in this file.
+
+# Minimum severity to display: information | warning | error
+severity: warning
+
+# Exit non-zero when issues at this level or above are found: error | warning | never
+fail-on: error
+
+# FHIR version to validate against: 4.0.1 | 4.3.0 | 5.0.0
+fhir-version: 4.0.1
+
+# Profile aliases or URLs (repeatable)
+# See: fhirlint profiles
+profile:
+  # - kbv-basis
+  # - mii
+  # - diga
+
+# Implementation guide packages (repeatable)
+ig:
+  # - kbv.basis#1.5.0
+  # - de.medizininformatikinitiative.kerndatensatz#2024.0.0
+
+# Output format: terminal | json | html (repeatable)
+format:
+  - terminal
+
+# Output file for json/html reports (stdout if omitted)
+# output: fhir-report.json
+
+# JSONPath fields to remove before validating (repeatable)
+ignore:
+  # - "$.meta.tag"
+  # - "$.text"
