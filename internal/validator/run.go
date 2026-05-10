@@ -58,6 +58,7 @@ type Options struct {
 	NoTerminologyServer bool
 	TerminologyServer   string
 	BestPractice        string // ignore | hint | warning | error (empty = JAR default)
+	TxCache             string // path to terminology cache dir, or "n/a" to disable
 	JARPath             string // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 }
 
@@ -85,6 +86,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.BestPractice != "" {
 		args = append(args, "-best-practice", opts.BestPractice)
+	}
+	if opts.TxCache != "" {
+		args = append(args, "-txCache", opts.TxCache)
 	}
 	return args
 }

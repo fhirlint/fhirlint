@@ -111,6 +111,27 @@ func TestBuildArgs_BestPracticeEmptyOmitted(t *testing.T) {
 	mustNotContain(t, args, "-best-practice")
 }
 
+func TestBuildArgs_TxCache(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		TxCache:     "/tmp/tx-cache",
+	})
+	mustContainPair(t, args, "-txCache", "/tmp/tx-cache")
+}
+
+func TestBuildArgs_TxCacheDisabled(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		TxCache:     "n/a",
+	})
+	mustContainPair(t, args, "-txCache", "n/a")
+}
+
+func TestBuildArgs_TxCacheEmptyOmitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-txCache")
+}
+
 func TestBuildArgs_MultipleInputPaths(t *testing.T) {
 	paths := []string{"/tmp/a.json", "/tmp/b.json", "/tmp/c.json"}
 	args := buildArgs("jar", paths, "out", Options{FHIRVersion: "4.0.1"})
