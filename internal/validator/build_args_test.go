@@ -132,6 +132,32 @@ func TestBuildArgs_TxCacheEmptyOmitted(t *testing.T) {
 	mustNotContain(t, args, "-txCache")
 }
 
+func TestBuildArgs_Locale(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		Locale:      "de",
+	})
+	mustContainPair(t, args, "-locale", "de")
+}
+
+func TestBuildArgs_LocaleEmptyOmitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-locale")
+}
+
+func TestBuildArgs_AllowExampleURLs(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:      "4.0.1",
+		AllowExampleURLs: true,
+	})
+	mustContain(t, args, "-allow-example-urls")
+}
+
+func TestBuildArgs_AllowExampleURLsFalseOmitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-allow-example-urls")
+}
+
 func TestBuildArgs_MultipleInputPaths(t *testing.T) {
 	paths := []string{"/tmp/a.json", "/tmp/b.json", "/tmp/c.json"}
 	args := buildArgs("jar", paths, "out", Options{FHIRVersion: "4.0.1"})

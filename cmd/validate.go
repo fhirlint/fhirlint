@@ -32,6 +32,8 @@ var (
 	flagTerminologyServer   string
 	flagBestPractice        string
 	flagTxCache             string
+	flagLocale              string
+	flagAllowExampleURLs    bool
 )
 
 var validateCmd = &cobra.Command{
@@ -78,6 +80,10 @@ func init() {
 		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
 	validateCmd.Flags().StringVar(&flagTxCache, "tx-cache", "",
 		"Terminology cache directory (pass n/a to disable, useful with actions/cache in CI)")
+	validateCmd.Flags().StringVar(&flagLocale, "locale", "",
+		"Locale for validation messages, e.g. de, fr (default: system locale)")
+	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
+		"Suppress warnings about example.org and similar placeholder URLs")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -95,6 +101,8 @@ func init() {
 	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
+	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
+	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -146,6 +154,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("tx-cache") && viper.IsSet("tx-cache") {
 		flagTxCache = viper.GetString("tx-cache")
 	}
+	if !cmd.Flags().Changed("locale") && viper.IsSet("locale") {
+		flagLocale = viper.GetString("locale")
+	}
+	if !cmd.Flags().Changed("allow-example-urls") && viper.IsSet("allow-example-urls") {
+		flagAllowExampleURLs = viper.GetBool("allow-example-urls")
+	}
 
 	arg := ""
 	if len(args) > 0 {
@@ -179,6 +193,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		TerminologyServer:   flagTerminologyServer,
 		BestPractice:        flagBestPractice,
 		TxCache:             flagTxCache,
+		Locale:              flagLocale,
+		AllowExampleURLs:    flagAllowExampleURLs,
 		JARPath:             viper.GetString("jar"),
 	}
 

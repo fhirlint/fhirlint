@@ -57,9 +57,11 @@ type Options struct {
 	IGs                 []string
 	NoTerminologyServer bool
 	TerminologyServer   string
-	BestPractice        string // ignore | hint | warning | error (empty = JAR default)
-	TxCache             string // path to terminology cache dir, or "n/a" to disable
-	JARPath             string // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	BestPractice       string // ignore | hint | warning | error (empty = JAR default)
+	TxCache            string // path to terminology cache dir, or "n/a" to disable
+	Locale             string // Java locale code, e.g. "de", "fr" (empty = JAR default)
+	AllowExampleURLs   bool   // pass -allow-example-urls to suppress example.org warnings
+	JARPath            string // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -89,6 +91,12 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.TxCache != "" {
 		args = append(args, "-txCache", opts.TxCache)
+	}
+	if opts.Locale != "" {
+		args = append(args, "-locale", opts.Locale)
+	}
+	if opts.AllowExampleURLs {
+		args = append(args, "-allow-example-urls")
 	}
 	return args
 }
