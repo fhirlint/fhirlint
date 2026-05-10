@@ -165,6 +165,34 @@ func TestConfigFile_TxCacheFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_LocaleFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "locale: de\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetString("locale"); got != "de" {
+		t.Errorf("locale = %q, want %q", got, "de")
+	}
+}
+
+func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "allow-example-urls: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetBool("allow-example-urls"); !got {
+		t.Error("allow-example-urls should be true")
+	}
+}
+
 func TestConfigFile_BestPracticeFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

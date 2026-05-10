@@ -45,3 +45,11 @@ ignore:
 # Terminology cache directory (pass n/a to disable)
 # Useful with actions/cache in CI to reuse terminology responses across runs
 # tx-cache: .fhirlint-tx-cache/
+
+# Locale for validation messages (Java locale format: de, de-DE, fr, etc.)
+# Default: system locale
+# locale: de
+
+# Suppress warnings about example.org and similar placeholder URLs
+# Useful for test fixtures and documentation examples
+# allow-example-urls: true
