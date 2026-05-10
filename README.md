@@ -139,6 +139,10 @@ fhirlint validate patient.json --fail-on warning
 fhirlint validate patient.json --fail-on never
 ```
 
+When validation fails, fhirlint reports the exact resource, line, and issue — and exits non-zero to break the build:
+
+![fhirlint failing pipeline](assets/pipeline-failure.png)
+
 Example GitHub Actions step:
 
 ```yaml
