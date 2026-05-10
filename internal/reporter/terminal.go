@@ -17,12 +17,12 @@ var (
 	fileStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-func Terminal(result *validator.Result, minSeverity string) {
+func Terminal(result *validator.Result, minSeverity string, showSuppressed bool) {
 	fmt.Println(fileStyle.Render("▶ " + result.Label))
 
 	filtered := filterIssues(result.Issues, minSeverity)
 
-	if len(filtered) == 0 {
+	if len(filtered) == 0 && len(result.Suppressed) == 0 {
 		fmt.Println(successStyle.Render("  ✓ Valid"))
 		fmt.Println()
 		return
@@ -47,11 +47,24 @@ func Terminal(result *validator.Result, minSeverity string) {
 			fmt.Println(dimStyle.Render("           @ " + issue.Location))
 		}
 	}
+
+	if showSuppressed {
+		for _, issue := range result.Suppressed {
+			fmt.Println(dimStyle.Render("  ↷ SUPP  ") + dimStyle.Render(issue.Message))
+			if issue.Location != "" {
+				fmt.Println(dimStyle.Render("           @ " + issue.Location))
+			}
+		}
+	}
+
+	if len(filtered) == 0 {
+		fmt.Println(successStyle.Render("  ✓ Valid"))
+	}
 	fmt.Println()
 }
 
 func TerminalSummary(results []*validator.Result, minSeverity string) int {
-	total, errCount, warnCount := 0, 0, 0
+	total, errCount, warnCount, suppCount := 0, 0, 0, 0
 	for _, r := range results {
 		for _, issue := range filterIssues(r.Issues, minSeverity) {
 			total++
@@ -62,6 +75,7 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 				warnCount++
 			}
 		}
+		suppCount += len(r.Suppressed)
 	}
 	validCount := 0
 	for _, r := range results {
@@ -72,12 +86,16 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 
 	sep := strings.Repeat("─", 40)
 	fmt.Println(dimStyle.Render(sep))
-	fmt.Printf("Files: %d  Valid: %s  Errors: %s  Warnings: %s\n",
+	line := fmt.Sprintf("Files: %d  Valid: %s  Errors: %s  Warnings: %s",
 		len(results),
 		successStyle.Render(fmt.Sprintf("%d", validCount)),
 		errorStyle.Render(fmt.Sprintf("%d", errCount)),
 		warningStyle.Render(fmt.Sprintf("%d", warnCount)),
 	)
+	if suppCount > 0 {
+		line += dimStyle.Render(fmt.Sprintf("  Suppressed: %d", suppCount))
+	}
+	fmt.Println(line)
 	return total
 }
 

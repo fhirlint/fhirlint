@@ -20,10 +20,11 @@ type Issue struct {
 
 // Result holds the outcome for one validated resource.
 type Result struct {
-	Filename string  `json:"filename"`
-	Label    string  `json:"label"` // human-readable source (path, URL, "stdin")
-	Valid    bool    `json:"valid"`
-	Issues   []Issue `json:"issues"`
+	Filename   string  `json:"filename"`
+	Label      string  `json:"label"` // human-readable source (path, URL, "stdin")
+	Valid       bool    `json:"valid"`
+	Issues     []Issue `json:"issues"`
+	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
 }
 
 // operationOutcome mirrors the FHIR OperationOutcome resource the validator emits.

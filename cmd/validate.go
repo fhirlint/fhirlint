@@ -11,6 +11,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
+	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,6 +37,8 @@ var (
 	flagAllowExampleURLs    bool
 	flagWatch               string
 	flagWatchInterval       int
+	flagSuppress            []string
+	flagShowSuppressed      bool
 )
 
 var validateCmd = &cobra.Command{
@@ -92,6 +95,10 @@ func init() {
 	validateCmd.Flags().Lookup("watch").NoOptDefVal = "single"
 	validateCmd.Flags().IntVar(&flagWatchInterval, "watch-interval", 0,
 		"Polling interval for --watch in milliseconds (default: JAR default)")
+	validateCmd.Flags().StringArrayVar(&flagSuppress, "suppress", nil,
+		"Silence a known issue: type:value (repeatable). Types: messageId, constraint, expression")
+	validateCmd.Flags().BoolVar(&flagShowSuppressed, "show-suppressed", false,
+		"Show suppressed issues with a muted label instead of hiding them")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -175,6 +182,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("watch-interval") && viper.IsSet("watch-interval") {
 		flagWatchInterval = viper.GetInt("watch-interval")
+	}
+	if !cmd.Flags().Changed("show-suppressed") && viper.IsSet("show-suppressed") {
+		flagShowSuppressed = viper.GetBool("show-suppressed")
 	}
 
 	arg := ""
@@ -263,12 +273,26 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Apply suppression rules (CLI flags + config file).
+	suppressRules, serr := buildSuppressRules(cmd)
+	if serr != nil {
+		return serr
+	}
+	if len(suppressRules) > 0 {
+		counts := suppress.Apply(results, suppressRules)
+		for i, count := range counts {
+			if count == 0 {
+				fmt.Fprintf(os.Stderr, "warn: suppress rule %q matched 0 issues\n", suppressRules[i].Raw)
+			}
+		}
+	}
+
 	// Render output(s)
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
 		case "terminal":
 			for _, r := range results {
-				reporter.Terminal(r, flagSeverity)
+				reporter.Terminal(r, flagSeverity, flagShowSuppressed)
 			}
 			reporter.TerminalSummary(results, flagSeverity)
 		case "json":
@@ -495,6 +519,56 @@ func printUpdateNotice() {
 	if newer := validator.CheckForUpdate(); newer != "" {
 		fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
 	}
+}
+
+// buildSuppressRules merges --suppress CLI flags with suppress rules from fhirlint.yml.
+// CLI flags take precedence: if any --suppress flag was given, config rules are ignored.
+func buildSuppressRules(cmd *cobra.Command) ([]suppress.Rule, error) {
+	var rules []suppress.Rule
+	if cmd.Flags().Changed("suppress") {
+		for _, s := range flagSuppress {
+			r, err := suppress.ParseCLI(s)
+			if err != nil {
+				return nil, err
+			}
+			rules = append(rules, r)
+		}
+		return rules, nil
+	}
+	if viper.IsSet("suppress") {
+		raw := viper.Get("suppress")
+		return parseSuppressFromConfig(raw)
+	}
+	return nil, nil
+}
+
+// parseSuppressFromConfig parses the suppress list from fhirlint.yml.
+// Each entry can be a string ("messageId:dom-6") or a map ({messageId: dom-6, severity: warning}).
+func parseSuppressFromConfig(raw interface{}) ([]suppress.Rule, error) {
+	items, ok := raw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("suppress config must be a list")
+	}
+	var rules []suppress.Rule
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			r, err := suppress.ParseCLI(v)
+			if err != nil {
+				return nil, err
+			}
+			rules = append(rules, r)
+		case map[string]interface{}:
+			r, err := suppress.ParseMap(v)
+			if err != nil {
+				return nil, err
+			}
+			rules = append(rules, r)
+		default:
+			return nil, fmt.Errorf("suppress rule must be a string or map, got %T", item)
+		}
+	}
+	return rules, nil
 }
 
 func checkExitCode(results []*validator.Result) error {
