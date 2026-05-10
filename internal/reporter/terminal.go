@@ -18,7 +18,11 @@ var (
 )
 
 func Terminal(result *validator.Result, minSeverity string, showSuppressed bool) {
-	fmt.Println(fileStyle.Render("▶ " + result.Label))
+	label := result.Label
+	if result.Cached {
+		label += dimStyle.Render(" ↩ cached")
+	}
+	fmt.Println(fileStyle.Render("▶ " + label))
 
 	filtered := filterIssues(result.Issues, minSeverity)
 

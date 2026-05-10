@@ -68,6 +68,12 @@ ignore:
 # Polling interval for watch mode in milliseconds (default: JAR default ~1000ms)
 # watch-interval: 500
 
+# Cache validation results per file hash (opt-in)
+# Skips re-validating files that haven't changed since the last run.
+# Combine with actions/cache in CI for faster repeated runs.
+# cache: true
+# cache-dir: .fhirlint-cache/
+
 # Suppression rules — silence known/accepted validation issues
 # Each rule silences matching issues from output and exit-code calculation.
 # Use --show-suppressed to display them with a muted label instead of hiding.
