@@ -207,3 +207,25 @@ func TestConfigFile_BestPracticeFromConfig(t *testing.T) {
 		t.Errorf("best-practice = %q, want %q", got, "ignore")
 	}
 }
+
+func TestConfigFile_URLFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "url:\n  - http://example.com/fhir/Patient/1\n  - http://example.com/fhir/Patient/2\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	got := viper.GetStringSlice("url")
+	want := []string{"http://example.com/fhir/Patient/1", "http://example.com/fhir/Patient/2"}
+	if len(got) != len(want) {
+		t.Fatalf("url len = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("url[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
