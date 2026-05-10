@@ -41,3 +41,7 @@ ignore:
 # warning — JAR default
 # error   — escalates to errors, fails build with fail-on: error
 # best-practice: ignore
+
+# Terminology cache directory (pass n/a to disable)
+# Useful with actions/cache in CI to reuse terminology responses across runs
+# tx-cache: .fhirlint-tx-cache/

@@ -31,6 +31,7 @@ var (
 	flagNoTerminologyServer bool
 	flagTerminologyServer   string
 	flagBestPractice        string
+	flagTxCache             string
 )
 
 var validateCmd = &cobra.Command{
@@ -75,6 +76,8 @@ func init() {
 		"Custom terminology server URL (default: https://tx.fhir.org)")
 	validateCmd.Flags().StringVar(&flagBestPractice, "best-practice", "",
 		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
+	validateCmd.Flags().StringVar(&flagTxCache, "tx-cache", "",
+		"Terminology cache directory (pass n/a to disable, useful with actions/cache in CI)")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -91,6 +94,7 @@ func init() {
 	_ = viper.BindPFlag("no-terminology-server", validateCmd.Flags().Lookup("no-terminology-server"))
 	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
+	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -139,6 +143,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("best-practice") && viper.IsSet("best-practice") {
 		flagBestPractice = viper.GetString("best-practice")
 	}
+	if !cmd.Flags().Changed("tx-cache") && viper.IsSet("tx-cache") {
+		flagTxCache = viper.GetString("tx-cache")
+	}
 
 	arg := ""
 	if len(args) > 0 {
@@ -171,6 +178,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		NoTerminologyServer: flagNoTerminologyServer,
 		TerminologyServer:   flagTerminologyServer,
 		BestPractice:        flagBestPractice,
+		TxCache:             flagTxCache,
 		JARPath:             viper.GetString("jar"),
 	}
 
