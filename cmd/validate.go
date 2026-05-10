@@ -171,6 +171,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		NoTerminologyServer: flagNoTerminologyServer,
 		TerminologyServer:   flagTerminologyServer,
 		BestPractice:        flagBestPractice,
+		JARPath:             viper.GetString("jar"),
 	}
 
 	var results []*validator.Result
