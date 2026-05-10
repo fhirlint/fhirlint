@@ -44,7 +44,7 @@ func Key(filePath string, opts KeyOpts) (string, error) {
 	sort.Strings(profiles)
 	sort.Strings(igs)
 
-	fmt.Fprintf(h, "\x00%s\x00%s\x00%s\x00%s",
+	_, _ = fmt.Fprintf(h, "\x00%s\x00%s\x00%s\x00%s",
 		opts.FhirlintVersion,
 		opts.FHIRVersion,
 		strings.Join(profiles, ","),
