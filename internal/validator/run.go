@@ -25,6 +25,7 @@ type Result struct {
 	Valid       bool    `json:"valid"`
 	Issues     []Issue `json:"issues"`
 	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
+	Cached     bool    `json:"cached,omitempty"`     // true when result came from the result cache
 }
 
 // operationOutcome mirrors the FHIR OperationOutcome resource the validator emits.

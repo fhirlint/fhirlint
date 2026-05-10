@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
+	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
@@ -43,6 +45,8 @@ var (
 	flagExtractEach         string
 	flagCodeSystem          []string
 	flagValueSet            []string
+	flagCache               bool
+	flagCacheDir            string
 )
 
 var validateCmd = &cobra.Command{
@@ -70,6 +74,10 @@ func init() {
 		"Local FHIR CodeSystem JSON file to load without a full IG package (repeatable)")
 	validateCmd.Flags().StringArrayVar(&flagValueSet, "valueset", nil,
 		"Local FHIR ValueSet JSON file to load without a full IG package (repeatable)")
+	validateCmd.Flags().BoolVar(&flagCache, "cache", false,
+		"Cache validation results per file hash to skip unchanged files on subsequent runs")
+	validateCmd.Flags().StringVar(&flagCacheDir, "cache-dir", "",
+		"Directory for result cache (default: ~/.fhirlint/result-cache/)")
 	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", "4.0.1",
 		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
@@ -199,6 +207,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("show-suppressed") && viper.IsSet("show-suppressed") {
 		flagShowSuppressed = viper.GetBool("show-suppressed")
 	}
+	if !cmd.Flags().Changed("cache") && viper.IsSet("cache") {
+		flagCache = viper.GetBool("cache")
+	}
+	if !cmd.Flags().Changed("cache-dir") && viper.IsSet("cache-dir") {
+		flagCacheDir = viper.GetString("cache-dir")
+	}
 
 	if flagExtract != "" && flagExtractEach != "" {
 		return fmt.Errorf("--extract and --extract-each are mutually exclusive")
@@ -317,12 +331,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 					return err
 				}
 			}
-			result, rerr2 := validator.Run(in.Path, opts)
+			rs, rerr2 := runWithCache([]string{in.Path}, opts)
 			if rerr2 != nil {
 				return rerr2
 			}
-			result.Label = in.Label
-			results = []*validator.Result{result}
+			rs[0].Label = in.Label
+			results = rs
 		}
 	}
 	if err != nil {
@@ -526,6 +540,89 @@ func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validat
 	return results, nil
 }
 
+// timeNow is a variable so tests can override it.
+var timeNow = func() time.Time { return time.Now().UTC() }
+
+// runWithCache validates the given paths, consulting the result cache when --cache is enabled.
+// Cached results are used as-is; uncached paths are passed to the validator.
+// Fresh results are written back to the cache for future runs.
+func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, error) {
+	if !flagCache || len(paths) == 0 {
+		return validator.RunMultiple(paths, opts)
+	}
+
+	cacheDir := flagCacheDir
+	if cacheDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return validator.RunMultiple(paths, opts)
+		}
+		cacheDir = filepath.Join(home, ".fhirlint", "result-cache")
+	}
+
+	keyOpts := resultcache.KeyOpts{
+		FhirlintVersion: fhirlintVersion(),
+		FHIRVersion:     opts.FHIRVersion,
+		Profiles:        opts.Profiles,
+		IGs:             opts.IGs,
+	}
+
+	keys := make([]string, len(paths))
+	cachedResults := make([]*validator.Result, len(paths))
+	var uncachedPaths []string
+	var uncachedIdx []int
+
+	for i, p := range paths {
+		key, err := resultcache.Key(p, keyOpts)
+		if err != nil {
+			uncachedPaths = append(uncachedPaths, p)
+			uncachedIdx = append(uncachedIdx, i)
+			continue
+		}
+		keys[i] = key
+		entry, err := resultcache.Get(cacheDir, key)
+		if err == nil {
+			r := entry.Result
+			r.Cached = true
+			cachedResults[i] = &r
+		} else {
+			uncachedPaths = append(uncachedPaths, p)
+			uncachedIdx = append(uncachedIdx, i)
+		}
+	}
+
+	var fresh []*validator.Result
+	if len(uncachedPaths) > 0 {
+		var err error
+		fresh, err = validator.RunMultiple(uncachedPaths, opts)
+		if err != nil {
+			return nil, err
+		}
+		for j, r := range fresh {
+			i := uncachedIdx[j]
+			if keys[i] != "" {
+				_ = resultcache.Put(cacheDir, keys[i], resultcache.Entry{
+					CachedAt:        timeNow(),
+					FhirlintVersion: keyOpts.FhirlintVersion,
+					Result:          *r,
+				})
+			}
+		}
+	}
+
+	results := make([]*validator.Result, len(paths))
+	freshIdx := 0
+	for i := range paths {
+		if cachedResults[i] != nil {
+			results[i] = cachedResults[i]
+		} else {
+			results[i] = fresh[freshIdx]
+			freshIdx++
+		}
+	}
+	return results, nil
+}
+
 // validateDir finds all .json/.xml files and validates them in a single JVM invocation.
 func validateDir(dir string, opts validator.Options) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir})
@@ -535,7 +632,7 @@ func validateDir(dir string, opts validator.Options) ([]*validator.Result, error
 	if len(paths) == 0 {
 		return nil, nil
 	}
-	results, err := validator.RunMultiple(paths, opts)
+	results, err := runWithCache(paths, opts)
 	if err != nil {
 		return nil, err
 	}
