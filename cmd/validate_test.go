@@ -215,6 +215,96 @@ func TestPreprocessJSON_IgnoreMultipleFields(t *testing.T) {
 	}
 }
 
+// --- extractEachElements ---
+
+func TestExtractEachElements_BasicArray(t *testing.T) {
+	in := tempJSONFile(t, `{"medications":[
+		{"resourceType":"Medication","id":"med-1"},
+		{"resourceType":"Medication","id":"med-2"}
+	]}`)
+	in.Label = "api.json"
+	flagExtractEach = "$.medications"
+	t.Cleanup(func() { flagExtractEach = "" })
+
+	ins, err := extractEachElements(in, flagExtractEach)
+	if err != nil {
+		t.Fatalf("extractEachElements error: %v", err)
+	}
+	defer func() {
+		for _, t2 := range ins {
+			t2.Cleanup()
+		}
+	}()
+
+	if len(ins) != 2 {
+		t.Fatalf("expected 2 elements, got %d", len(ins))
+	}
+	if ins[0].Label != "api.json[0] (Medication/med-1)" {
+		t.Errorf("label[0] = %q", ins[0].Label)
+	}
+	if ins[1].Label != "api.json[1] (Medication/med-2)" {
+		t.Errorf("label[1] = %q", ins[1].Label)
+	}
+
+	// Verify temp files contain valid JSON
+	for i, elem := range ins {
+		data, err := os.ReadFile(elem.Path)
+		if err != nil {
+			t.Fatalf("reading temp file %d: %v", i, err)
+		}
+		var obj map[string]interface{}
+		if err := json.Unmarshal(data, &obj); err != nil {
+			t.Fatalf("element %d is not valid JSON: %v", i, err)
+		}
+	}
+}
+
+func TestExtractEachElements_LabelWithoutID(t *testing.T) {
+	in := tempJSONFile(t, `{"items":[{"resourceType":"Patient"},{"foo":"bar"}]}`)
+	in.Label = "response.json"
+
+	ins, err := extractEachElements(in, "$.items")
+	if err != nil {
+		t.Fatalf("extractEachElements error: %v", err)
+	}
+	defer func() {
+		for _, t2 := range ins {
+			t2.Cleanup()
+		}
+	}()
+
+	if ins[0].Label != "response.json[0]" {
+		t.Errorf("label[0] without id = %q, want response.json[0]", ins[0].Label)
+	}
+	if ins[1].Label != "response.json[1]" {
+		t.Errorf("label[1] = %q, want response.json[1]", ins[1].Label)
+	}
+}
+
+func TestExtractEachElements_PathNotFound(t *testing.T) {
+	in := tempJSONFile(t, `{"foo":"bar"}`)
+	_, err := extractEachElements(in, "$.nonexistent")
+	if err == nil {
+		t.Error("expected error for missing path")
+	}
+}
+
+func TestExtractEachElements_NotAnArray(t *testing.T) {
+	in := tempJSONFile(t, `{"data":{"resourceType":"Patient"}}`)
+	_, err := extractEachElements(in, "$.data")
+	if err == nil {
+		t.Error("expected error when path points to an object, not array")
+	}
+}
+
+func TestExtractEachElements_EmptyArray(t *testing.T) {
+	in := tempJSONFile(t, `{"items":[]}`)
+	_, err := extractEachElements(in, "$.items")
+	if err == nil {
+		t.Error("expected error for empty array")
+	}
+}
+
 func TestPreprocessJSON_ExtractThenImplicitNoIgnore(t *testing.T) {
 	in := tempJSONFile(t, `{"wrapper":{"resourceType":"Observation","status":"final"}}`)
 	flagExtract = "$.wrapper"
