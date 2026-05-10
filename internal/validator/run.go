@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -69,11 +70,11 @@ type Options struct {
 func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Options) []string {
 	args := []string{"-jar", jarPath}
 	args = append(args, inputPaths...)
-	args = append(args,
-		"-version", opts.FHIRVersion,
-		"-output-style", "json",
-		"-output", outputPath,
-	)
+	args = append(args, "-version", opts.FHIRVersion)
+	// outputPath is empty in watch mode — skip structured output flags.
+	if outputPath != "" {
+		args = append(args, "-output-style", "json", "-output", outputPath)
+	}
 	for _, ig := range opts.IGs {
 		args = append(args, "-ig", ig)
 	}
@@ -99,6 +100,27 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 		args = append(args, "-allow-example-urls")
 	}
 	return args
+}
+
+// RunWatch starts the JAR in watch mode and blocks until the process is killed (Ctrl-C).
+// mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
+// The JAR prints results directly to stdout/stderr — no structured output is captured.
+func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) error {
+	jarPath, err := EnsureJAR(opts.JARPath)
+	if err != nil {
+		return err
+	}
+
+	args := buildArgs(jarPath, inputPaths, "", opts)
+	args = append(args, "-watch-mode", mode)
+	if intervalMS > 0 {
+		args = append(args, "-watch-interval", strconv.Itoa(intervalMS))
+	}
+
+	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled paths
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // Run validates a single file and returns its result.

@@ -34,6 +34,8 @@ var (
 	flagTxCache             string
 	flagLocale              string
 	flagAllowExampleURLs    bool
+	flagWatch               string
+	flagWatchInterval       int
 )
 
 var validateCmd = &cobra.Command{
@@ -84,6 +86,11 @@ func init() {
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
 		"Suppress warnings about example.org and similar placeholder URLs")
+	validateCmd.Flags().StringVar(&flagWatch, "watch", "",
+		"Watch for file changes and re-validate: single (changed files only) or all (all files on any change)")
+	validateCmd.Flags().Lookup("watch").NoOptDefVal = "single"
+	validateCmd.Flags().IntVar(&flagWatchInterval, "watch-interval", 0,
+		"Polling interval for --watch in milliseconds (default: JAR default)")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -103,6 +110,8 @@ func init() {
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
+	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
+	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -160,6 +169,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("allow-example-urls") && viper.IsSet("allow-example-urls") {
 		flagAllowExampleURLs = viper.GetBool("allow-example-urls")
 	}
+	if !cmd.Flags().Changed("watch") && viper.IsSet("watch") {
+		flagWatch = viper.GetString("watch")
+	}
+	if !cmd.Flags().Changed("watch-interval") && viper.IsSet("watch-interval") {
+		flagWatchInterval = viper.GetInt("watch-interval")
+	}
 
 	arg := ""
 	if len(args) > 0 {
@@ -196,6 +211,21 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		Locale:              flagLocale,
 		AllowExampleURLs:    flagAllowExampleURLs,
 		JARPath:             viper.GetString("jar"),
+	}
+
+	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
+	if flagWatch != "" {
+		for _, format := range flagFormat {
+			if (format == "json" || format == "html") && flagOutput != "" {
+				return fmt.Errorf("--watch is not compatible with --format %s --output; use terminal output only", format)
+			}
+		}
+		paths, werr := collectFHIRPaths(in)
+		if werr != nil {
+			return werr
+		}
+		fmt.Fprintf(os.Stderr, "Watching %d file(s) for changes (mode: %s). Press Ctrl-C to stop.\n", len(paths), flagWatch)
+		return validator.RunWatch(paths, opts, flagWatch, flagWatchInterval)
 	}
 
 	var results []*validator.Result
@@ -241,10 +271,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	return checkExitCode(results)
 }
 
-// validateDir finds all .json/.xml files and validates them in a single JVM invocation.
-func validateDir(dir string, opts validator.Options) ([]*validator.Result, error) {
+// collectFHIRPaths returns all .json/.xml file paths for the given input.
+func collectFHIRPaths(in *input.Input) ([]string, error) {
+	if in.Source != input.SourceDir {
+		return []string{in.Path}, nil
+	}
 	var paths []string
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(in.Path, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -258,6 +291,12 @@ func validateDir(dir string, opts validator.Options) ([]*validator.Result, error
 		paths = append(paths, path)
 		return nil
 	})
+	return paths, err
+}
+
+// validateDir finds all .json/.xml files and validates them in a single JVM invocation.
+func validateDir(dir string, opts validator.Options) ([]*validator.Result, error) {
+	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir})
 	if err != nil {
 		return nil, err
 	}
