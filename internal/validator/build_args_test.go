@@ -90,6 +90,27 @@ func TestBuildArgs_EmptyProfilesAndIGs(t *testing.T) {
 	mustNotContain(t, args, "-ig")
 }
 
+func TestBuildArgs_BestPracticeIgnore(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:  "4.0.1",
+		BestPractice: "ignore",
+	})
+	mustContainPair(t, args, "-best-practice", "ignore")
+}
+
+func TestBuildArgs_BestPracticeError(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:  "4.0.1",
+		BestPractice: "error",
+	})
+	mustContainPair(t, args, "-best-practice", "error")
+}
+
+func TestBuildArgs_BestPracticeEmptyOmitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-best-practice")
+}
+
 func TestBuildArgs_MultipleInputPaths(t *testing.T) {
 	paths := []string{"/tmp/a.json", "/tmp/b.json", "/tmp/c.json"}
 	args := buildArgs("jar", paths, "out", Options{FHIRVersion: "4.0.1"})

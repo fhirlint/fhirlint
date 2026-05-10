@@ -30,6 +30,7 @@ var (
 	flagIgnore              []string
 	flagNoTerminologyServer bool
 	flagTerminologyServer   string
+	flagBestPractice        string
 )
 
 var validateCmd = &cobra.Command{
@@ -72,6 +73,8 @@ func init() {
 		"Disable terminology server — no data is sent to tx.fhir.org")
 	validateCmd.Flags().StringVar(&flagTerminologyServer, "terminology-server", "",
 		"Custom terminology server URL (default: https://tx.fhir.org)")
+	validateCmd.Flags().StringVar(&flagBestPractice, "best-practice", "",
+		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -87,6 +90,7 @@ func init() {
 	_ = viper.BindPFlag("ignore", validateCmd.Flags().Lookup("ignore"))
 	_ = viper.BindPFlag("no-terminology-server", validateCmd.Flags().Lookup("no-terminology-server"))
 	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
+	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -132,6 +136,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("terminology-server") && viper.IsSet("terminology-server") {
 		flagTerminologyServer = viper.GetString("terminology-server")
 	}
+	if !cmd.Flags().Changed("best-practice") && viper.IsSet("best-practice") {
+		flagBestPractice = viper.GetString("best-practice")
+	}
 
 	arg := ""
 	if len(args) > 0 {
@@ -163,6 +170,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		IGs:                 flagIG,
 		NoTerminologyServer: flagNoTerminologyServer,
 		TerminologyServer:   flagTerminologyServer,
+		BestPractice:        flagBestPractice,
 	}
 
 	var results []*validator.Result

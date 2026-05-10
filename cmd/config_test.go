@@ -149,3 +149,18 @@ ignore:
 		}
 	}
 }
+
+func TestConfigFile_BestPracticeFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "best-practice: ignore\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if got := viper.GetString("best-practice"); got != "ignore" {
+		t.Errorf("best-practice = %q, want %q", got, "ignore")
+	}
+}
