@@ -44,9 +44,18 @@ func runAudit(_ *cobra.Command, _ []string) error {
 	} else if len(report.Advisories) == 0 {
 		fmt.Println("  ✓ no published advisories found")
 	} else {
-		for _, a := range report.Advisories {
-			fmt.Fprintf(os.Stderr, "  ✗ [%s] %s (%s)\n     %s\n", a.Severity, a.Summary, a.GHSAID, a.HTMLURL)
-			issues++
+		affecting := report.AffectingAdvisories()
+		if len(affecting) == 0 {
+			fmt.Printf("  ✓ %d advisory/advisories published, none affect your version (%s)\n",
+				len(report.Advisories), report.CurrentVersion)
+		} else {
+			for _, a := range affecting {
+				fmt.Fprintf(os.Stderr, "  ✗ [%s] %s (%s)\n     %s\n",
+					a.Severity, a.Summary, a.GHSAID, a.HTMLURL)
+				issues++
+			}
+			fmt.Printf("  (%d advisory/advisories total, %d not affecting your version)\n",
+				len(report.Advisories), len(report.Advisories)-len(affecting))
 		}
 	}
 
