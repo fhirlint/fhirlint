@@ -29,7 +29,7 @@ func CheckJava() error {
 
 	if major < minJavaVersion {
 		return fmt.Errorf(
-			"Java %d detected, but fhirlint requires Java %d+.\n"+
+			"java %d detected, but fhirlint requires Java %d+.\n"+
 				"install a newer version from https://adoptium.net or via your package manager:\n"+
 				"  Ubuntu/Debian: sudo apt install default-jre\n"+
 				"  macOS:         brew install openjdk\n"+
