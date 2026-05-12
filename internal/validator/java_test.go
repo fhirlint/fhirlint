@@ -1,6 +1,10 @@
 package validator
 
 import (
+	"fmt"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 )
 
@@ -49,4 +53,29 @@ func TestParseJavaMajorVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestMinJavaVersionConsistency ensures that every "Java X+" mention in the
+// README matches minJavaVersion, so documentation and code cannot drift apart.
+func TestMinJavaVersionConsistency(t *testing.T) {
+	readme, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatalf("could not read README.md: %v", err)
+	}
+
+	re := regexp.MustCompile(`Java (\d+)\+`)
+	matches := re.FindAllSubmatch(readme, -1)
+	if len(matches) == 0 {
+		t.Fatal("no 'Java X+' pattern found in README.md")
+	}
+
+	want := fmt.Sprintf("%d", minJavaVersion)
+	for _, m := range matches {
+		got := string(m[1])
+		v, _ := strconv.Atoi(got)
+		if v != minJavaVersion {
+			t.Errorf("README.md says Java %s+ but minJavaVersion = %d — update one to match the other", got, minJavaVersion)
+		}
+	}
+	_ = want
 }
