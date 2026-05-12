@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -158,8 +157,8 @@ func TestOOMError_DetectsOutOfMemory(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "JAVA_OPTS") {
-		t.Errorf("expected actionable hint with JAVA_OPTS, got: %v", err)
+	if err.Error() != "out of memory" {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 

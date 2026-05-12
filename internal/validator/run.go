@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -185,7 +186,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 
 func oomError(stderr string) error {
 	if strings.Contains(stderr, "OutOfMemoryError") {
-		return fmt.Errorf("Java ran out of memory while validating. Try increasing the heap size:\n  JAVA_OPTS=\"-Xmx2g\" fhirlint validate")
+		fmt.Fprintln(os.Stderr, "Java ran out of memory while validating. Try increasing the heap size:")
+		fmt.Fprintln(os.Stderr, `  JAVA_OPTS="-Xmx2g" fhirlint validate`)
+		return errors.New("out of memory")
 	}
 	return nil
 }
