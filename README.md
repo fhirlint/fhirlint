@@ -14,7 +14,7 @@ A lightweight CLI for validating FHIR resources with a developer-friendly experi
 
 The validator JAR is downloaded automatically on first use — no manual setup required.
 
-**Requirements:** Java 11+
+**Requirements:** Java 17+
 
 ---
 
@@ -503,7 +503,7 @@ result, err := fhirlint.ValidateURL("https://hapi.fhir.org/baseR4/Patient/1", fh
 })
 ```
 
-The library requires Java 11+ and downloads the validator JAR on first use (~250 MB). Set `JARPath` or `FHIRLINT_JAR` to provide a pre-downloaded JAR.
+The library requires Java 17+ and downloads the validator JAR on first use (~250 MB). Set `JARPath` or `FHIRLINT_JAR` to provide a pre-downloaded JAR.
 
 ---
 
