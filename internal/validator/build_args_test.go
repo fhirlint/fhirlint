@@ -62,6 +62,39 @@ func TestBuildArgs_Profiles(t *testing.T) {
 	mustContainPair(t, args, "-profile", "http://example.com/profile2")
 }
 
+func TestBuildArgs_ProfileIGRef_RoutedToIG(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		Profiles:    []string{"kbv.basis#1.5.0"},
+	})
+
+	mustContainPair(t, args, "-ig", "kbv.basis#1.5.0")
+	mustNotContain(t, args, "-profile")
+}
+
+func TestBuildArgs_ProfileURL_RoutedToProfile(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		Profiles:    []string{"http://example.com/StructureDefinition/MyProfile"},
+	})
+
+	mustContainPair(t, args, "-profile", "http://example.com/StructureDefinition/MyProfile")
+	mustNotContain(t, args, "-ig")
+}
+
+func TestBuildArgs_MixedProfilesAndIGRefs(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		Profiles: []string{
+			"kbv.basis#1.5.0",
+			"http://example.com/StructureDefinition/MyProfile",
+		},
+	})
+
+	mustContainPair(t, args, "-ig", "kbv.basis#1.5.0")
+	mustContainPair(t, args, "-profile", "http://example.com/StructureDefinition/MyProfile")
+}
+
 func TestBuildArgs_IGs(t *testing.T) {
 	args := buildArgs("jar", []string{"input"}, "out", Options{
 		FHIRVersion: "4.0.1",

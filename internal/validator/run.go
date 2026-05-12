@@ -82,7 +82,11 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 		args = append(args, "-ig", ig)
 	}
 	for _, p := range opts.Profiles {
-		args = append(args, "-profile", p)
+		if strings.Contains(p, "#") {
+			args = append(args, "-ig", p)
+		} else {
+			args = append(args, "-profile", p)
+		}
 	}
 	switch {
 	case opts.NoTerminologyServer:
