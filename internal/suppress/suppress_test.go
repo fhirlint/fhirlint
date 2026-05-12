@@ -172,3 +172,68 @@ func TestApply_UnmatchedRuleHasZeroCount(t *testing.T) {
 		t.Errorf("unmatched rule count = %d, want 0", counts[0])
 	}
 }
+
+func TestParseCLI_Pattern(t *testing.T) {
+	r, err := ParseCLI("pattern:.*example\\.org.*")
+	if err != nil {
+		t.Fatalf("ParseCLI pattern error: %v", err)
+	}
+	if r.Type != "pattern" {
+		t.Errorf("Type = %q, want pattern", r.Type)
+	}
+	if r.Regexp == nil {
+		t.Error("Regexp should be compiled and non-nil")
+	}
+}
+
+func TestParseCLI_InvalidPattern(t *testing.T) {
+	if _, err := ParseCLI("pattern:[invalid"); err == nil {
+		t.Error("expected error for invalid regex pattern")
+	}
+}
+
+func TestParseMap_Pattern(t *testing.T) {
+	r, err := ParseMap(map[string]interface{}{"pattern": ".*example\\.org.*"})
+	if err != nil {
+		t.Fatalf("ParseMap pattern error: %v", err)
+	}
+	if r.Type != "pattern" || r.Regexp == nil {
+		t.Errorf("unexpected rule: %+v", r)
+	}
+}
+
+func TestParseMap_InvalidPattern(t *testing.T) {
+	if _, err := ParseMap(map[string]interface{}{"pattern": "[invalid"}); err == nil {
+		t.Error("expected error for invalid regex in map")
+	}
+}
+
+func TestMatches_Pattern(t *testing.T) {
+	r, _ := ParseCLI("pattern:.*example\\.org.*")
+	cases := []struct {
+		message string
+		match   bool
+	}{
+		{"Unknown code from example.org/codes", true},
+		{"URL points to example.org in narrative", true},
+		{"Unrelated validation message", false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		issue := validator.Issue{Severity: "warning", Message: tc.message}
+		if r.Matches(issue) != tc.match {
+			t.Errorf("pattern.Matches(%q) = %v, want %v", tc.message, !tc.match, tc.match)
+		}
+	}
+}
+
+func TestMatches_PatternWithSeverityFilter(t *testing.T) {
+	r, _ := ParseCLI("pattern:.*example\\.org.*")
+	r.Severity = "warning"
+	if r.Matches(validator.Issue{Severity: "error", Message: "code from example.org"}) {
+		t.Error("should not match when severity filter does not match")
+	}
+	if !r.Matches(validator.Issue{Severity: "warning", Message: "code from example.org"}) {
+		t.Error("should match when severity filter matches")
+	}
+}

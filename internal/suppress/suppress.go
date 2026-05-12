@@ -2,6 +2,7 @@ package suppress
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
@@ -9,10 +10,11 @@ import (
 
 // Rule is a single suppression selector.
 type Rule struct {
-	Type     string // "messageId", "constraint", or "expression"
+	Type     string // "messageId", "constraint", "expression", or "pattern"
 	Value    string
-	Severity string // optional; empty matches any severity
-	Raw      string // original string for diagnostics
+	Regexp   *regexp.Regexp // compiled pattern; non-nil only when Type == "pattern"
+	Severity string         // optional; empty matches any severity
+	Raw      string         // original string for diagnostics
 }
 
 // ParseCLI parses the CLI flag format "type:value".
@@ -28,13 +30,21 @@ func ParseCLI(s string) (Rule, error) {
 	if err := validateType(typ); err != nil {
 		return Rule{}, err
 	}
-	return Rule{Type: typ, Value: val, Raw: s}, nil
+	r := Rule{Type: typ, Value: val, Raw: s}
+	if typ == "pattern" {
+		re, err := regexp.Compile(val)
+		if err != nil {
+			return Rule{}, fmt.Errorf("invalid suppress rule %q: invalid regex: %w", s, err)
+		}
+		r.Regexp = re
+	}
+	return r, nil
 }
 
-// ParseMap parses the YAML map format: {messageId|constraint|expression: value, severity?: sev}.
+// ParseMap parses the YAML map format: {messageId|constraint|expression|pattern: value, severity?: sev}.
 func ParseMap(m map[string]interface{}) (Rule, error) {
 	r := Rule{}
-	for _, typ := range []string{"messageId", "constraint", "expression"} {
+	for _, typ := range []string{"messageId", "constraint", "expression", "pattern"} {
 		if v, ok := m[typ]; ok {
 			r.Type = typ
 			r.Value = fmt.Sprintf("%v", v)
@@ -43,7 +53,14 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 		}
 	}
 	if r.Type == "" {
-		return Rule{}, fmt.Errorf("suppress rule must have one of: messageId, constraint, expression")
+		return Rule{}, fmt.Errorf("suppress rule must have one of: messageId, constraint, expression, pattern")
+	}
+	if r.Type == "pattern" {
+		re, err := regexp.Compile(r.Value)
+		if err != nil {
+			return Rule{}, fmt.Errorf("invalid suppress pattern %q: %w", r.Value, err)
+		}
+		r.Regexp = re
 	}
 	if sev, ok := m["severity"]; ok {
 		r.Severity = fmt.Sprintf("%v", sev)
@@ -53,10 +70,10 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 
 func validateType(typ string) error {
 	switch typ {
-	case "messageId", "constraint", "expression":
+	case "messageId", "constraint", "expression", "pattern":
 		return nil
 	}
-	return fmt.Errorf("unknown suppress type %q: use messageId, constraint, or expression", typ)
+	return fmt.Errorf("unknown suppress type %q: use messageId, constraint, expression, or pattern", typ)
 }
 
 // Matches returns true when the rule matches the given issue.
@@ -74,6 +91,8 @@ func (r Rule) Matches(issue validator.Issue) bool {
 			loc = loc[:i]
 		}
 		return loc == r.Value || strings.HasPrefix(loc, r.Value+".")
+	case "pattern":
+		return r.Regexp != nil && r.Regexp.MatchString(issue.Message)
 	}
 	return false
 }

@@ -83,3 +83,6 @@ ignore:
 #   - expression: MedicationRequest.intent        # suppress all issues on a field path
 #   - expression: Patient.text
 #     severity: warning                           # optional: only suppress at this severity
+#   - pattern: ".*example\\.org.*"               # suppress by regex match on message text
+#   - pattern: "Unknown extension.*"
+#     severity: warning                           # optional: only at this severity
