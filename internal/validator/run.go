@@ -185,7 +185,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 
 func oomError(stderr string) error {
 	if strings.Contains(stderr, "OutOfMemoryError") {
-		return fmt.Errorf("Java ran out of memory while validating. Try increasing the heap size:\n  JAVA_OPTS=\"-Xmx2g\" fhirlint validate ...")
+		return fmt.Errorf("Java ran out of memory while validating. Try increasing the heap size:\n  JAVA_OPTS=\"-Xmx2g\" fhirlint validate")
 	}
 	return nil
 }
