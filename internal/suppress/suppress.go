@@ -82,8 +82,12 @@ func (r Rule) Matches(issue validator.Issue) bool {
 		return false
 	}
 	switch r.Type {
-	case "messageId", "constraint":
+	case "messageId":
 		return issue.MessageID == r.Value
+	case "constraint":
+		// Match the short constraint key (e.g. "dom-6") against a full URI messageId
+		// like "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6".
+		return issue.MessageID == r.Value || strings.HasSuffix(issue.MessageID, "#"+r.Value)
 	case "expression":
 		loc := issue.Location
 		// strip " (line X, col Y)" suffix before comparing

@@ -85,9 +85,17 @@ func TestMatches_MessageID(t *testing.T) {
 
 func TestMatches_Constraint(t *testing.T) {
 	r := Rule{Type: "constraint", Value: "dom-6"}
-	issue := validator.Issue{Severity: "warning", MessageID: "dom-6"}
-	if !r.Matches(issue) {
-		t.Error("expected match for constraint:dom-6")
+	// exact short ID
+	if !r.Matches(validator.Issue{Severity: "warning", MessageID: "dom-6"}) {
+		t.Error("expected match for short messageId dom-6")
+	}
+	// full URI emitted by HL7 FHIR Validator >= 6.x
+	if !r.Matches(validator.Issue{Severity: "warning", MessageID: "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"}) {
+		t.Error("expected match for full URI messageId ending in #dom-6")
+	}
+	// different constraint should not match
+	if r.Matches(validator.Issue{Severity: "warning", MessageID: "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-7"}) {
+		t.Error("unexpected match for different constraint dom-7")
 	}
 }
 
