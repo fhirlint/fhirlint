@@ -21,6 +21,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+const defaultFHIRVersion = "4.0.1"
+
 var (
 	flagProfile             []string
 	flagIG                  []string
@@ -78,7 +80,7 @@ func init() {
 		"Cache validation results per file hash to skip unchanged files on subsequent runs")
 	validateCmd.Flags().StringVar(&flagCacheDir, "cache-dir", "",
 		"Directory for result cache (default: ~/.fhirlint/result-cache/)")
-	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", "4.0.1",
+	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", defaultFHIRVersion,
 		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
 		"Output format: terminal, json, html (repeatable)")

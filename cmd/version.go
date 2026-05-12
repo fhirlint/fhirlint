@@ -7,6 +7,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var versionCmd = &cobra.Command{
@@ -18,10 +19,28 @@ var versionCmd = &cobra.Command{
 			validator.ValidatorVersion(),
 			validator.JARReleasesURL(),
 		)
+		if viper.IsSet("fhir-version") {
+			fmt.Printf("fhir:      %s\n", fhirVersionName(viper.GetString("fhir-version")))
+		} else {
+			fmt.Printf("fhir:      %s (default)\n", fhirVersionName(defaultFHIRVersion))
+		}
 		if newer := validator.CheckForUpdate(); newer != "" {
 			fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
 		}
 	},
+}
+
+func fhirVersionName(v string) string {
+	switch v {
+	case "4.0.1":
+		return "R4"
+	case "4.3.0":
+		return "R4B"
+	case "5.0.0":
+		return "R5"
+	default:
+		return v
+	}
 }
 
 func fhirlintVersion() string {
