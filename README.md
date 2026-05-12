@@ -167,6 +167,9 @@ fhirlint validate patient.json --format json
 # HTML report to file
 fhirlint validate patient.json --format html --output report.html
 
+# JUnit XML report (for GitHub Actions, Jenkins, Azure DevOps test dashboards)
+fhirlint validate ./fhir/ --format junit --output results.xml
+
 # Multiple formats in one run
 fhirlint validate patient.json --format terminal --format json --output results.json
 
@@ -372,7 +375,7 @@ A fully annotated example is provided in [`fhirlint.yml.example`](fhirlint.yml.e
 | `--ig` | — | IG package, e.g. `kbv.basis#1.5.0` (repeatable) |
 | `--codesystem` | — | Local FHIR `CodeSystem` file (repeatable) |
 | `--valueset` | — | Local FHIR `ValueSet` file (repeatable) |
-| `--format`, `-f` | `terminal` | Output format: `terminal`, `json`, `html` (repeatable) |
+| `--format`, `-f` | `terminal` | Output format: `terminal`, `json`, `html`, `junit` (repeatable) |
 | `--output`, `-o` | stdout | Output file for `json`/`html` reports |
 | `--severity`, `-s` | `information` | Minimum severity to display: `information`, `warning`, `error` |
 | `--fail-on` | `error` | Exit non-zero when issues at this level or above are found: `error`, `warning`, `never` |
