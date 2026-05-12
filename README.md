@@ -236,6 +236,8 @@ suppress:
 
 By default, fhirlint sends code lookups to `https://tx.fhir.org`. This behaviour can be tuned:
 
+> **Note for CI and production use:** `tx.fhir.org` is a public development server — HL7 explicitly states it is not provisioned for CI pipelines or production use, has no SLA, and can go down without notice. For CI, either disable it with `--no-terminology-server` (terminology checks are skipped) or cache responses with `--tx-cache` to minimize requests. For production, run your own terminology server.
+
 ```bash
 # Disable the terminology server entirely (offline / privacy-sensitive environments)
 fhirlint validate patient.json --no-terminology-server
