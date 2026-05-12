@@ -99,7 +99,7 @@ func SARIF(results []*validator.Result, minSeverity, fhirlintVersion, dest strin
 }
 
 func buildSARIFReport(results []*validator.Result, minSeverity, fhirlintVersion string) sarifReport {
-	var sarifResults []sarifResult
+	sarifResults := make([]sarifResult, 0)
 	rulesSeen := map[string]bool{}
 	var rules []sarifRule
 
