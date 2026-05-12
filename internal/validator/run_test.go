@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -148,6 +149,30 @@ func TestToResult_MessageTextFromDetails(t *testing.T) {
 	want := "The value 'unknown' is not valid for element Patient.gender"
 	if result.Issues[0].Message != want {
 		t.Errorf("expected message %q, got %q", want, result.Issues[0].Message)
+	}
+}
+
+func TestOOMError_DetectsOutOfMemory(t *testing.T) {
+	stderr := "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space"
+	err := oomError(stderr)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "JAVA_OPTS") {
+		t.Errorf("expected actionable hint with JAVA_OPTS, got: %v", err)
+	}
+}
+
+func TestOOMError_NilOnNormalStderr(t *testing.T) {
+	err := oomError("some other warning from the JVM")
+	if err != nil {
+		t.Errorf("expected nil, got: %v", err)
+	}
+}
+
+func TestOOMError_NilOnEmpty(t *testing.T) {
+	if err := oomError(""); err != nil {
+		t.Errorf("expected nil for empty stderr, got: %v", err)
 	}
 }
 

@@ -174,10 +174,20 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	}
 
 	if len(jsonBytes) == 0 {
+		if err := oomError(stderrBuf.String()); err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("validator produced no output — JAR may have crashed\nfiles: %v\nstderr: %s", inputPaths, stderrBuf.String())
 	}
 
 	return parseOutput(jsonBytes, inputPaths, stderrBuf.String())
+}
+
+func oomError(stderr string) error {
+	if strings.Contains(stderr, "OutOfMemoryError") {
+		return fmt.Errorf("Java ran out of memory while validating. Try increasing the heap size:\n  JAVA_OPTS=\"-Xmx2g\" fhirlint validate ...")
+	}
+	return nil
 }
 
 // parseOutput handles both single OperationOutcome (one file) and Bundle (multiple files).
