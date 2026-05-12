@@ -83,7 +83,7 @@ func init() {
 	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", defaultFHIRVersion,
 		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
-		"Output format: terminal, json, html (repeatable)")
+		"Output format: terminal, json, html, junit (repeatable)")
 	validateCmd.Flags().StringVarP(&flagOutput, "output", "o", "",
 		"Output file for json/html (stdout if omitted)")
 	validateCmd.Flags().StringVarP(&flagSeverity, "severity", "s", "information",
@@ -377,8 +377,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			if err := reporter.HTML(results, flagSeverity, flagFHIRVersion, outFile); err != nil {
 				return fmt.Errorf("html report: %w", err)
 			}
+		case "junit":
+			outFile := outputFile("xml")
+			if err := reporter.JUnit(results, flagSeverity, outFile); err != nil {
+				return fmt.Errorf("junit report: %w", err)
+			}
 		default:
-			return fmt.Errorf("unknown format %q — use: terminal, json, html", format)
+			return fmt.Errorf("unknown format %q — use: terminal, json, html, junit", format)
 		}
 	}
 

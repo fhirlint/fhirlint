@@ -8,6 +8,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [Caching the validator JAR](#caching-the-validator-jar)
 - [Caching terminology responses](#caching-terminology-responses)
 - [Uploading reports as artifacts](#uploading-reports-as-artifacts)
+- [JUnit XML test results](#junit-xml-test-results)
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
 - [GitLab CI](#gitlab-ci)
 - [Exit codes](#exit-codes)
@@ -198,6 +199,36 @@ fhirlint can produce JSON and HTML reports alongside the terminal output. Use `i
 ```
 
 The HTML report can be downloaded from the Actions run summary and opened in any browser — no server required.
+
+---
+
+## JUnit XML test results
+
+`--format junit` outputs results in JUnit XML format. GitHub Actions, Jenkins, Azure DevOps, and GitLab CI can all consume this format natively to display per-file pass/fail results in their test dashboards — no custom plugin needed.
+
+Each validated file becomes a `<testcase>`. Issues at or above `--severity` become `<failure>` elements. Files with no issues are recorded as passing test cases.
+
+```yaml
+- name: Validate FHIR resources
+  run: fhirlint validate ./fhir/ --format junit --output fhir-results.xml
+
+- name: Publish test results
+  uses: mikepenz/action-junit-report@v4
+  if: always()
+  with:
+    report_paths: fhir-results.xml
+```
+
+Combine with terminal output to see results in the log and in the test dashboard at the same time:
+
+```yaml
+- name: Validate FHIR resources
+  run: |
+    fhirlint validate ./fhir/ \
+      --format terminal \
+      --format junit --output fhir-results.xml \
+      --fail-on error
+```
 
 ---
 
