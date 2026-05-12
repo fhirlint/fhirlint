@@ -42,10 +42,15 @@ func ParseCLI(s string) (Rule, error) {
 }
 
 // ParseMap parses the YAML map format: {messageId|constraint|expression|pattern: value, severity?: sev}.
+// Viper lowercases all config keys, so we accept both camelCase ("messageId") and lowercase ("messageid").
 func ParseMap(m map[string]interface{}) (Rule, error) {
 	r := Rule{}
 	for _, typ := range []string{"messageId", "constraint", "expression", "pattern"} {
-		if v, ok := m[typ]; ok {
+		v, ok := m[typ]
+		if !ok {
+			v, ok = m[strings.ToLower(typ)] // viper normalises keys to lowercase
+		}
+		if ok {
 			r.Type = typ
 			r.Value = fmt.Sprintf("%v", v)
 			r.Raw = fmt.Sprintf("%s:%s", typ, r.Value)
