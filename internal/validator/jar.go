@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -94,17 +95,60 @@ func UpdateJAR() error {
 	return nil
 }
 
-// ValidatorVersion returns the cached JAR version, or "unknown" if not available.
+// ValidatorVersion returns the validator JAR version.
+// It reads the cached version file written at download time. If that file is
+// absent (e.g. Docker images where the JAR is bundled without a separate
+// version file, or before the first validate run), it falls back to reading
+// the version from the JAR's own MANIFEST.MF class-path entries.
 func ValidatorVersion() string {
 	versionPath, err := cache.ValidatorVersionPath()
-	if err != nil {
-		return "unknown"
+	if err == nil {
+		if data, err := os.ReadFile(versionPath); err == nil { //nolint:gosec // known cache path
+			if v := strings.TrimSpace(string(data)); v != "" {
+				return v
+			}
+		}
 	}
-	data, err := os.ReadFile(versionPath) //nolint:gosec // known cache path
-	if err != nil {
-		return "unknown"
+	// Fallback: read version from the bundled JAR manifest.
+	if jarPath, err := cache.JARPath(); err == nil {
+		if v := versionFromJARManifest(jarPath); v != "" {
+			_ = saveValidatorVersion(v) // cache for next time
+			return v
+		}
 	}
-	return strings.TrimSpace(string(data))
+	return "unknown"
+}
+
+// versionFromJARManifest extracts the validator version from the JAR's
+// MANIFEST.MF class-path, which contains entries like
+// "org.hl7.fhir.validation/6.9.7/org.hl7.fhir.validation-6.9.7.jar".
+var versionInClassPath = regexp.MustCompile(`org\.hl7\.fhir\.validation/([0-9]+\.[0-9]+\.[0-9]+)/`)
+
+func versionFromJARManifest(jarPath string) string {
+	r, err := zip.OpenReader(jarPath)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = r.Close() }()
+	for _, f := range r.File {
+		if f.Name != "META-INF/MANIFEST.MF" {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return ""
+		}
+		data, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			return ""
+		}
+		if m := versionInClassPath.FindSubmatch(data); len(m) == 2 {
+			return string(m[1])
+		}
+		return ""
+	}
+	return ""
 }
 
 func downloadJAR(dest string) error {

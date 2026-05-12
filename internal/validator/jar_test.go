@@ -55,8 +55,8 @@ func TestVersionFromURL_NoMatchForOtherURLs(t *testing.T) {
 	}
 }
 
-func TestValidatorVersion_ReturnsUnknownWhenNotCached(t *testing.T) {
-	// Temporarily rename the version file if it exists
+func TestValidatorVersion_FallsBackToJARManifest(t *testing.T) {
+	// Temporarily rename the version file so it is absent.
 	vp, err := cache.ValidatorVersionPath()
 	if err != nil {
 		t.Fatal(err)
@@ -66,16 +66,28 @@ func TestValidatorVersion_ReturnsUnknownWhenNotCached(t *testing.T) {
 	if _, err := os.Stat(vp); err == nil {
 		if err := os.Rename(vp, tmp); err == nil {
 			renamed = true
-			defer func() { _ = os.Rename(tmp, vp) }()
+			defer func() {
+				_ = os.Remove(vp) // clean up the re-created file
+				_ = os.Rename(tmp, vp)
+			}()
 		}
 	}
 	if !renamed {
 		t.Skip("version file not present, skipping rename test")
 	}
 
+	// If the local JAR is present the fallback must return a non-empty, non-"unknown" version.
+	jp, err := cache.JARPath()
+	if err != nil {
+		t.Skip("cannot determine JAR path")
+	}
+	if _, err := os.Stat(jp); os.IsNotExist(err) {
+		t.Skip("local JAR not present, skipping manifest-fallback test")
+	}
+
 	got := ValidatorVersion()
-	if got != "unknown" {
-		t.Errorf("expected 'unknown' when version file missing, got %q", got)
+	if got == "unknown" || got == "" {
+		t.Errorf("expected a version from JAR manifest, got %q", got)
 	}
 }
 
