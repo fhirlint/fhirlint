@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-const minJavaVersion = 11
+const minJavaVersion = 17
 
 func CheckJava() error {
 	out, err := exec.Command("java", "-version").CombinedOutput()
