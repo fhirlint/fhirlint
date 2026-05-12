@@ -97,20 +97,67 @@ func TestValidatorVersion_ReturnsCachedVersion(t *testing.T) {
 	}
 }
 
-func TestEnsureJAR_Override_ExistingFile(t *testing.T) {
+func writeJAR(t *testing.T, content []byte) string {
+	t.Helper()
 	f, err := os.CreateTemp("", "fake-validator-*.jar")
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := f.Write(content); err != nil {
+		t.Fatal(err)
+	}
 	_ = f.Close()
-	defer func() { _ = os.Remove(f.Name()) }()
+	t.Cleanup(func() { _ = os.Remove(f.Name()) })
+	return f.Name()
+}
 
-	got, err := EnsureJAR(f.Name())
+var zipMagic = []byte{0x50, 0x4B, 0x03, 0x04}
+
+func TestIsValidJAR_ValidZIP(t *testing.T) {
+	path := writeJAR(t, append(zipMagic, []byte("rest of jar")...))
+	if !isValidJAR(path) {
+		t.Error("expected true for file with ZIP magic bytes")
+	}
+}
+
+func TestIsValidJAR_EmptyFile(t *testing.T) {
+	path := writeJAR(t, []byte{})
+	if isValidJAR(path) {
+		t.Error("expected false for empty file")
+	}
+}
+
+func TestIsValidJAR_WrongBytes(t *testing.T) {
+	path := writeJAR(t, []byte{0x00, 0x01, 0x02, 0x03})
+	if isValidJAR(path) {
+		t.Error("expected false for file with wrong magic bytes")
+	}
+}
+
+func TestIsValidJAR_NonExistent(t *testing.T) {
+	if isValidJAR("/nonexistent/file.jar") {
+		t.Error("expected false for non-existent file")
+	}
+}
+
+func TestEnsureJAR_Override_ExistingFile(t *testing.T) {
+	path := writeJAR(t, append(zipMagic, []byte("fake jar content")...))
+
+	got, err := EnsureJAR(path)
 	if err != nil {
 		t.Fatalf("EnsureJAR() error: %v", err)
 	}
-	if got != f.Name() {
-		t.Errorf("expected %q, got %q", f.Name(), got)
+	if got != path {
+		t.Errorf("expected %q, got %q", path, got)
+	}
+}
+
+func TestEnsureJAR_Override_CorruptedFile_ReturnsError(t *testing.T) {
+	path := writeJAR(t, []byte("not a jar"))
+
+	_, err := EnsureJAR(path)
+	if err == nil {
+		t.Error("expected error for corrupted JAR, got nil")
 	}
 }
 
