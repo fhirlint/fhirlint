@@ -66,6 +66,18 @@ Windows: download the `.zip` from the [releases page](https://github.com/fhirlin
 go install github.com/fhirlint/fhirlint@latest
 ```
 
+### Docker
+
+```bash
+# Validate files in the current directory
+docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint validate /work/fhir/
+
+# Pin to a specific version
+docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.0.0 validate /work/fhir/
+```
+
+The image includes a JRE — no separate Java installation required.
+
 ### GitHub Actions
 
 ```yaml
@@ -77,6 +89,15 @@ go install github.com/fhirlint/fhirlint@latest
     tar xzf fhirlint_*_linux_amd64.tar.gz
     sudo mv fhirlint /usr/local/bin/
     rm fhirlint_*_linux_amd64.tar.gz
+```
+
+Or use the Docker image directly in a workflow step:
+
+```yaml
+- name: Validate FHIR resources
+  uses: docker://ghcr.io/fhirlint/fhirlint:latest
+  with:
+    args: validate /github/workspace/fhir/ --fail-on error
 ```
 
 ---
