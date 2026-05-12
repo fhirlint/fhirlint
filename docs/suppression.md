@@ -68,9 +68,28 @@ fhirlint validate prescription.json --suppress expression:MedicationRequest.inte
 
 This matches any issue whose location starts with `MedicationRequest.intent` — including nested paths like `MedicationRequest.intent.value`.
 
+### `pattern` — by regex match on message text
+
+Suppresses any issue whose full message text matches a regular expression. Useful when a message varies slightly across resources or validator versions and cannot be pinned to a stable `messageId`:
+
+```bash
+fhirlint validate resources/ --suppress "pattern:.*example\\.org.*"
+```
+
+```yaml
+suppress:
+  - pattern: ".*example\\.org.*"         # suppress all messages mentioning example.org
+  - pattern: "Unknown extension.*"
+    severity: warning                     # optional: only at this severity
+```
+
+Invalid regex patterns are rejected at startup with a clear error — not silently at match time.
+
+`messageId`, `constraint`, and `expression` are preferred when available — `pattern` is the right tool only when the other selectors cannot target the issue precisely enough.
+
 ### Optional severity filter
 
-All three selectors accept an optional severity qualifier in `fhirlint.yml`:
+All four selectors accept an optional severity qualifier in `fhirlint.yml`:
 
 ```yaml
 suppress:
