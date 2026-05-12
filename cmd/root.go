@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -8,8 +10,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "fhirlint",
-	Short: "Lightweight FHIR validator CLI",
+	Use:          "fhirlint",
+	Short:        "Lightweight FHIR validator CLI",
+	SilenceErrors: true,
 	Long: `fhirlint validates FHIR resources against profiles and implementation guides.
 
 It wraps the official HL7 FHIR Validator with a better developer experience:
@@ -25,6 +28,9 @@ HL7® FHIR® is a registered trademark of Health Level Seven International.`,
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		if !errors.Is(err, errValidationFailed) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }

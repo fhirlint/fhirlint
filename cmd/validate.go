@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,11 @@ import (
 )
 
 const defaultFHIRVersion = "4.0.1"
+
+// errValidationFailed is returned by checkExitCode when issues exceed the
+// --fail-on threshold. Using a sentinel instead of os.Exit allows deferred
+// temp-file cleanup to run before the process exits.
+var errValidationFailed = errors.New("validation failed")
 
 var (
 	flagProfile             []string
@@ -832,7 +838,7 @@ func checkExitCode(results []*validator.Result) error {
 	for _, r := range results {
 		for _, issue := range r.Issues {
 			if threshold[issue.Severity] >= min {
-				os.Exit(1)
+				return errValidationFailed
 			}
 		}
 	}
