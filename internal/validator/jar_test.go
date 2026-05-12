@@ -1,6 +1,10 @@
 package validator
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -158,6 +162,75 @@ func TestEnsureJAR_Override_CorruptedFile_ReturnsError(t *testing.T) {
 	_, err := EnsureJAR(path)
 	if err == nil {
 		t.Error("expected error for corrupted JAR, got nil")
+	}
+}
+
+func sha256hex(data []byte) string {
+	h := sha256.Sum256(data)
+	return fmt.Sprintf("%x", h)
+}
+
+func TestVerifyJARChecksum_MatchingHash(t *testing.T) {
+	content := []byte("fake jar content")
+	path := writeJAR(t, content)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, sha256hex(content))
+	}))
+	defer srv.Close()
+
+	// Temporarily override the URL pattern via a wrapper function call
+	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+		t.Errorf("expected nil for matching checksum, got: %v", err)
+	}
+}
+
+func TestVerifyJARChecksum_MismatchHash(t *testing.T) {
+	path := writeJAR(t, []byte("fake jar content"))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "0000000000000000000000000000000000000000000000000000000000000000")
+	}))
+	defer srv.Close()
+
+	err := verifyJARChecksumURL(path, srv.URL)
+	if err == nil {
+		t.Error("expected error for mismatched checksum, got nil")
+	}
+}
+
+func TestVerifyJARChecksum_404_SkipsVerification(t *testing.T) {
+	path := writeJAR(t, []byte("fake jar content"))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+		t.Errorf("expected nil when checksum file not published, got: %v", err)
+	}
+}
+
+func TestVerifyJARChecksum_GNUFormat(t *testing.T) {
+	content := []byte("fake jar content")
+	path := writeJAR(t, content)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// GNU coreutils sha256sum format: "hash  filename"
+		fmt.Fprintf(w, "%s  validator_cli.jar\n", sha256hex(content))
+	}))
+	defer srv.Close()
+
+	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+		t.Errorf("expected nil for GNU-format checksum, got: %v", err)
+	}
+}
+
+func TestVerifyJARChecksum_EmptyVersion_Skips(t *testing.T) {
+	path := writeJAR(t, []byte("content"))
+	if err := verifyJARChecksum(path, ""); err != nil {
+		t.Errorf("expected nil for empty version, got: %v", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -117,8 +118,10 @@ func downloadJAR(dest string) error {
 	}
 
 	// Extract version from the final URL after redirect (e.g. .../releases/download/6.9.7/...)
+	var version string
 	if m := versionFromURL.FindStringSubmatch(resp.Request.URL.String()); len(m) == 2 {
-		_ = saveValidatorVersion(m[1])
+		version = m[1]
+		_ = saveValidatorVersion(version)
 	}
 
 	f, err := os.Create(dest) //nolint:gosec // intentional: dest is our own cache path
@@ -126,8 +129,68 @@ func downloadJAR(dest string) error {
 		return err
 	}
 	defer func() { _ = f.Close() }()
-	_, err = io.Copy(f, resp.Body)
-	return err
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	if err := verifyJARChecksum(dest, version); err != nil {
+		_ = os.Remove(dest)
+		return fmt.Errorf(
+			"JAR checksum mismatch — download may be corrupted or tampered with.\n"+
+				"File deleted. Re-run fhirlint to attempt a fresh download.\n"+
+				"Details: %w", err)
+	}
+	return nil
+}
+
+// verifyJARChecksum fetches the .sha256 file for the given release version and compares it
+// against the downloaded JAR. If no checksum file is published, verification is skipped silently.
+func verifyJARChecksum(jarPath, version string) error {
+	if version == "" {
+		return nil
+	}
+	url := fmt.Sprintf(
+		"https://github.com/hapifhir/org.hl7.fhir.core/releases/download/%s/validator_cli.jar.sha256",
+		version,
+	)
+	return verifyJARChecksumURL(jarPath, url)
+}
+
+func verifyJARChecksumURL(jarPath, checksumURL string) error {
+	resp, err := http.Get(checksumURL) //nolint:gosec,noctx // known URL pattern, version from trusted source
+	if err != nil {
+		return nil // network error fetching checksum — skip silently
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil // no checksum file published for this release — skip
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+	// SHA256 files may be "hash  filename" (GNU coreutils format) or just "hash"
+	expected := strings.ToLower(strings.Fields(strings.TrimSpace(string(body)))[0])
+
+	f, err := os.Open(jarPath) //nolint:gosec // our own cache path
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+	actual := fmt.Sprintf("%x", h.Sum(nil))
+
+	if actual != expected {
+		return fmt.Errorf("expected %s, got %s", expected, actual)
+	}
+	return nil
 }
 
 func saveValidatorVersion(version string) error {
