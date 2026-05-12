@@ -9,6 +9,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [Caching terminology responses](#caching-terminology-responses)
 - [Uploading reports as artifacts](#uploading-reports-as-artifacts)
 - [JUnit XML test results](#junit-xml-test-results)
+- [SARIF output for GitHub Code Scanning](#sarif-output-for-github-code-scanning)
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
 - [GitLab CI](#gitlab-ci)
 - [Exit codes](#exit-codes)
@@ -227,6 +228,37 @@ Combine with terminal output to see results in the log and in the test dashboard
     fhirlint validate ./fhir/ \
       --format terminal \
       --format junit --output fhir-results.xml \
+      --fail-on error
+```
+
+---
+
+## SARIF output for GitHub Code Scanning
+
+`--format sarif` produces a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) file that GitHub Code Scanning can ingest and display inline on pull requests and in the Security tab.
+
+```yaml
+- name: Validate FHIR resources
+  run: fhirlint validate ./fhir/ --format sarif --output fhir-results.sarif
+
+- name: Upload SARIF to GitHub Code Scanning
+  uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: fhir-results.sarif
+    category: fhir-validation
+```
+
+Each validation issue becomes a Code Scanning alert linked to its source file and line number. Issues with a `messageId` (e.g. `dom-6`) appear under their own rule; issues without one are grouped under the generic `fhir-validation` rule.
+
+Combine with terminal output to see results in the log and as Code Scanning alerts at the same time:
+
+```yaml
+- name: Validate FHIR resources
+  run: |
+    fhirlint validate ./fhir/ \
+      --format terminal \
+      --format sarif --output fhir-results.sarif \
       --fail-on error
 ```
 
