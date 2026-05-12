@@ -10,7 +10,7 @@
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
-`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON and HTML reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA).
+`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON, HTML, JUnit, and SARIF reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA).
 
 The validator JAR is downloaded automatically on first use — no manual setup required.
 
@@ -169,6 +169,9 @@ fhirlint validate patient.json --format html --output report.html
 
 # JUnit XML report (for GitHub Actions, Jenkins, Azure DevOps test dashboards)
 fhirlint validate ./fhir/ --format junit --output results.xml
+
+# SARIF report (for GitHub Code Scanning / security dashboard)
+fhirlint validate ./fhir/ --format sarif --output results.sarif
 
 # Multiple formats in one run
 fhirlint validate patient.json --format terminal --format json --output results.json
@@ -375,7 +378,7 @@ A fully annotated example is provided in [`fhirlint.yml.example`](fhirlint.yml.e
 | `--ig` | — | IG package, e.g. `kbv.basis#1.5.0` (repeatable) |
 | `--codesystem` | — | Local FHIR `CodeSystem` file (repeatable) |
 | `--valueset` | — | Local FHIR `ValueSet` file (repeatable) |
-| `--format`, `-f` | `terminal` | Output format: `terminal`, `json`, `html`, `junit` (repeatable) |
+| `--format`, `-f` | `terminal` | Output format: `terminal`, `json`, `html`, `junit`, `sarif` (repeatable) |
 | `--output`, `-o` | stdout | Output file for `json`/`html` reports |
 | `--severity`, `-s` | `information` | Minimum severity to display: `information`, `warning`, `error` |
 | `--fail-on` | `error` | Exit non-zero when issues at this level or above are found: `error`, `warning`, `never` |
