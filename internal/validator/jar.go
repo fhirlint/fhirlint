@@ -27,6 +27,9 @@ func EnsureJAR(override string) (string, error) {
 		if _, err := os.Stat(override); err != nil {
 			return "", fmt.Errorf("JAR not found at %q (set via --jar or FHIRLINT_JAR): %w", override, err)
 		}
+		if !isValidJAR(override) {
+			return "", fmt.Errorf("JAR at %q appears to be corrupted or is not a valid JAR file", override)
+		}
 		return override, nil
 	}
 
@@ -34,7 +37,15 @@ func EnsureJAR(override string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := os.Stat(jarPath); os.IsNotExist(err) {
+
+	_, statErr := os.Stat(jarPath)
+	if statErr == nil && !isValidJAR(jarPath) {
+		fmt.Fprintln(os.Stderr, "validator JAR appears to be corrupted — re-downloading...")
+		_ = os.Remove(jarPath)
+		statErr = os.ErrNotExist
+	}
+
+	if os.IsNotExist(statErr) {
 		fmt.Fprintln(os.Stderr, "Downloading FHIR validator JAR (first run, ~250 MB)...")
 		if err := downloadJAR(jarPath); err != nil {
 			_ = os.Remove(jarPath)
@@ -51,6 +62,22 @@ func EnsureJAR(override string) (string, error) {
 		fmt.Fprintln(os.Stderr, "Download complete.")
 	}
 	return jarPath, nil
+}
+
+// isValidJAR checks that the file starts with the ZIP magic bytes (PK\x03\x04).
+// JAR files are ZIP archives; a missing or wrong header indicates a corrupt/incomplete download.
+func isValidJAR(path string) bool {
+	f, err := os.Open(path) //nolint:gosec // path is our own cache file or user-supplied --jar
+	if err != nil {
+		return false
+	}
+	defer func() { _ = f.Close() }()
+	magic := make([]byte, 4)
+	n, err := f.Read(magic)
+	if err != nil || n < 4 {
+		return false
+	}
+	return magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04
 }
 
 func UpdateJAR() error {
