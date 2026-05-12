@@ -2,10 +2,6 @@ version: 2
 
 project_name: fhirlint
 
-before:
-  hooks:
-    - go mod tidy
-
 builds:
   - main: .
     binary: fhirlint
