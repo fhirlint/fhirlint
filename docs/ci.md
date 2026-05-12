@@ -91,6 +91,8 @@ Alternatively, check in a pre-downloaded JAR and point fhirlint at it:
 
 The validator resolves code system lookups against `https://tx.fhir.org`. These responses can be cached between runs with `--tx-cache`, which is often the biggest source of per-run latency after the JAR itself.
 
+> **Important:** `tx.fhir.org` is a public development server that HL7 explicitly states is not provisioned for CI or production use. It has no SLA and can go down without notice. For CI, either cache responses with `--tx-cache` (recommended) or disable the terminology server entirely with `--no-terminology-server`. For production systems, run your own terminology server.
+
 ```yaml
       - name: Cache terminology responses
         uses: actions/cache@v4
@@ -290,3 +292,6 @@ fhirlint requires Java 11+. Add `actions/setup-java` (GitHub Actions) or use a J
 
 **Different results between local and CI**
 The most common cause is a different JAR version or a cold terminology cache. Pin the JAR version in `fhirlint.yml` and use `--tx-cache` with a persistent cache store.
+
+**Terminology server errors or flaky validation in CI**
+`tx.fhir.org` is not provisioned for CI use and can be unavailable. Use `--tx-cache` to reuse cached responses across runs, or switch to `--no-terminology-server` if terminology validation is not required. For reliable CI, consider running your own terminology server.
