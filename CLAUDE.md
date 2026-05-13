@@ -48,6 +48,12 @@ golangci-lint run
 
 `//nolint` annotations require a reason comment.
 
+## Branching & PRs
+
+- Every issue gets its own branch: `issue-<number>-<short-slug>`
+- Open a PR against `main` — details go in the PR description, not the commit message
+- Merge directly to `main` after review
+
 ## Commit messages
 
 - **One-liner only** — `feat(#42): add --foo flag` is enough; details belong in the PR description

@@ -2,12 +2,16 @@ package input
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
+
+const defaultHTTPTimeout = 30 * time.Second
 
 type Source int
 
@@ -32,9 +36,10 @@ func (i *Input) Cleanup() {
 }
 
 // Resolve determines the input type and prepares a file path the validator can use.
-func Resolve(arg string, fromURL string) (*Input, error) {
+// httpTimeout applies only to URL inputs; 0 uses the default (30s).
+func Resolve(arg string, fromURL string, httpTimeout time.Duration) (*Input, error) {
 	if fromURL != "" {
-		return fromHTTP(fromURL)
+		return fromHTTP(fromURL, httpTimeout)
 	}
 	if arg == "" || arg == "-" {
 		return fromStdin()
@@ -57,8 +62,17 @@ func fromStdin() (*Input, error) {
 	return writeTempFileDetectExt(data, "stdin")
 }
 
-func fromHTTP(rawURL string) (*Input, error) {
-	resp, err := http.Get(rawURL) //nolint:gosec,noctx // intentional: user-supplied URL
+func fromHTTP(rawURL string, timeout time.Duration) (*Input, error) {
+	if timeout == 0 {
+		timeout = defaultHTTPTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil) //nolint:gosec // intentional: user-supplied URL
+	if err != nil {
+		return nil, fmt.Errorf("fetching %s: %w", rawURL, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", rawURL, err)
 	}

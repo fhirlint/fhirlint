@@ -65,6 +65,10 @@ type Options struct {
 	// Timeout limits how long the Java validator process may run.
 	// Zero means no timeout.
 	Timeout time.Duration
+
+	// HTTPTimeout limits how long each HTTP fetch via ValidateURL may take.
+	// Zero uses the default of 30 seconds.
+	HTTPTimeout time.Duration
 }
 
 // Result holds the validation outcome for one resource.
@@ -174,7 +178,7 @@ func ValidateDir(dir string, opts Options) ([]*Result, error) {
 
 // ValidateURL fetches a FHIR resource from an HTTP endpoint and validates it.
 func ValidateURL(rawURL string, opts Options) (*Result, error) {
-	in, err := input.Resolve("", rawURL)
+	in, err := input.Resolve("", rawURL, opts.HTTPTimeout)
 	if err != nil {
 		return nil, err
 	}
