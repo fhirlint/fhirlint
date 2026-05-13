@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Issue is our internal representation, mapped from OperationOutcome.issue.
@@ -61,11 +63,12 @@ type Options struct {
 	IGs                 []string
 	NoTerminologyServer bool
 	TerminologyServer   string
-	BestPractice       string // ignore | hint | warning | error (empty = JAR default)
-	TxCache            string // path to terminology cache dir, or "n/a" to disable
-	Locale             string // Java locale code, e.g. "de", "fr" (empty = JAR default)
-	AllowExampleURLs   bool   // pass -allow-example-urls to suppress example.org warnings
-	JARPath            string // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	BestPractice       string        // ignore | hint | warning | error (empty = JAR default)
+	TxCache            string        // path to terminology cache dir, or "n/a" to disable
+	Locale             string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
+	AllowExampleURLs   bool          // pass -allow-example-urls to suppress example.org warnings
+	JARPath            string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	Timeout            time.Duration // 0 means no timeout
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -166,12 +169,23 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 
 	args := buildArgs(jarPath, inputPaths, tmpFile.Name(), opts)
 
+	ctx := context.Background()
+	var cancel context.CancelFunc = func() {}
+	if opts.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+	}
+	defer cancel()
+
 	var stderrBuf bytes.Buffer
-	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled input paths
+	cmd := exec.CommandContext(ctx, "java", args...) //nolint:gosec // intentional: runs java with user-controlled input paths
 	cmd.Stdout = nil
 	cmd.Stderr = &stderrBuf
 	// Non-zero exit is expected when validation finds errors — not a tool failure.
 	_ = cmd.Run()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return nil, fmt.Errorf("validator timed out after %s — use --timeout to increase the limit", formatDuration(opts.Timeout))
+	}
 
 	jsonBytes, err := os.ReadFile(tmpFile.Name())
 	if err != nil {
@@ -246,6 +260,19 @@ func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, er
 	}
 }
 
+
+// formatDuration formats a duration for display, removing redundant zero components
+// (e.g. "5m0s" → "5m", "1h0m0s" → "1h").
+func formatDuration(d time.Duration) string {
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = s[:len(s)-2] // "5m0s" → "5m"
+	}
+	if strings.HasSuffix(s, "h0m") {
+		s = s[:len(s)-2] // "1h0m" → "1h"
+	}
+	return s
+}
 
 func toResult(oo operationOutcome, filename string) *Result {
 	valid := true

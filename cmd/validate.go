@@ -55,6 +55,7 @@ var (
 	flagValueSet            []string
 	flagCache               bool
 	flagCacheDir            string
+	flagTimeout             string
 )
 
 var validateCmd = &cobra.Command{
@@ -125,6 +126,8 @@ func init() {
 		"Silence a known issue: type:value (repeatable). Types: messageId, constraint, expression")
 	validateCmd.Flags().BoolVar(&flagShowSuppressed, "show-suppressed", false,
 		"Show suppressed issues with a muted label instead of hiding them")
+	validateCmd.Flags().StringVar(&flagTimeout, "timeout", "5m",
+		"Timeout for the Java validator process (e.g. 30s, 5m, 1h). Set to 0 to disable.")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -146,6 +149,7 @@ func init() {
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
 	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
+	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -221,6 +225,18 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("cache-dir") && viper.IsSet("cache-dir") {
 		flagCacheDir = viper.GetString("cache-dir")
 	}
+	if !cmd.Flags().Changed("timeout") && viper.IsSet("timeout") {
+		flagTimeout = viper.GetString("timeout")
+	}
+
+	var validatorTimeout time.Duration
+	if flagTimeout != "0" {
+		var parseErr error
+		validatorTimeout, parseErr = time.ParseDuration(flagTimeout)
+		if parseErr != nil {
+			return fmt.Errorf("invalid --timeout value %q (examples: 5m, 30s, 1h): %w", flagTimeout, parseErr)
+		}
+	}
 
 	if flagExtract != "" && flagExtractEach != "" {
 		return fmt.Errorf("--extract and --extract-each are mutually exclusive")
@@ -259,6 +275,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		Locale:              flagLocale,
 		AllowExampleURLs:    flagAllowExampleURLs,
 		JARPath:             viper.GetString("jar"),
+		Timeout:             validatorTimeout,
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.

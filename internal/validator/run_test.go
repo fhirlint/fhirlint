@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+	"time"
 )
 
 // fixtureOO loads a testdata/fixtures/*.json file as an operationOutcome.
@@ -172,6 +174,71 @@ func TestOOMError_NilOnNormalStderr(t *testing.T) {
 func TestOOMError_NilOnEmpty(t *testing.T) {
 	if err := oomError(""); err != nil {
 		t.Errorf("expected nil for empty stderr, got: %v", err)
+	}
+}
+
+func TestFormatDuration(t *testing.T) {
+	tests := []struct {
+		d    time.Duration
+		want string
+	}{
+		{5 * time.Minute, "5m"},
+		{30 * time.Second, "30s"},
+		{time.Hour, "1h"},
+		{90 * time.Second, "1m30s"},
+		{200 * time.Millisecond, "200ms"},
+		{90 * time.Minute, "1h30m"},
+	}
+	for _, tt := range tests {
+		got := formatDuration(tt.d)
+		if got != tt.want {
+			t.Errorf("formatDuration(%v) = %q, want %q", tt.d, got, tt.want)
+		}
+	}
+}
+
+func TestRunMultiple_TimesOut(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess timeout test")
+	}
+
+	dir := t.TempDir()
+
+	// Fake "java" that hangs indefinitely.
+	// exec replaces the shell process so that SIGKILL reaches the sleep directly,
+	// preventing the child from holding the stderr pipe open past the timeout.
+	fakeJava := filepath.Join(dir, "java")
+	if err := os.WriteFile(fakeJava, []byte("#!/bin/sh\nexec sleep 60\n"), 0755); err != nil { //nolint:gosec // test helper
+		t.Fatal(err)
+	}
+
+	// Dummy JAR file so EnsureJAR passes the existence check.
+	fakeJAR := filepath.Join(dir, "validator_cli.jar")
+	if err := os.WriteFile(fakeJAR, []byte{}, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Dummy FHIR input file.
+	fakeInput := filepath.Join(dir, "patient.json")
+	if err := os.WriteFile(fakeInput, []byte(`{"resourceType":"Patient"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	_, err := RunMultiple([]string{fakeInput}, Options{
+		FHIRVersion: "4.0.1",
+		JARPath:     fakeJAR,
+		Timeout:     200 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Errorf("expected 'timed out' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "--timeout") {
+		t.Errorf("expected '--timeout' in error, got: %v", err)
 	}
 }
 

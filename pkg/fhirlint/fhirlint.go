@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/profiles"
@@ -60,6 +61,10 @@ type Options struct {
 	// JARPath overrides the auto-downloaded validator JAR with a local copy.
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
+
+	// Timeout limits how long the Java validator process may run.
+	// Zero means no timeout.
+	Timeout time.Duration
 }
 
 // Result holds the validation outcome for one resource.
@@ -206,6 +211,7 @@ func toInternalOpts(opts Options) validator.Options {
 		Locale:              opts.Locale,
 		AllowExampleURLs:    opts.AllowExampleURLs,
 		JARPath:             opts.JARPath,
+		Timeout:             opts.Timeout,
 	}
 }
 

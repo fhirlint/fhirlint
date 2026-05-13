@@ -2,6 +2,7 @@ package fhirlint
 
 import (
 	"testing"
+	"time"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -32,6 +33,7 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 		Locale:              "de",
 		AllowExampleURLs:    true,
 		JARPath:             "/opt/validator.jar",
+		Timeout:             5 * time.Minute,
 	}
 	out := toInternalOpts(in)
 
@@ -64,6 +66,16 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 	}
 	if out.JARPath != "/opt/validator.jar" {
 		t.Errorf("JARPath: got %q", out.JARPath)
+	}
+	if out.Timeout != 5*time.Minute {
+		t.Errorf("Timeout: got %v", out.Timeout)
+	}
+}
+
+func TestToInternalOpts_TimeoutZero_NoTimeout(t *testing.T) {
+	out := toInternalOpts(Options{Timeout: 0})
+	if out.Timeout != 0 {
+		t.Errorf("expected zero Timeout to pass through as 0, got %v", out.Timeout)
 	}
 }
 
