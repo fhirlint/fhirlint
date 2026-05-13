@@ -212,9 +212,9 @@ func TestRunMultiple_TimesOut(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Dummy JAR file so EnsureJAR passes the existence check.
+	// Dummy JAR file with ZIP magic bytes so EnsureJAR passes the isValidJAR check.
 	fakeJAR := filepath.Join(dir, "validator_cli.jar")
-	if err := os.WriteFile(fakeJAR, []byte{}, 0600); err != nil {
+	if err := os.WriteFile(fakeJAR, []byte{0x50, 0x4B, 0x03, 0x04}, 0600); err != nil {
 		t.Fatal(err)
 	}
 
