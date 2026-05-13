@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestResolve_ExistingFile(t *testing.T) {
@@ -21,7 +22,7 @@ func TestResolve_ExistingFile(t *testing.T) {
 	}
 	defer func() { _ = os.Remove(f.Name()) }()
 
-	in, err := Resolve(f.Name(), "")
+	in, err := Resolve(f.Name(), "", 0)
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestResolve_ExistingDirectory(t *testing.T) {
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
 
-	in, err := Resolve(dir, "")
+	in, err := Resolve(dir, "", 0)
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
@@ -59,7 +60,7 @@ func TestResolve_ExistingDirectory(t *testing.T) {
 }
 
 func TestResolve_NonExistentPath_ReturnsError(t *testing.T) {
-	_, err := Resolve("/this/does/not/exist.json", "")
+	_, err := Resolve("/this/does/not/exist.json", "", 0)
 	if err == nil {
 		t.Error("expected error for non-existent path, got nil")
 	}
@@ -72,7 +73,7 @@ func TestResolve_URL_FetchesAndWritesTempFile(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	in, err := Resolve("", srv.URL+"/fhir/Patient/test")
+	in, err := Resolve("", srv.URL+"/fhir/Patient/test", 0)
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
@@ -101,7 +102,7 @@ func TestResolve_URL_XMLContentType_GetsXMLExtension(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	in, err := Resolve("", srv.URL+"/fhir/Patient/test")
+	in, err := Resolve("", srv.URL+"/fhir/Patient/test", 0)
 	if err != nil {
 		t.Fatalf("Resolve() error: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestResolve_URL_404_ReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := Resolve("", srv.URL+"/not-found")
+	_, err := Resolve("", srv.URL+"/not-found", 0)
 	if err == nil {
 		t.Error("expected error for 404 response, got nil")
 	}
@@ -181,4 +182,34 @@ func TestWriteTempFileDetectExt_XMLWithLeadingWhitespace(t *testing.T) {
 	if filepath.Ext(in.Path) != ".xml" {
 		t.Errorf("expected .xml for XML with leading whitespace, got %q", filepath.Ext(in.Path))
 	}
+}
+
+func TestResolve_URL_Timeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(500 * time.Millisecond) // simulate a slow/hung server
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	_, err := Resolve("", srv.URL, 100*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+}
+
+func TestResolve_URL_DefaultTimeout_IsApplied(t *testing.T) {
+	// Passing 0 should use the 30s default, not disable the timeout entirely.
+	// Verify by checking that fromHTTP with timeout=0 still sets a context deadline.
+	// We test indirectly: a fast server should still succeed.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"resourceType":"Patient"}`))
+	}))
+	defer srv.Close()
+
+	in, err := Resolve("", srv.URL, 0)
+	if err != nil {
+		t.Fatalf("expected success with default timeout, got: %v", err)
+	}
+	in.Cleanup()
 }

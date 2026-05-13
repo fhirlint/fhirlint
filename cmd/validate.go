@@ -56,6 +56,7 @@ var (
 	flagCache               bool
 	flagCacheDir            string
 	flagTimeout             string
+	flagURLTimeout          string
 )
 
 var validateCmd = &cobra.Command{
@@ -128,6 +129,8 @@ func init() {
 		"Show suppressed issues with a muted label instead of hiding them")
 	validateCmd.Flags().StringVar(&flagTimeout, "timeout", "5m",
 		"Timeout for the Java validator process (e.g. 30s, 5m, 1h). Set to 0 to disable.")
+	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
+		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -150,6 +153,7 @@ func init() {
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
 	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
 	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
+	_ = viper.BindPFlag("url-timeout", validateCmd.Flags().Lookup("url-timeout"))
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -228,6 +232,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("timeout") && viper.IsSet("timeout") {
 		flagTimeout = viper.GetString("timeout")
 	}
+	if !cmd.Flags().Changed("url-timeout") && viper.IsSet("url-timeout") {
+		flagURLTimeout = viper.GetString("url-timeout")
+	}
 
 	var validatorTimeout time.Duration
 	if flagTimeout != "0" {
@@ -235,6 +242,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		validatorTimeout, parseErr = time.ParseDuration(flagTimeout)
 		if parseErr != nil {
 			return fmt.Errorf("invalid --timeout value %q (examples: 5m, 30s, 1h): %w", flagTimeout, parseErr)
+		}
+	}
+
+	var urlTimeout time.Duration
+	if flagURLTimeout != "0" {
+		var parseErr error
+		urlTimeout, parseErr = time.ParseDuration(flagURLTimeout)
+		if parseErr != nil {
+			return fmt.Errorf("invalid --url-timeout value %q (examples: 10s, 30s, 1m): %w", flagURLTimeout, parseErr)
 		}
 	}
 
@@ -288,7 +304,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--watch is not compatible with --format %s --output; use terminal output only", format)
 			}
 		}
-		in, werr := input.Resolve(arg, "")
+		in, werr := input.Resolve(arg, "", 0)
 		if werr != nil {
 			return werr
 		}
@@ -314,7 +330,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			if len(flagURLs) > 1 {
 				return fmt.Errorf("--extract-each can only be used with a single --url")
 			}
-			in, rerr := input.Resolve("", flagURLs[0])
+			in, rerr := input.Resolve("", flagURLs[0], urlTimeout)
 			if rerr != nil {
 				return rerr
 			}
@@ -326,10 +342,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			}
 			results, err = extractEachAndValidate(in, opts)
 		} else {
-			results, err = validateURLs(flagURLs, opts)
+			results, err = validateURLs(flagURLs, opts, urlTimeout)
 		}
 	} else {
-		in, rerr := input.Resolve(arg, "")
+		in, rerr := input.Resolve(arg, "", 0)
 		if rerr != nil {
 			return rerr
 		}
@@ -444,7 +460,7 @@ func collectFHIRPaths(in *input.Input) ([]string, error) {
 
 // validateURLs fetches all URLs, applies --extract/--ignore to each response, and validates
 // them in a single JVM invocation.
-func validateURLs(urls []string, opts validator.Options) ([]*validator.Result, error) {
+func validateURLs(urls []string, opts validator.Options, httpTimeout time.Duration) ([]*validator.Result, error) {
 	ins := make([]*input.Input, 0, len(urls))
 	defer func() {
 		for _, in := range ins {
@@ -453,7 +469,7 @@ func validateURLs(urls []string, opts validator.Options) ([]*validator.Result, e
 	}()
 
 	for _, u := range urls {
-		in, err := input.Resolve("", u)
+		in, err := input.Resolve("", u, httpTimeout)
 		if err != nil {
 			return nil, err
 		}

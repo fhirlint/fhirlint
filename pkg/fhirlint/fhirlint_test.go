@@ -34,6 +34,7 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 		AllowExampleURLs:    true,
 		JARPath:             "/opt/validator.jar",
 		Timeout:             5 * time.Minute,
+		HTTPTimeout:         45 * time.Second,
 	}
 	out := toInternalOpts(in)
 
