@@ -51,8 +51,10 @@ test: add buildArgs unit tests
 refactor: extract buildArgs as pure function
 ```
 
+- **One-liner only** — keep the subject line short and self-contained; put additional context in the PR description, not the commit body
 - First line under 72 characters
 - Reference the relevant issue number where applicable
+- **No AI co-author lines** — do not add `Co-Authored-By: Claude` or similar AI attribution to commits
 
 ## Opening a PR
 
