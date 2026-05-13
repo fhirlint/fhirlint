@@ -8,14 +8,17 @@ import (
 
 func TestParseCLI_Valid(t *testing.T) {
 	cases := []struct {
-		input    string
-		wantType string
-		wantVal  string
+		input      string
+		wantType   string
+		wantVal    string
+		wantReason string
 	}{
-		{"messageId:dom-6", "messageId", "dom-6"},
-		{"constraint:dom-6", "constraint", "dom-6"},
-		{"expression:Patient.name", "expression", "Patient.name"},
-		{"messageId:Measure_M_POPULATIONIDENTIFIER", "messageId", "Measure_M_POPULATIONIDENTIFIER"},
+		{"messageId:dom-6", "messageId", "dom-6", ""},
+		{"constraint:dom-6", "constraint", "dom-6", ""},
+		{"expression:Patient.name", "expression", "Patient.name", ""},
+		{"messageId:Measure_M_POPULATIONIDENTIFIER", "messageId", "Measure_M_POPULATIONIDENTIFIER", ""},
+		{"constraint:dom-6|Narrative not required in API context", "constraint", "dom-6", "Narrative not required in API context"},
+		{"messageId:UNKNOWN_CODESYSTEM| trimmed reason ", "messageId", "UNKNOWN_CODESYSTEM", "trimmed reason"},
 	}
 	for _, tc := range cases {
 		r, err := ParseCLI(tc.input)
@@ -28,6 +31,9 @@ func TestParseCLI_Valid(t *testing.T) {
 		}
 		if r.Value != tc.wantVal {
 			t.Errorf("ParseCLI(%q).Value = %q, want %q", tc.input, r.Value, tc.wantVal)
+		}
+		if r.Reason != tc.wantReason {
+			t.Errorf("ParseCLI(%q).Reason = %q, want %q", tc.input, r.Reason, tc.wantReason)
 		}
 	}
 }
@@ -62,6 +68,16 @@ func TestParseMap_WithSeverity(t *testing.T) {
 	}
 	if r.Severity != "warning" {
 		t.Errorf("Severity = %q, want %q", r.Severity, "warning")
+	}
+}
+
+func TestParseMap_WithReason(t *testing.T) {
+	r, err := ParseMap(map[string]interface{}{"constraint": "dom-6", "reason": "Narrative not required in API context"})
+	if err != nil {
+		t.Fatalf("ParseMap error: %v", err)
+	}
+	if r.Reason != "Narrative not required in API context" {
+		t.Errorf("Reason = %q, want %q", r.Reason, "Narrative not required in API context")
 	}
 }
 

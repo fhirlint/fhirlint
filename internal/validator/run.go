@@ -15,10 +15,11 @@ import (
 
 // Issue is our internal representation, mapped from OperationOutcome.issue.
 type Issue struct {
-	Severity  string `json:"severity"`  // fatal | error | warning | information
-	Message   string `json:"message"`
-	Location  string `json:"location"`
-	MessageID string `json:"messageId"`
+	Severity       string `json:"severity"`                 // fatal | error | warning | information
+	Message        string `json:"message"`
+	Location       string `json:"location"`
+	MessageID      string `json:"messageId"`
+	SuppressReason string `json:"suppressReason,omitempty"` // set when the issue is suppressed
 }
 
 // Result holds the outcome for one validated resource.

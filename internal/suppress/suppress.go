@@ -14,23 +14,27 @@ type Rule struct {
 	Value    string
 	Regexp   *regexp.Regexp // compiled pattern; non-nil only when Type == "pattern"
 	Severity string         // optional; empty matches any severity
+	Reason   string         // optional; shown in --show-suppressed output for audit trail
 	Raw      string         // original string for diagnostics
 }
 
-// ParseCLI parses the CLI flag format "type:value".
+// ParseCLI parses the CLI flag format "type:value" or "type:value|reason".
+// The optional "|reason" suffix is split on the first pipe character.
+// For pattern rules whose regex contains "|", use the YAML config format instead.
 func ParseCLI(s string) (Rule, error) {
 	idx := strings.Index(s, ":")
 	if idx < 0 {
 		return Rule{}, fmt.Errorf("invalid suppress rule %q: expected type:value (e.g. messageId:dom-6)", s)
 	}
-	typ, val := s[:idx], s[idx+1:]
+	typ, rest := s[:idx], s[idx+1:]
+	val, reason, _ := strings.Cut(rest, "|")
 	if val == "" {
 		return Rule{}, fmt.Errorf("invalid suppress rule %q: value is empty", s)
 	}
 	if err := validateType(typ); err != nil {
 		return Rule{}, err
 	}
-	r := Rule{Type: typ, Value: val, Raw: s}
+	r := Rule{Type: typ, Value: val, Reason: strings.TrimSpace(reason), Raw: s}
 	if typ == "pattern" {
 		re, err := regexp.Compile(val)
 		if err != nil {
@@ -69,6 +73,9 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 	}
 	if sev, ok := m["severity"]; ok {
 		r.Severity = fmt.Sprintf("%v", sev)
+	}
+	if reason, ok := m["reason"]; ok {
+		r.Reason = strings.TrimSpace(fmt.Sprintf("%v", reason))
 	}
 	return r, nil
 }
@@ -117,6 +124,7 @@ func Apply(results []*validator.Result, rules []Rule) []int {
 			matched := false
 			for i, rule := range rules {
 				if rule.Matches(issue) {
+					issue.SuppressReason = rule.Reason
 					suppressed = append(suppressed, issue)
 					matchCount[i]++
 					matched = true

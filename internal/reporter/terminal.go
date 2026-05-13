@@ -58,6 +58,9 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed bool)
 			if issue.Location != "" {
 				fmt.Println(dimStyle.Render("           @ " + issue.Location))
 			}
+			if issue.SuppressReason != "" {
+				fmt.Println(dimStyle.Render("           ↳ " + issue.SuppressReason))
+			}
 		}
 	}
 
