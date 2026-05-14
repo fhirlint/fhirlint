@@ -26,8 +26,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          ADVISORY_COUNT: ${{ steps.advisories.outputs.count }}
         run: |
-          count="${{ steps.advisories.outputs.count }}"
+          count="$ADVISORY_COUNT"
           existing=$(gh issue list --label "security,jar" --state open --json number --jq 'length')
           if [ "$existing" -gt "0" ]; then
             echo "Issue already open, skipping."
