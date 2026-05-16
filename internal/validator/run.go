@@ -121,8 +121,8 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 	if opts.AllowInsecureTx || !strings.HasPrefix(opts.TerminologyServer, "http://") {
 		return
 	}
-	fmt.Fprintln(w, "warning: terminology server URL uses HTTP — data will be transmitted unencrypted.")
-	fmt.Fprintln(w, "Use HTTPS or suppress this warning with --allow-insecure-tx.")
+	_, _ = fmt.Fprintln(w, "warning: terminology server URL uses HTTP — data will be transmitted unencrypted.")
+	_, _ = fmt.Fprintln(w, "Use HTTPS or suppress this warning with --allow-insecure-tx.")
 }
 
 // RunWatch starts the JAR in watch mode and blocks until the process is killed (Ctrl-C).
