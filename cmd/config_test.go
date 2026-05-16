@@ -193,6 +193,20 @@ func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_AllowInsecureTxFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "allow-insecure-tx: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetBool("allow-insecure-tx"); !got {
+		t.Error("allow-insecure-tx should be true")
+	}
+}
+
 func TestConfigFile_BestPracticeFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

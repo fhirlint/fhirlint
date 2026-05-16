@@ -62,6 +62,10 @@ ignore:
 # Useful for test fixtures and documentation examples
 # allow-example-urls: true
 
+# Suppress warning when terminology server URL uses HTTP instead of HTTPS
+# Only set this for local or internal servers where encryption is not required
+# allow-insecure-tx: true
+
 # Watch mode: re-validate on file changes (single = changed files only, all = all files)
 # watch: single
 

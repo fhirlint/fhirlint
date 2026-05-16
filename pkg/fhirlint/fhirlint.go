@@ -58,6 +58,9 @@ type Options struct {
 	// AllowExampleURLs suppresses warnings about example.org placeholder URLs.
 	AllowExampleURLs bool
 
+	// AllowInsecureTx suppresses the warning when the terminology server URL uses HTTP.
+	AllowInsecureTx bool
+
 	// JARPath overrides the auto-downloaded validator JAR with a local copy.
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
@@ -214,6 +217,7 @@ func toInternalOpts(opts Options) validator.Options {
 		TxCache:             opts.TxCache,
 		Locale:              opts.Locale,
 		AllowExampleURLs:    opts.AllowExampleURLs,
+		AllowInsecureTx:     opts.AllowInsecureTx,
 		JARPath:             opts.JARPath,
 		Timeout:             opts.Timeout,
 	}
