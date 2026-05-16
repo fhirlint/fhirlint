@@ -128,6 +128,23 @@ func validateFHIRVersion(version string) error {
 	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, strings.Join(allowedFHIRVersions, ", "))
 }
 
+// allowedBestPractice lists the values the HL7 validator JAR accepts for -best-practice.
+var allowedBestPractice = []string{"ignore", "hint", "warning", "error"}
+
+// validateBestPractice returns an error when value is not in allowedBestPractice.
+// An empty value means "use JAR default" and is always valid.
+func validateBestPractice(value string) error {
+	if value == "" {
+		return nil
+	}
+	for _, v := range allowedBestPractice {
+		if value == v {
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown --best-practice value %q — allowed: %s", value, strings.Join(allowedBestPractice, ", "))
+}
+
 // warnInsecureTerminologyServer writes a warning to w when the terminology server URL
 // uses HTTP and the user has not suppressed the warning with AllowInsecureTx.
 func warnInsecureTerminologyServer(w io.Writer, opts Options) {
@@ -143,6 +160,9 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
 func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) error {
 	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
+		return err
+	}
+	if err := validateBestPractice(opts.BestPractice); err != nil {
 		return err
 	}
 
@@ -184,6 +204,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	}
 
 	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
+		return nil, err
+	}
+	if err := validateBestPractice(opts.BestPractice); err != nil {
 		return nil, err
 	}
 
