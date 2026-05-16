@@ -338,6 +338,24 @@ func TestValidateFHIRVersion_Invalid(t *testing.T) {
 	}
 }
 
+func TestValidateBestPractice_Valid(t *testing.T) {
+	for _, v := range []string{"", "ignore", "hint", "warning", "error"} {
+		if err := validateBestPractice(v); err != nil {
+			t.Errorf("expected %q to be valid, got: %v", v, err)
+		}
+	}
+}
+
+func TestValidateBestPractice_Invalid(t *testing.T) {
+	err := validateBestPractice("typo")
+	if err == nil {
+		t.Fatal("expected error for invalid best-practice value")
+	}
+	if !strings.Contains(err.Error(), "typo") {
+		t.Errorf("error should mention the bad value, got: %v", err)
+	}
+}
+
 func TestWarnInsecureTerminologyServer_HTTP_PrintsWarning(t *testing.T) {
 	var buf bytes.Buffer
 	warnInsecureTerminologyServer(&buf, Options{TerminologyServer: "http://tx.example.com"})
