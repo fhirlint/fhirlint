@@ -46,6 +46,7 @@ var (
 	flagTxCache             string
 	flagLocale              string
 	flagAllowExampleURLs    bool
+	flagAllowInsecureTx     bool
 	flagWatch               string
 	flagWatchInterval       int
 	flagSuppress            []string
@@ -110,6 +111,8 @@ func init() {
 		"Disable terminology server — no data is sent to tx.fhir.org")
 	validateCmd.Flags().StringVar(&flagTerminologyServer, "terminology-server", "",
 		"Custom terminology server URL (default: https://tx.fhir.org)")
+	validateCmd.Flags().BoolVar(&flagAllowInsecureTx, "allow-insecure-tx", false,
+		"Suppress warning when terminology server URL uses HTTP instead of HTTPS")
 	validateCmd.Flags().StringVar(&flagBestPractice, "best-practice", "",
 		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
 	validateCmd.Flags().StringVar(&flagTxCache, "tx-cache", "",
@@ -146,6 +149,7 @@ func init() {
 	_ = viper.BindPFlag("ignore", validateCmd.Flags().Lookup("ignore"))
 	_ = viper.BindPFlag("no-terminology-server", validateCmd.Flags().Lookup("no-terminology-server"))
 	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
+	_ = viper.BindPFlag("allow-insecure-tx", validateCmd.Flags().Lookup("allow-insecure-tx"))
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
@@ -201,6 +205,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("terminology-server") && viper.IsSet("terminology-server") {
 		flagTerminologyServer = viper.GetString("terminology-server")
+	}
+	if !cmd.Flags().Changed("allow-insecure-tx") && viper.IsSet("allow-insecure-tx") {
+		flagAllowInsecureTx = viper.GetBool("allow-insecure-tx")
 	}
 	if !cmd.Flags().Changed("best-practice") && viper.IsSet("best-practice") {
 		flagBestPractice = viper.GetString("best-practice")
@@ -290,6 +297,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		TxCache:             flagTxCache,
 		Locale:              flagLocale,
 		AllowExampleURLs:    flagAllowExampleURLs,
+		AllowInsecureTx:     flagAllowInsecureTx,
 		JARPath:             viper.GetString("jar"),
 		Timeout:             validatorTimeout,
 	}

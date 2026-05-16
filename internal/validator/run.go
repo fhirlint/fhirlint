@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -68,6 +69,7 @@ type Options struct {
 	TxCache            string        // path to terminology cache dir, or "n/a" to disable
 	Locale             string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
 	AllowExampleURLs   bool          // pass -allow-example-urls to suppress example.org warnings
+	AllowInsecureTx    bool          // suppress HTTP terminology server warning
 	JARPath            string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 	Timeout            time.Duration // 0 means no timeout
 }
@@ -113,6 +115,16 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	return args
 }
 
+// warnInsecureTerminologyServer writes a warning to w when the terminology server URL
+// uses HTTP and the user has not suppressed the warning with AllowInsecureTx.
+func warnInsecureTerminologyServer(w io.Writer, opts Options) {
+	if opts.AllowInsecureTx || !strings.HasPrefix(opts.TerminologyServer, "http://") {
+		return
+	}
+	_, _ = fmt.Fprintln(w, "warning: terminology server URL uses HTTP — data will be transmitted unencrypted.")
+	_, _ = fmt.Fprintln(w, "Use HTTPS or suppress this warning with --allow-insecure-tx.")
+}
+
 // RunWatch starts the JAR in watch mode and blocks until the process is killed (Ctrl-C).
 // mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
@@ -122,6 +134,7 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 		return err
 	}
 
+	warnInsecureTerminologyServer(os.Stderr, opts)
 	args := buildArgs(jarPath, inputPaths, "", opts)
 	args = append(args, "-watch-mode", mode)
 	if intervalMS > 0 {
@@ -157,6 +170,8 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	warnInsecureTerminologyServer(os.Stderr, opts)
 
 	// Write JSON output to a temp file to avoid mixing with validator log output.
 	tmpFile, err := os.CreateTemp("", "fhirlint-result-*.json")

@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 )
@@ -316,4 +317,39 @@ func mustNotContain(t *testing.T, args []string, value string) {
 
 func encodeJSON(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
+}
+
+func TestWarnInsecureTerminologyServer_HTTP_PrintsWarning(t *testing.T) {
+	var buf bytes.Buffer
+	warnInsecureTerminologyServer(&buf, Options{TerminologyServer: "http://tx.example.com"})
+	if !bytes.Contains(buf.Bytes(), []byte("HTTP")) {
+		t.Errorf("expected HTTP warning, got: %q", buf.String())
+	}
+}
+
+func TestWarnInsecureTerminologyServer_HTTPS_Silent(t *testing.T) {
+	var buf bytes.Buffer
+	warnInsecureTerminologyServer(&buf, Options{TerminologyServer: "https://tx.example.com"})
+	if buf.Len() != 0 {
+		t.Errorf("expected no output for HTTPS, got: %q", buf.String())
+	}
+}
+
+func TestWarnInsecureTerminologyServer_AllowInsecureTx_Silent(t *testing.T) {
+	var buf bytes.Buffer
+	warnInsecureTerminologyServer(&buf, Options{
+		TerminologyServer: "http://tx.example.com",
+		AllowInsecureTx:   true,
+	})
+	if buf.Len() != 0 {
+		t.Errorf("expected no output when AllowInsecureTx=true, got: %q", buf.String())
+	}
+}
+
+func TestWarnInsecureTerminologyServer_Empty_Silent(t *testing.T) {
+	var buf bytes.Buffer
+	warnInsecureTerminologyServer(&buf, Options{})
+	if buf.Len() != 0 {
+		t.Errorf("expected no output for empty URL, got: %q", buf.String())
+	}
 }
