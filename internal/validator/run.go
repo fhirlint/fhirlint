@@ -115,6 +115,19 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	return args
 }
 
+// allowedFHIRVersions lists the FHIR versions the HL7 validator JAR accepts.
+var allowedFHIRVersions = []string{"4.0.1", "4.3.0", "5.0.0"}
+
+// validateFHIRVersion returns an error when version is not in allowedFHIRVersions.
+func validateFHIRVersion(version string) error {
+	for _, v := range allowedFHIRVersions {
+		if version == v {
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, strings.Join(allowedFHIRVersions, ", "))
+}
+
 // warnInsecureTerminologyServer writes a warning to w when the terminology server URL
 // uses HTTP and the user has not suppressed the warning with AllowInsecureTx.
 func warnInsecureTerminologyServer(w io.Writer, opts Options) {
@@ -129,6 +142,10 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 // mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
 func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) error {
+	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
+		return err
+	}
+
 	jarPath, err := EnsureJAR(opts.JARPath)
 	if err != nil {
 		return err
@@ -164,6 +181,10 @@ func Run(inputPath string, opts Options) (*Result, error) {
 func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	if len(inputPaths) == 0 {
 		return nil, nil
+	}
+
+	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
+		return nil, err
 	}
 
 	jarPath, err := EnsureJAR(opts.JARPath)

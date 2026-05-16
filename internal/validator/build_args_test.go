@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -317,6 +318,24 @@ func mustNotContain(t *testing.T, args []string, value string) {
 
 func encodeJSON(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
+}
+
+func TestValidateFHIRVersion_Valid(t *testing.T) {
+	for _, v := range []string{"4.0.1", "4.3.0", "5.0.0"} {
+		if err := validateFHIRVersion(v); err != nil {
+			t.Errorf("expected %q to be valid, got: %v", v, err)
+		}
+	}
+}
+
+func TestValidateFHIRVersion_Invalid(t *testing.T) {
+	err := validateFHIRVersion("3.0.0")
+	if err == nil {
+		t.Fatal("expected error for invalid FHIR version")
+	}
+	if !strings.Contains(err.Error(), "3.0.0") {
+		t.Errorf("error should mention the bad value, got: %v", err)
+	}
 }
 
 func TestWarnInsecureTerminologyServer_HTTP_PrintsWarning(t *testing.T) {
