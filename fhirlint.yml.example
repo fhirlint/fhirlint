@@ -21,6 +21,15 @@ profile:
   # - mii
   # - diga
 
+# Per-resource-type or per-filename-glob profile mapping.
+# Keys are FHIR resource type names or gitignore-style filename globs.
+# Values are one or more profile URLs automatically added for matching files.
+# profile-map:
+#   Patient: http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient
+#   Medication:
+#     - https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Medication|1.5.0
+#   "tests/fixtures/de-*.json": https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0
+
 # Implementation guide packages (repeatable)
 ig:
   # - kbv.basis#1.5.0

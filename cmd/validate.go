@@ -6,9 +6,11 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -274,6 +276,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		excludePatterns = append(excludePatterns, ignorePatterns...)
 	}
 
+	profileMap := loadProfileMap()
+
 	var validatorTimeout time.Duration
 	if flagTimeout != "0" {
 		var parseErr error
@@ -396,7 +400,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--extract-each cannot be used with a directory")
 			}
 			// Apply --ignore on directory inputs (--extract not supported for dirs)
-			results, err = validateDir(in.Path, opts, excludePatterns)
+			results, err = validateDir(in.Path, opts, excludePatterns, profileMap)
 		} else if flagExtractEach != "" {
 			// Apply --ignore to outer document before extracting elements
 			if len(flagIgnore) > 0 {
@@ -412,7 +416,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 					return err
 				}
 			}
-			rs, rerr2 := runWithCache([]string{in.Path}, opts)
+			singleOpts := optsWithProfileMap(opts, in.Path, profileMap)
+			rs, rerr2 := runWithCache([]string{in.Path}, singleOpts)
 			if rerr2 != nil {
 				return rerr2
 			}
@@ -542,6 +547,93 @@ func matchesExclude(relPath, pattern string) bool {
 		}
 	}
 	return false
+}
+
+// loadProfileMap parses the profile-map config key into a map[resourceTypeOrGlob][]profileURL.
+func loadProfileMap() map[string][]string {
+	raw := viper.Get("profile-map")
+	if raw == nil {
+		return nil
+	}
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	result := make(map[string][]string, len(m))
+	for k, v := range m {
+		switch tv := v.(type) {
+		case string:
+			result[k] = []string{tv}
+		case []interface{}:
+			ps := make([]string, 0, len(tv))
+			for _, p := range tv {
+				if s, ok := p.(string); ok {
+					ps = append(ps, s)
+				}
+			}
+			result[k] = ps
+		}
+	}
+	return result
+}
+
+// isFilenameGlob returns true when the profile-map key looks like a filename
+// glob (contains /, *, ?, .) rather than a FHIR resource type name.
+func isFilenameGlob(pattern string) bool {
+	return strings.ContainsAny(pattern, "*/?.\\")
+}
+
+// peekResourceType reads the resourceType field from a JSON file without
+// parsing the entire document.
+func peekResourceType(filePath string) string {
+	f, err := os.Open(filePath) //nolint:gosec // user-supplied path validated upstream
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }()
+	var v struct {
+		ResourceType string `json:"resourceType"`
+	}
+	_ = json.NewDecoder(io.LimitReader(f, 4096)).Decode(&v)
+	return v.ResourceType
+}
+
+// resolveProfilesForPath returns the extra profiles that should be applied to
+// filePath based on the profile-map. Keys are matched as FHIR resource type
+// names first, then as filename globs.
+func resolveProfilesForPath(filePath string, profileMap map[string][]string) []string {
+	if len(profileMap) == 0 {
+		return nil
+	}
+	relSlash := filepath.ToSlash(filePath)
+	var extra []string
+	// Resource type match (non-glob keys).
+	rt := peekResourceType(filePath)
+	if rt != "" {
+		if ps, ok := profileMap[rt]; ok {
+			extra = append(extra, ps...)
+		}
+	}
+	// Filename glob match.
+	for pattern, ps := range profileMap {
+		if !isFilenameGlob(pattern) {
+			continue
+		}
+		if matchesExclude(relSlash, pattern) {
+			extra = append(extra, ps...)
+		}
+	}
+	return extra
+}
+
+// optsWithProfileMap returns opts with extra profiles from profileMap appended.
+func optsWithProfileMap(opts validator.Options, filePath string, profileMap map[string][]string) validator.Options {
+	extra := resolveProfilesForPath(filePath, profileMap)
+	if len(extra) == 0 {
+		return opts
+	}
+	opts.Profiles = append(append([]string{}, opts.Profiles...), extra...)
+	return opts
 }
 
 // loadIgnoreFile reads a gitignore-style ignore file and returns its patterns.
@@ -782,8 +874,10 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	return results, nil
 }
 
-// validateDir finds all .json/.xml files and validates them in a single JVM invocation.
-func validateDir(dir string, opts validator.Options, excludePatterns []string) ([]*validator.Result, error) {
+// validateDir finds all .json/.xml files and validates them.
+// When a profile-map is set, files are grouped by their extra profiles and validated
+// in separate JVM invocations per group.
+func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
 		return nil, err
@@ -791,14 +885,55 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string) (
 	if len(paths) == 0 {
 		return nil, nil
 	}
-	results, err := runWithCache(paths, opts)
-	if err != nil {
-		return nil, err
+
+	if len(profileMap) == 0 {
+		results, err := runWithCache(paths, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range results {
+			r.Label = r.Filename
+		}
+		return results, nil
 	}
-	for _, r := range results {
-		r.Label = r.Filename
+
+	// Group files by their extra-profile combination for minimal JVM invocations.
+	type group struct {
+		paths []string
+		opts  validator.Options
 	}
-	return results, nil
+	groupMap := map[string]*group{}
+	for _, p := range paths {
+		extra := resolveProfilesForPath(p, profileMap)
+		key := strings.Join(extra, "\x00")
+		if _, ok := groupMap[key]; !ok {
+			g := opts
+			g.Profiles = append(append([]string{}, opts.Profiles...), extra...)
+			groupMap[key] = &group{opts: g}
+		}
+		groupMap[key].paths = append(groupMap[key].paths, p)
+	}
+
+	// Sort groups for deterministic output order.
+	keys := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var allResults []*validator.Result
+	for _, k := range keys {
+		g := groupMap[k]
+		rs, rerr := runWithCache(g.paths, g.opts)
+		if rerr != nil {
+			return nil, rerr
+		}
+		for _, r := range rs {
+			r.Label = r.Filename
+		}
+		allResults = append(allResults, rs...)
+	}
+	return allResults, nil
 }
 
 // preprocessJSON applies --extract and --ignore to the input file in-place.

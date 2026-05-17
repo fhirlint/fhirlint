@@ -77,6 +77,81 @@ func TestCheckExitCode_UnknownValue_ReturnsError(t *testing.T) {
 	}
 }
 
+// --- profile-map helpers ---
+
+func TestIsFilenameGlob(t *testing.T) {
+	cases := []struct {
+		pattern string
+		want    bool
+	}{
+		{"Patient", false},
+		{"MedicationRequest", false},
+		{"tests/fixtures/*.json", true},
+		{"vendor/**", true},
+		{"*.xml", true},
+	}
+	for _, tc := range cases {
+		if got := isFilenameGlob(tc.pattern); got != tc.want {
+			t.Errorf("isFilenameGlob(%q) = %v, want %v", tc.pattern, got, tc.want)
+		}
+	}
+}
+
+func TestPeekResourceType_ValidJSON(t *testing.T) {
+	f, err := os.CreateTemp("", "peek-*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
+	_, _ = f.WriteString(`{"resourceType":"Patient","id":"123"}`)
+	_ = f.Close()
+
+	if got := peekResourceType(f.Name()); got != "Patient" {
+		t.Errorf("expected Patient, got %q", got)
+	}
+}
+
+func TestPeekResourceType_Missing_ReturnsEmpty(t *testing.T) {
+	if got := peekResourceType("/nonexistent/file.json"); got != "" {
+		t.Errorf("expected empty for missing file, got %q", got)
+	}
+}
+
+func TestResolveProfilesForPath_ResourceType(t *testing.T) {
+	f, err := os.CreateTemp("", "res-*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
+	_, _ = f.WriteString(`{"resourceType":"Patient"}`)
+	_ = f.Close()
+
+	pm := map[string][]string{
+		"Patient": {"http://example.com/patient-profile"},
+	}
+	got := resolveProfilesForPath(f.Name(), pm)
+	if len(got) != 1 || got[0] != "http://example.com/patient-profile" {
+		t.Errorf("unexpected profiles: %v", got)
+	}
+}
+
+func TestResolveProfilesForPath_NoMatch_ReturnsNil(t *testing.T) {
+	f, err := os.CreateTemp("", "res-*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
+	_, _ = f.WriteString(`{"resourceType":"Observation"}`)
+	_ = f.Close()
+
+	pm := map[string][]string{
+		"Patient": {"http://example.com/patient-profile"},
+	}
+	if got := resolveProfilesForPath(f.Name(), pm); len(got) != 0 {
+		t.Errorf("expected no profiles, got: %v", got)
+	}
+}
+
 // --- matchesExclude ---
 
 func TestMatchesExclude_TrailingSlash(t *testing.T) {
