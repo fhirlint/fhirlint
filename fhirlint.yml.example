@@ -54,6 +54,9 @@ ignore:
 # Useful with actions/cache in CI to reuse terminology responses across runs
 # tx-cache: .fhirlint-tx-cache/
 
+# Write a log of all terminology server HTTP requests to a file (for debugging and auditing)
+# tx-log: tx.log
+
 # Locale for validation messages (Java locale format: de, de-DE, fr, etc.)
 # Default: system locale
 # locale: de

@@ -70,6 +70,7 @@ type Options struct {
 	Locale             string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
 	AllowExampleURLs   bool          // pass -allow-example-urls to suppress example.org warnings
 	AllowInsecureTx    bool          // suppress HTTP terminology server warning
+	TxLog              string        // path to write terminology server request log (-txLog)
 	JARPath            string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 	Timeout            time.Duration // 0 means no timeout
 }
@@ -111,6 +112,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.AllowExampleURLs {
 		args = append(args, "-allow-example-urls")
+	}
+	if opts.TxLog != "" {
+		args = append(args, "-txLog", opts.TxLog)
 	}
 	return args
 }

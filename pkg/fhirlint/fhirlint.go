@@ -61,6 +61,9 @@ type Options struct {
 	// AllowInsecureTx suppresses the warning when the terminology server URL uses HTTP.
 	AllowInsecureTx bool
 
+	// TxLog writes a terminology server request log to the given file path.
+	TxLog string
+
 	// JARPath overrides the auto-downloaded validator JAR with a local copy.
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
@@ -218,6 +221,7 @@ func toInternalOpts(opts Options) validator.Options {
 		Locale:              opts.Locale,
 		AllowExampleURLs:    opts.AllowExampleURLs,
 		AllowInsecureTx:     opts.AllowInsecureTx,
+		TxLog:               opts.TxLog,
 		JARPath:             opts.JARPath,
 		Timeout:             opts.Timeout,
 	}
