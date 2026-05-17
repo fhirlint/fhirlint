@@ -33,6 +33,7 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 		Locale:              "de",
 		AllowExampleURLs:    true,
 		AllowInsecureTx:     true,
+		TxLog:               "/tmp/tx.log",
 		JARPath:             "/opt/validator.jar",
 		Timeout:             5 * time.Minute,
 		HTTPTimeout:         45 * time.Second,
@@ -68,6 +69,9 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 	}
 	if !out.AllowInsecureTx {
 		t.Error("AllowInsecureTx should be true")
+	}
+	if out.TxLog != "/tmp/tx.log" {
+		t.Errorf("TxLog: got %q", out.TxLog)
 	}
 	if out.JARPath != "/opt/validator.jar" {
 		t.Errorf("JARPath: got %q", out.JARPath)

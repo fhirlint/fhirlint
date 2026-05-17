@@ -193,6 +193,20 @@ func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_TxLogFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "tx-log: tx.log\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetString("tx-log"); got != "tx.log" {
+		t.Errorf("tx-log = %q, want %q", got, "tx.log")
+	}
+}
+
 func TestConfigFile_AllowInsecureTxFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

@@ -47,6 +47,7 @@ var (
 	flagLocale              string
 	flagAllowExampleURLs    bool
 	flagAllowInsecureTx     bool
+	flagTxLog               string
 	flagWatch               string
 	flagWatchInterval       int
 	flagSuppress            []string
@@ -117,6 +118,8 @@ func init() {
 		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
 	validateCmd.Flags().StringVar(&flagTxCache, "tx-cache", "",
 		"Terminology cache directory (pass n/a to disable, useful with actions/cache in CI)")
+	validateCmd.Flags().StringVar(&flagTxLog, "tx-log", "",
+		"Write terminology server request log to this file (for debugging and auditing)")
 	validateCmd.Flags().StringVar(&flagLocale, "locale", "",
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
@@ -152,6 +155,7 @@ func init() {
 	_ = viper.BindPFlag("allow-insecure-tx", validateCmd.Flags().Lookup("allow-insecure-tx"))
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
+	_ = viper.BindPFlag("tx-log", validateCmd.Flags().Lookup("tx-log"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
@@ -214,6 +218,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("tx-cache") && viper.IsSet("tx-cache") {
 		flagTxCache = viper.GetString("tx-cache")
+	}
+	if !cmd.Flags().Changed("tx-log") && viper.IsSet("tx-log") {
+		flagTxLog = viper.GetString("tx-log")
 	}
 	if !cmd.Flags().Changed("locale") && viper.IsSet("locale") {
 		flagLocale = viper.GetString("locale")
@@ -298,6 +305,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		Locale:              flagLocale,
 		AllowExampleURLs:    flagAllowExampleURLs,
 		AllowInsecureTx:     flagAllowInsecureTx,
+		TxLog:               flagTxLog,
 		JARPath:             viper.GetString("jar"),
 		Timeout:             validatorTimeout,
 	}

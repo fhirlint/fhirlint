@@ -320,6 +320,19 @@ func encodeJSON(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
+func TestBuildArgs_TxLog(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		TxLog:       "/tmp/tx.log",
+	})
+	mustContainPair(t, args, "-txLog", "/tmp/tx.log")
+}
+
+func TestBuildArgs_TxLogEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-txLog")
+}
+
 func TestValidateFHIRVersion_Valid(t *testing.T) {
 	for _, v := range []string{"4.0.1", "4.3.0", "5.0.0"} {
 		if err := validateFHIRVersion(v); err != nil {
