@@ -174,6 +174,8 @@ func init() {
 	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
 	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
 	_ = viper.BindPFlag("url-timeout", validateCmd.Flags().Lookup("url-timeout"))
+
+	registerFlagCompletions(validateCmd)
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
