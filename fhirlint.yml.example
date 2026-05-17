@@ -8,6 +8,9 @@ severity: warning
 # Exit non-zero when issues at this level or above are found: error | warning | never
 fail-on: error
 
+# Exit non-zero when warning count exceeds N (ratchet pattern; omit or set to -1 to disable)
+# max-warnings: 10
+
 # FHIR version to validate against: 4.0.1 | 4.3.0 | 5.0.0
 fhir-version: 4.0.1
 

@@ -75,6 +75,51 @@ func TestCheckExitCode_UnknownValue_ReturnsError(t *testing.T) {
 	}
 }
 
+// --- checkMaxWarnings ---
+
+func TestCheckMaxWarnings_Disabled_AlwaysPasses(t *testing.T) {
+	flagMaxWarnings = -1
+	if err := checkMaxWarnings(makeResults("warning", "warning", "warning")); err != nil {
+		t.Errorf("expected nil when disabled, got: %v", err)
+	}
+}
+
+func TestCheckMaxWarnings_WithinThreshold_Passes(t *testing.T) {
+	flagMaxWarnings = 3
+	if err := checkMaxWarnings(makeResults("warning", "warning")); err != nil {
+		t.Errorf("expected nil when count <= max, got: %v", err)
+	}
+}
+
+func TestCheckMaxWarnings_ExactThreshold_Passes(t *testing.T) {
+	flagMaxWarnings = 2
+	if err := checkMaxWarnings(makeResults("warning", "warning")); err != nil {
+		t.Errorf("expected nil when count == max, got: %v", err)
+	}
+}
+
+func TestCheckMaxWarnings_ExceedsThreshold_Fails(t *testing.T) {
+	flagMaxWarnings = 1
+	if err := checkMaxWarnings(makeResults("warning", "warning")); err == nil {
+		t.Error("expected error when warning count exceeds max")
+	}
+}
+
+func TestCheckMaxWarnings_OnlyCountsWarnings(t *testing.T) {
+	flagMaxWarnings = 0
+	// errors and information should not count toward the warning limit
+	if err := checkMaxWarnings(makeResults("error", "information", "fatal")); err != nil {
+		t.Errorf("expected nil when no warnings, got: %v", err)
+	}
+}
+
+func TestCheckMaxWarnings_ZeroThreshold_FailsOnAnyWarning(t *testing.T) {
+	flagMaxWarnings = 0
+	if err := checkMaxWarnings(makeResults("warning")); err == nil {
+		t.Error("expected error when max-warnings=0 and one warning present")
+	}
+}
+
 // --- gjsonPath ---
 
 func TestGjsonPath_DollarDotPrefix(t *testing.T) {
