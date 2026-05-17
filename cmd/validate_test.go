@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/input"
@@ -72,6 +74,108 @@ func TestCheckExitCode_UnknownValue_ReturnsError(t *testing.T) {
 	flagFailOn = "typo"
 	if err := checkExitCode(makeResults()); err == nil {
 		t.Error("expected error for unknown fail-on value")
+	}
+}
+
+// --- matchesExclude ---
+
+func TestMatchesExclude_TrailingSlash(t *testing.T) {
+	cases := []struct {
+		relPath string
+		pattern string
+		want    bool
+	}{
+		{"vendor/foo.json", "vendor/", true},
+		{"vendor", "vendor/", true},
+		{"src/vendor/foo.json", "vendor/", false},
+		{"tests/fixtures/legacy/a.json", "tests/fixtures/legacy/**", true},
+		{"tests/fixtures/other/a.json", "tests/fixtures/legacy/**", false},
+		{"src/generated/foo.json", "src/generated/*.json", true},
+		{"src/generated/sub/foo.json", "src/generated/*.json", false},
+		{"foo.json", "*.json", true},
+		{"src/foo.json", "*.json", true},
+		{"src/foo.xml", "*.json", false},
+		{"src/exact.json", "src/exact.json", true},
+		{"src/other.json", "src/exact.json", false},
+		{"", "", false},
+	}
+	for _, tc := range cases {
+		got := matchesExclude(tc.relPath, tc.pattern)
+		if got != tc.want {
+			t.Errorf("matchesExclude(%q, %q) = %v, want %v", tc.relPath, tc.pattern, got, tc.want)
+		}
+	}
+}
+
+func TestCollectFHIRPaths_ExcludeDir(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(dir, "vendor"), 0750)
+	_ = os.WriteFile(filepath.Join(dir, "vendor", "v.json"), []byte("{}"), 0600)
+	_ = os.WriteFile(filepath.Join(dir, "keep.json"), []byte("{}"), 0600)
+
+	in := &input.Input{Source: input.SourceDir, Path: dir}
+	paths, err := collectFHIRPaths(in, []string{"vendor/"})
+	if err != nil {
+		t.Fatalf("collectFHIRPaths error: %v", err)
+	}
+	for _, p := range paths {
+		if strings.Contains(filepath.ToSlash(p), "/vendor/") {
+			t.Errorf("excluded path should not appear: %s", p)
+		}
+	}
+	if len(paths) != 1 {
+		t.Errorf("expected 1 path, got %d: %v", len(paths), paths)
+	}
+}
+
+func TestCollectFHIRPaths_ExcludeGlob(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "keep.xml"), []byte("<r/>"), 0600)
+	_ = os.WriteFile(filepath.Join(dir, "skip.json"), []byte("{}"), 0600)
+
+	in := &input.Input{Source: input.SourceDir, Path: dir}
+	paths, err := collectFHIRPaths(in, []string{"*.json"})
+	if err != nil {
+		t.Fatalf("collectFHIRPaths error: %v", err)
+	}
+	for _, p := range paths {
+		if strings.HasSuffix(p, ".json") {
+			t.Errorf("excluded .json file should not appear: %s", p)
+		}
+	}
+}
+
+func TestLoadIgnoreFile_ParsesPatterns(t *testing.T) {
+	f, err := os.CreateTemp("", ".fhirlintignore-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
+	content := "# comment\nvendor/\n\nsrc/generated/*.json\n"
+	if _, err := f.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	patterns, err := loadIgnoreFile(f.Name())
+	if err != nil {
+		t.Fatalf("loadIgnoreFile error: %v", err)
+	}
+	if len(patterns) != 2 {
+		t.Fatalf("expected 2 patterns, got %d: %v", len(patterns), patterns)
+	}
+	if patterns[0] != "vendor/" || patterns[1] != "src/generated/*.json" {
+		t.Errorf("unexpected patterns: %v", patterns)
+	}
+}
+
+func TestLoadIgnoreFile_Missing_ReturnsNil(t *testing.T) {
+	patterns, err := loadIgnoreFile("/nonexistent/.fhirlintignore")
+	if err != nil {
+		t.Errorf("expected nil error for missing file, got: %v", err)
+	}
+	if patterns != nil {
+		t.Errorf("expected nil patterns for missing file, got: %v", patterns)
 	}
 }
 
