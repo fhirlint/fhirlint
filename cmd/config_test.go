@@ -193,6 +193,20 @@ func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_MaxWarningsFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "max-warnings: 10\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetInt("max-warnings"); got != 10 {
+		t.Errorf("max-warnings = %d, want 10", got)
+	}
+}
+
 func TestConfigFile_TxLogFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

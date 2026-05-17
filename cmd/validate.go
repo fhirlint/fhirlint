@@ -48,6 +48,7 @@ var (
 	flagAllowExampleURLs    bool
 	flagAllowInsecureTx     bool
 	flagTxLog               string
+	flagMaxWarnings         int
 	flagWatch               string
 	flagWatchInterval       int
 	flagSuppress            []string
@@ -100,6 +101,8 @@ func init() {
 		"Minimum severity to show: information, warning, error")
 	validateCmd.Flags().StringVar(&flagFailOn, "fail-on", "error",
 		"Exit non-zero when issues at this level or above are found: error, warning, information, never")
+	validateCmd.Flags().IntVar(&flagMaxWarnings, "max-warnings", -1,
+		"Exit non-zero when warning count exceeds N (ratchet pattern; -1 disables)")
 	validateCmd.Flags().StringArrayVar(&flagURLs, "url", nil,
 		"Fetch and validate a resource from an HTTP endpoint (repeatable)")
 	validateCmd.Flags().StringVar(&flagExtract, "extract", "",
@@ -147,6 +150,7 @@ func init() {
 	_ = viper.BindPFlag("output", validateCmd.Flags().Lookup("output"))
 	_ = viper.BindPFlag("severity", validateCmd.Flags().Lookup("severity"))
 	_ = viper.BindPFlag("fail-on", validateCmd.Flags().Lookup("fail-on"))
+	_ = viper.BindPFlag("max-warnings", validateCmd.Flags().Lookup("max-warnings"))
 	_ = viper.BindPFlag("url", validateCmd.Flags().Lookup("url"))
 	_ = viper.BindPFlag("extract", validateCmd.Flags().Lookup("extract"))
 	_ = viper.BindPFlag("ignore", validateCmd.Flags().Lookup("ignore"))
@@ -176,6 +180,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("fail-on") && viper.IsSet("fail-on") {
 		flagFailOn = viper.GetString("fail-on")
+	}
+	if !cmd.Flags().Changed("max-warnings") && viper.IsSet("max-warnings") {
+		flagMaxWarnings = viper.GetInt("max-warnings")
 	}
 	if !cmd.Flags().Changed("fhir-version") && viper.IsSet("fhir-version") {
 		flagFHIRVersion = viper.GetString("fhir-version")
@@ -448,6 +455,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	printUpdateNotice()
+	if err := checkMaxWarnings(results); err != nil {
+		return err
+	}
 	return checkExitCode(results)
 }
 
@@ -878,6 +888,25 @@ func parseSuppressFromConfig(raw interface{}) ([]suppress.Rule, error) {
 		}
 	}
 	return rules, nil
+}
+
+func checkMaxWarnings(results []*validator.Result) error {
+	if flagMaxWarnings < 0 {
+		return nil
+	}
+	count := 0
+	for _, r := range results {
+		for _, issue := range r.Issues {
+			if issue.Severity == "warning" {
+				count++
+			}
+		}
+	}
+	if count > flagMaxWarnings {
+		fmt.Fprintf(os.Stderr, "warning count %d exceeds --max-warnings %d\n", count, flagMaxWarnings)
+		return errValidationFailed
+	}
+	return nil
 }
 
 func checkExitCode(results []*validator.Result) error {
