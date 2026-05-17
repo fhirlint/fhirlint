@@ -109,7 +109,7 @@ func TestMatchesExclude_TrailingSlash(t *testing.T) {
 
 func TestCollectFHIRPaths_ExcludeDir(t *testing.T) {
 	dir := t.TempDir()
-	_ = os.MkdirAll(filepath.Join(dir, "vendor"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, "vendor"), 0750)
 	_ = os.WriteFile(filepath.Join(dir, "vendor", "v.json"), []byte("{}"), 0600)
 	_ = os.WriteFile(filepath.Join(dir, "keep.json"), []byte("{}"), 0600)
 
