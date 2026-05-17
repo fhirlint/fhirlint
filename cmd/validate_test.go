@@ -6,7 +6,74 @@ import (
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/validator"
 )
+
+// --- checkExitCode ---
+
+func makeResults(severities ...string) []*validator.Result {
+	issues := make([]validator.Issue, len(severities))
+	for i, s := range severities {
+		issues[i] = validator.Issue{Severity: s}
+	}
+	return []*validator.Result{{Issues: issues}}
+}
+
+func TestCheckExitCode_Never_AlwaysPasses(t *testing.T) {
+	flagFailOn = "never"
+	if err := checkExitCode(makeResults("error", "fatal")); err != nil {
+		t.Errorf("expected nil for never, got: %v", err)
+	}
+}
+
+func TestCheckExitCode_FailOnError_PassesWarning(t *testing.T) {
+	flagFailOn = "error"
+	if err := checkExitCode(makeResults("warning")); err != nil {
+		t.Errorf("expected nil for warning with fail-on=error, got: %v", err)
+	}
+}
+
+func TestCheckExitCode_FailOnError_FailsOnError(t *testing.T) {
+	flagFailOn = "error"
+	if err := checkExitCode(makeResults("error")); err == nil {
+		t.Error("expected error for error with fail-on=error")
+	}
+}
+
+func TestCheckExitCode_FailOnError_FailsOnFatal(t *testing.T) {
+	flagFailOn = "error"
+	if err := checkExitCode(makeResults("fatal")); err == nil {
+		t.Error("expected error for fatal with fail-on=error")
+	}
+}
+
+func TestCheckExitCode_FailOnWarning_FailsOnWarning(t *testing.T) {
+	flagFailOn = "warning"
+	if err := checkExitCode(makeResults("warning")); err == nil {
+		t.Error("expected error for warning with fail-on=warning")
+	}
+}
+
+func TestCheckExitCode_FailOnWarning_PassesInformation(t *testing.T) {
+	flagFailOn = "warning"
+	if err := checkExitCode(makeResults("information")); err != nil {
+		t.Errorf("expected nil for information with fail-on=warning, got: %v", err)
+	}
+}
+
+func TestCheckExitCode_FailOnInformation_FailsOnInformation(t *testing.T) {
+	flagFailOn = "information"
+	if err := checkExitCode(makeResults("information")); err == nil {
+		t.Error("expected error for information with fail-on=information")
+	}
+}
+
+func TestCheckExitCode_UnknownValue_ReturnsError(t *testing.T) {
+	flagFailOn = "typo"
+	if err := checkExitCode(makeResults()); err == nil {
+		t.Error("expected error for unknown fail-on value")
+	}
+}
 
 // --- gjsonPath ---
 

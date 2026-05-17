@@ -99,7 +99,7 @@ func init() {
 	validateCmd.Flags().StringVarP(&flagSeverity, "severity", "s", "information",
 		"Minimum severity to show: information, warning, error")
 	validateCmd.Flags().StringVar(&flagFailOn, "fail-on", "error",
-		"Exit non-zero when issues at this level or above are found: error, warning, never")
+		"Exit non-zero when issues at this level or above are found: error, warning, information, never")
 	validateCmd.Flags().StringArrayVar(&flagURLs, "url", nil,
 		"Fetch and validate a resource from an HTTP endpoint (repeatable)")
 	validateCmd.Flags().StringVar(&flagExtract, "extract", "",
@@ -884,10 +884,10 @@ func checkExitCode(results []*validator.Result) error {
 	if flagFailOn == "never" {
 		return nil
 	}
-	threshold := map[string]int{"error": 2, "warning": 1, "information": 0}
+	threshold := map[string]int{"fatal": 3, "error": 2, "warning": 1, "information": 0}
 	min, ok := threshold[flagFailOn]
 	if !ok {
-		return fmt.Errorf("unknown --fail-on value %q — use: error, warning, never", flagFailOn)
+		return fmt.Errorf("unknown --fail-on value %q — use: error, warning, information, never", flagFailOn)
 	}
 	for _, r := range results {
 		for _, issue := range r.Issues {
