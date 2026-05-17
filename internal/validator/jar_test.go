@@ -1,11 +1,13 @@
 package validator
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/cache"
@@ -266,5 +268,55 @@ func TestJARReleasesURL_ContainsReleases(t *testing.T) {
 	}
 	if !containsStr(url, "releases") {
 		t.Errorf("JARReleasesURL() %q should contain 'releases'", url)
+	}
+}
+
+func TestFormatBytes(t *testing.T) {
+	cases := []struct {
+		n    int64
+		want string
+	}{
+		{512, "0 KB"},
+		{1024, "1 KB"},
+		{10 * 1024 * 1024, "10.0 MB"},
+		{250 * 1024 * 1024, "250.0 MB"},
+		{2 * 1024 * 1024 * 1024, "2.00 GB"},
+	}
+	for _, tc := range cases {
+		got := formatBytes(tc.n)
+		if got != tc.want {
+			t.Errorf("formatBytes(%d) = %q, want %q", tc.n, got, tc.want)
+		}
+	}
+}
+
+func TestProgressWriter_WritesDataAndProgress(t *testing.T) {
+	var dest, out bytes.Buffer
+	pw := &progressWriter{dest: &dest, out: &out, total: 1024}
+
+	data := bytes.Repeat([]byte("x"), 512)
+	n, err := pw.Write(data)
+	if err != nil {
+		t.Fatalf("Write error: %v", err)
+	}
+	if n != 512 {
+		t.Errorf("expected 512 bytes written, got %d", n)
+	}
+	if dest.Len() != 512 {
+		t.Errorf("expected 512 bytes in dest, got %d", dest.Len())
+	}
+	progress := out.String()
+	if !strings.Contains(progress, "50%") {
+		t.Errorf("expected progress to contain '50%%', got %q", progress)
+	}
+}
+
+func TestProgressWriter_NoTotal_ShowsBytesOnly(t *testing.T) {
+	var dest, out bytes.Buffer
+	pw := &progressWriter{dest: &dest, out: &out, total: -1}
+
+	_, _ = pw.Write([]byte("hello"))
+	if strings.Contains(out.String(), "%") {
+		t.Errorf("expected no percentage without known total, got %q", out.String())
 	}
 }
