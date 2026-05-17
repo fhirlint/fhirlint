@@ -46,6 +46,13 @@ ignore:
   # - "$.meta.tag"
   # - "$.text"
 
+# Exclude files or directories from validation (gitignore-style patterns, repeatable).
+# Also supported via .fhirlintignore in the project root.
+# exclude:
+#   - tests/fixtures/invalid/**
+#   - src/generated/*.json
+#   - vendor/
+
 # Best-practice constraint handling: ignore | hint | warning | error
 # ignore  — silences dom-6 and all other best-practice constraints
 # hint    — reported as informational hints

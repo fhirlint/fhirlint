@@ -193,6 +193,21 @@ func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_ExcludeFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "exclude:\n  - vendor/\n  - tests/invalid/**\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	got := viper.GetStringSlice("exclude")
+	if len(got) != 2 {
+		t.Errorf("expected 2 exclude patterns, got %d: %v", len(got), got)
+	}
+}
+
 func TestConfigFile_MaxWarningsFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

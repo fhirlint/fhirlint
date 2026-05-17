@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -47,6 +49,7 @@ var (
 	flagLocale              string
 	flagAllowExampleURLs    bool
 	flagAllowInsecureTx     bool
+	flagExclude             []string
 	flagTxLog               string
 	flagMaxWarnings         int
 	flagWatch               string
@@ -117,6 +120,8 @@ func init() {
 		"Custom terminology server URL (default: https://tx.fhir.org)")
 	validateCmd.Flags().BoolVar(&flagAllowInsecureTx, "allow-insecure-tx", false,
 		"Suppress warning when terminology server URL uses HTTP instead of HTTPS")
+	validateCmd.Flags().StringArrayVar(&flagExclude, "exclude", nil,
+		"Exclude files or directories matching pattern (repeatable, gitignore-style)")
 	validateCmd.Flags().StringVar(&flagBestPractice, "best-practice", "",
 		"Best-practice constraint handling: ignore, hint, warning, error (default: warning)")
 	validateCmd.Flags().StringVar(&flagTxCache, "tx-cache", "",
@@ -157,6 +162,7 @@ func init() {
 	_ = viper.BindPFlag("no-terminology-server", validateCmd.Flags().Lookup("no-terminology-server"))
 	_ = viper.BindPFlag("terminology-server", validateCmd.Flags().Lookup("terminology-server"))
 	_ = viper.BindPFlag("allow-insecure-tx", validateCmd.Flags().Lookup("allow-insecure-tx"))
+	_ = viper.BindPFlag("exclude", validateCmd.Flags().Lookup("exclude"))
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 	_ = viper.BindPFlag("tx-log", validateCmd.Flags().Lookup("tx-log"))
@@ -220,6 +226,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("allow-insecure-tx") && viper.IsSet("allow-insecure-tx") {
 		flagAllowInsecureTx = viper.GetBool("allow-insecure-tx")
 	}
+	if !cmd.Flags().Changed("exclude") && viper.IsSet("exclude") {
+		flagExclude = viper.GetStringSlice("exclude")
+	}
 	if !cmd.Flags().Changed("best-practice") && viper.IsSet("best-practice") {
 		flagBestPractice = viper.GetString("best-practice")
 	}
@@ -255,6 +264,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("url-timeout") && viper.IsSet("url-timeout") {
 		flagURLTimeout = viper.GetString("url-timeout")
+	}
+
+	// Merge .fhirlintignore patterns into the exclude list.
+	excludePatterns := append([]string{}, flagExclude...)
+	if ignorePatterns, err := loadIgnoreFile(".fhirlintignore"); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "warning: reading .fhirlintignore: %v\n", err)
+	} else {
+		excludePatterns = append(excludePatterns, ignorePatterns...)
 	}
 
 	var validatorTimeout time.Duration
@@ -332,7 +349,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			return werr
 		}
 		defer in.Cleanup()
-		paths, werr := collectFHIRPaths(in)
+		paths, werr := collectFHIRPaths(in, excludePatterns)
 		if werr != nil {
 			return werr
 		}
@@ -379,7 +396,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--extract-each cannot be used with a directory")
 			}
 			// Apply --ignore on directory inputs (--extract not supported for dirs)
-			results, err = validateDir(in.Path, opts)
+			results, err = validateDir(in.Path, opts, excludePatterns)
 		} else if flagExtractEach != "" {
 			// Apply --ignore to outer document before extracting elements
 			if len(flagIgnore) > 0 {
@@ -461,27 +478,92 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	return checkExitCode(results)
 }
 
-// collectFHIRPaths returns all .json/.xml file paths for the given input.
-func collectFHIRPaths(in *input.Input) ([]string, error) {
+// collectFHIRPaths returns all .json/.xml file paths for the given input,
+// skipping any paths that match an exclude pattern.
+func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, error) {
 	if in.Source != input.SourceDir {
 		return []string{in.Path}, nil
 	}
 	var paths []string
-	err := filepath.WalkDir(in.Path, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(in.Path, func(fpath string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		rel, relErr := filepath.Rel(in.Path, fpath)
+		if relErr != nil {
+			rel = fpath
+		}
+		relSlash := filepath.ToSlash(rel)
+		for _, pat := range excludePatterns {
+			if matchesExclude(relSlash, pat) {
+				if d.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
 		}
 		if d.IsDir() {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(path))
+		ext := strings.ToLower(filepath.Ext(fpath))
 		if ext != ".json" && ext != ".xml" {
 			return nil
 		}
-		paths = append(paths, path)
+		paths = append(paths, fpath)
 		return nil
 	})
 	return paths, err
+}
+
+// matchesExclude reports whether relPath (forward-slash, relative to walk root)
+// matches the given gitignore-style pattern.
+func matchesExclude(relPath, pattern string) bool {
+	pattern = filepath.ToSlash(strings.TrimSpace(pattern))
+	if pattern == "" {
+		return false
+	}
+	// Trailing "/" or "/**" → directory prefix match
+	if strings.HasSuffix(pattern, "/**") {
+		dir := strings.TrimSuffix(pattern, "/**")
+		return relPath == dir || strings.HasPrefix(relPath, dir+"/")
+	}
+	if strings.HasSuffix(pattern, "/") {
+		dir := strings.TrimSuffix(pattern, "/")
+		return relPath == dir || strings.HasPrefix(relPath, dir+"/")
+	}
+	// Try matching the full relative path
+	if matched, _ := path.Match(pattern, relPath); matched {
+		return true
+	}
+	// Patterns without "/" are matched against the basename only
+	if !strings.Contains(pattern, "/") {
+		if matched, _ := path.Match(pattern, path.Base(relPath)); matched {
+			return true
+		}
+	}
+	return false
+}
+
+// loadIgnoreFile reads a gitignore-style ignore file and returns its patterns.
+func loadIgnoreFile(filename string) ([]string, error) {
+	f, err := os.Open(filename) //nolint:gosec // filename is a constant (".fhirlintignore")
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	var patterns []string
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		patterns = append(patterns, line)
+	}
+	return patterns, sc.Err()
 }
 
 // validateURLs fetches all URLs, applies --extract/--ignore to each response, and validates
@@ -701,8 +783,8 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 }
 
 // validateDir finds all .json/.xml files and validates them in a single JVM invocation.
-func validateDir(dir string, opts validator.Options) ([]*validator.Result, error) {
-	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir})
+func validateDir(dir string, opts validator.Options, excludePatterns []string) ([]*validator.Result, error) {
+	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
 		return nil, err
 	}
