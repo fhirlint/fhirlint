@@ -151,6 +151,42 @@ func versionFromJARManifest(jarPath string) string {
 	return ""
 }
 
+// progressWriter wraps a destination writer and prints download progress to out.
+type progressWriter struct {
+	dest    io.Writer
+	out     io.Writer
+	total   int64
+	written int64
+}
+
+func (p *progressWriter) Write(b []byte) (int, error) {
+	n, err := p.dest.Write(b)
+	p.written += int64(n)
+	if p.total > 0 {
+		pct := int(100 * p.written / p.total)
+		_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s / %s)... %d%%",
+			formatBytes(p.written), formatBytes(p.total), pct)
+	} else {
+		_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s)...", formatBytes(p.written))
+	}
+	return n, err
+}
+
+func formatBytes(n int64) string {
+	const (
+		mb = 1 << 20
+		gb = 1 << 30
+	)
+	switch {
+	case n >= gb:
+		return fmt.Sprintf("%.2f GB", float64(n)/float64(gb))
+	case n >= mb:
+		return fmt.Sprintf("%.1f MB", float64(n)/float64(mb))
+	default:
+		return fmt.Sprintf("%d KB", n/1024)
+	}
+}
+
 func downloadJAR(dest string) error {
 	resp, err := http.Get(jarURL) //nolint:gosec,noctx // known URL, no user input
 	if err != nil {
@@ -173,9 +209,12 @@ func downloadJAR(dest string) error {
 		return err
 	}
 	defer func() { _ = f.Close() }()
-	if _, err = io.Copy(f, resp.Body); err != nil {
+	pw := &progressWriter{dest: f, out: os.Stderr, total: resp.ContentLength}
+	if _, err = io.Copy(pw, resp.Body); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr)
 		return err
 	}
+	_, _ = fmt.Fprintln(os.Stderr)
 	if err := f.Close(); err != nil {
 		return err
 	}
