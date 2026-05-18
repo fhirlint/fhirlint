@@ -23,56 +23,56 @@ func makeResults(severities ...string) []*validator.Result {
 
 func TestCheckExitCode_Never_AlwaysPasses(t *testing.T) {
 	flagFailOn = "never"
-	if err := checkExitCode(makeResults("error", "fatal")); err != nil {
+	if err := checkExitCode(makeResults("error", "fatal"), nil); err != nil {
 		t.Errorf("expected nil for never, got: %v", err)
 	}
 }
 
 func TestCheckExitCode_FailOnError_PassesWarning(t *testing.T) {
 	flagFailOn = "error"
-	if err := checkExitCode(makeResults("warning")); err != nil {
+	if err := checkExitCode(makeResults("warning"), nil); err != nil {
 		t.Errorf("expected nil for warning with fail-on=error, got: %v", err)
 	}
 }
 
 func TestCheckExitCode_FailOnError_FailsOnError(t *testing.T) {
 	flagFailOn = "error"
-	if err := checkExitCode(makeResults("error")); err == nil {
+	if err := checkExitCode(makeResults("error"), nil); err == nil {
 		t.Error("expected error for error with fail-on=error")
 	}
 }
 
 func TestCheckExitCode_FailOnError_FailsOnFatal(t *testing.T) {
 	flagFailOn = "error"
-	if err := checkExitCode(makeResults("fatal")); err == nil {
+	if err := checkExitCode(makeResults("fatal"), nil); err == nil {
 		t.Error("expected error for fatal with fail-on=error")
 	}
 }
 
 func TestCheckExitCode_FailOnWarning_FailsOnWarning(t *testing.T) {
 	flagFailOn = "warning"
-	if err := checkExitCode(makeResults("warning")); err == nil {
+	if err := checkExitCode(makeResults("warning"), nil); err == nil {
 		t.Error("expected error for warning with fail-on=warning")
 	}
 }
 
 func TestCheckExitCode_FailOnWarning_PassesInformation(t *testing.T) {
 	flagFailOn = "warning"
-	if err := checkExitCode(makeResults("information")); err != nil {
+	if err := checkExitCode(makeResults("information"), nil); err != nil {
 		t.Errorf("expected nil for information with fail-on=warning, got: %v", err)
 	}
 }
 
 func TestCheckExitCode_FailOnInformation_FailsOnInformation(t *testing.T) {
 	flagFailOn = "information"
-	if err := checkExitCode(makeResults("information")); err == nil {
+	if err := checkExitCode(makeResults("information"), nil); err == nil {
 		t.Error("expected error for information with fail-on=information")
 	}
 }
 
 func TestCheckExitCode_UnknownValue_ReturnsError(t *testing.T) {
 	flagFailOn = "typo"
-	if err := checkExitCode(makeResults()); err == nil {
+	if err := checkExitCode(makeResults(), nil); err == nil {
 		t.Error("expected error for unknown fail-on value")
 	}
 }
@@ -258,43 +258,42 @@ func TestLoadIgnoreFile_Missing_ReturnsNil(t *testing.T) {
 
 func TestCheckMaxWarnings_Disabled_AlwaysPasses(t *testing.T) {
 	flagMaxWarnings = -1
-	if err := checkMaxWarnings(makeResults("warning", "warning", "warning")); err != nil {
+	if err := checkMaxWarnings(makeResults("warning", "warning", "warning"), nil); err != nil {
 		t.Errorf("expected nil when disabled, got: %v", err)
 	}
 }
 
 func TestCheckMaxWarnings_WithinThreshold_Passes(t *testing.T) {
 	flagMaxWarnings = 3
-	if err := checkMaxWarnings(makeResults("warning", "warning")); err != nil {
+	if err := checkMaxWarnings(makeResults("warning", "warning"), nil); err != nil {
 		t.Errorf("expected nil when count <= max, got: %v", err)
 	}
 }
 
 func TestCheckMaxWarnings_ExactThreshold_Passes(t *testing.T) {
 	flagMaxWarnings = 2
-	if err := checkMaxWarnings(makeResults("warning", "warning")); err != nil {
+	if err := checkMaxWarnings(makeResults("warning", "warning"), nil); err != nil {
 		t.Errorf("expected nil when count == max, got: %v", err)
 	}
 }
 
 func TestCheckMaxWarnings_ExceedsThreshold_Fails(t *testing.T) {
 	flagMaxWarnings = 1
-	if err := checkMaxWarnings(makeResults("warning", "warning")); err == nil {
+	if err := checkMaxWarnings(makeResults("warning", "warning"), nil); err == nil {
 		t.Error("expected error when warning count exceeds max")
 	}
 }
 
 func TestCheckMaxWarnings_OnlyCountsWarnings(t *testing.T) {
 	flagMaxWarnings = 0
-	// errors and information should not count toward the warning limit
-	if err := checkMaxWarnings(makeResults("error", "information", "fatal")); err != nil {
+	if err := checkMaxWarnings(makeResults("error", "information", "fatal"), nil); err != nil {
 		t.Errorf("expected nil when no warnings, got: %v", err)
 	}
 }
 
 func TestCheckMaxWarnings_ZeroThreshold_FailsOnAnyWarning(t *testing.T) {
 	flagMaxWarnings = 0
-	if err := checkMaxWarnings(makeResults("warning")); err == nil {
+	if err := checkMaxWarnings(makeResults("warning"), nil); err == nil {
 		t.Error("expected error when max-warnings=0 and one warning present")
 	}
 }

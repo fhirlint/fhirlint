@@ -112,3 +112,31 @@ ignore:
 #   - pattern: ".*example\\.org.*"               # suppress by regex match on message text
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
+
+# Per-glob overrides — apply different rules to specific files or directories.
+# Overrides are matched in order; later entries win on scalar conflicts (best-practice).
+# Slice fields (ig, profile, suppress) are appended to the global values.
+# Files not matching any override use the global config.
+#
+# Overridable fields:
+#   ig            — appended to global IGs (separate JVM invocation per unique combination)
+#   profile       — appended to global profiles
+#   best-practice — replaces global best-practice (ignore | hint | warning | error)
+#   severity      — hides issues below this level for matching files (information | warning | error | fatal)
+#   fail-on       — set to "never" so matching files never cause a non-zero exit code
+#   suppress      — additional suppress rules, same format as the global suppress list
+#
+# overrides:
+#   - files: ["src/fhir/kbv/**"]
+#     ig:
+#       - kbv.basis#1.5.0
+#     profile:
+#       - https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0
+#
+#   - files: ["tests/fixtures/legacy/**"]
+#     severity: error            # only fail on hard errors in legacy fixtures
+#     suppress:
+#       - messageId: UNKNOWN_CODESYSTEM
+#
+#   - files: ["tests/fixtures/invalid/**"]
+#     fail-on: never             # intentionally invalid — never block CI

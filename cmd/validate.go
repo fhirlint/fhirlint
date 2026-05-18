@@ -33,6 +33,18 @@ const defaultFHIRVersion = "4.0.1"
 // temp-file cleanup to run before the process exits.
 var errValidationFailed = errors.New("validation failed")
 
+// configOverride is a single entry in the overrides: config key.
+// Matching overrides are merged on top of the global config for each file.
+type configOverride struct {
+	Files        []string        // gitignore-style glob patterns
+	IGs          []string        // appended to global IGs for matching files
+	Profiles     []string        // appended to global profiles for matching files
+	BestPractice string          // replaces global best-practice for matching files
+	Severity     string          // filters issues to this level and above for matching files
+	FailOn       string          // "never" = matching files don't contribute to the exit code
+	Suppress     []suppress.Rule // additional suppress rules for matching files
+}
+
 var (
 	flagProfile             []string
 	flagIG                  []string
@@ -279,6 +291,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	profileMap := loadProfileMap()
+	overrides := loadOverrides()
 
 	var validatorTimeout time.Duration
 	if flagTimeout != "0" {
@@ -402,7 +415,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--extract-each cannot be used with a directory")
 			}
 			// Apply --ignore on directory inputs (--extract not supported for dirs)
-			results, err = validateDir(in.Path, opts, excludePatterns, profileMap)
+			results, err = validateDir(in.Path, opts, excludePatterns, profileMap, overrides)
 		} else if flagExtractEach != "" {
 			// Apply --ignore to outer document before extracting elements
 			if len(flagIgnore) > 0 {
@@ -419,6 +432,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			singleOpts := optsWithProfileMap(opts, in.Path, profileMap)
+			singleOpts = mergeOverrideOpts(singleOpts, matchingOverrides(in.Path, overrides))
 			rs, rerr2 := runWithCache([]string{in.Path}, singleOpts)
 			if rerr2 != nil {
 				return rerr2
@@ -444,6 +458,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+
+	// Apply per-file override post-processing: suppress, severity filter, fail-on tracking.
+	// Must run after global suppress so that override suppress appends rather than overwrites.
+	neverFailPaths := applyOverridePostProcessing(results, overrides)
 
 	// Render output(s)
 	for _, format := range flagFormat {
@@ -479,10 +497,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	printUpdateNotice()
-	if err := checkMaxWarnings(results); err != nil {
+	if err := checkMaxWarnings(results, neverFailPaths); err != nil {
 		return err
 	}
-	return checkExitCode(results)
+	return checkExitCode(results, neverFailPaths)
 }
 
 // collectFHIRPaths returns all .json/.xml file paths for the given input,
@@ -577,6 +595,209 @@ func loadProfileMap() map[string][]string {
 		}
 	}
 	return result
+}
+
+// loadOverrides parses the overrides: config key into a slice of configOverride.
+func loadOverrides() []configOverride {
+	raw := viper.Get("overrides")
+	if raw == nil {
+		return nil
+	}
+	items, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var overrides []configOverride
+	for _, item := range items {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		ov := configOverride{
+			Files:    toStringSlice(m["files"]),
+			IGs:      toStringSlice(m["ig"]),
+			Profiles: toStringSlice(m["profile"]),
+		}
+		if v, ok := m["best-practice"].(string); ok {
+			ov.BestPractice = v
+		}
+		if v, ok := m["severity"].(string); ok {
+			ov.Severity = v
+		}
+		if v, ok := m["fail-on"].(string); ok {
+			ov.FailOn = v
+		}
+		if v, ok := m["suppress"]; ok {
+			if rules, err := parseSuppressFromConfig(v); err == nil {
+				ov.Suppress = rules
+			}
+		}
+		if len(ov.Files) > 0 {
+			overrides = append(overrides, ov)
+		}
+	}
+	return overrides
+}
+
+// toStringSlice converts a config value to []string.
+func toStringSlice(v interface{}) []string {
+	if v == nil {
+		return nil
+	}
+	switch t := v.(type) {
+	case string:
+		return []string{t}
+	case []interface{}:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// matchingOverrides returns overrides whose file globs match filePath.
+// Overrides are returned in declaration order.
+func matchingOverrides(filePath string, overrides []configOverride) []configOverride {
+	if len(overrides) == 0 {
+		return nil
+	}
+	relSlash := filepath.ToSlash(filePath)
+	var matched []configOverride
+	for _, ov := range overrides {
+		for _, pattern := range ov.Files {
+			if matchesExclude(relSlash, pattern) {
+				matched = append(matched, ov)
+				break
+			}
+		}
+	}
+	return matched
+}
+
+// mergeOverrideOpts applies the JVM-level fields from matched overrides to opts.
+// Later overrides win on scalar conflicts; slice fields are appended.
+func mergeOverrideOpts(opts validator.Options, matched []configOverride) validator.Options {
+	for _, ov := range matched {
+		if len(ov.IGs) > 0 {
+			opts.IGs = append(append([]string{}, opts.IGs...), ov.IGs...)
+		}
+		if len(ov.Profiles) > 0 {
+			opts.Profiles = append(append([]string{}, opts.Profiles...), ov.Profiles...)
+		}
+		if ov.BestPractice != "" {
+			opts.BestPractice = ov.BestPractice
+		}
+	}
+	return opts
+}
+
+// optsGroupKey returns a stable string that uniquely identifies the JVM-level
+// options so that files with identical options can share a JVM invocation.
+func optsGroupKey(opts validator.Options) string {
+	return strings.Join([]string{
+		strings.Join(opts.Profiles, "\x01"),
+		strings.Join(opts.IGs, "\x01"),
+		opts.BestPractice,
+	}, "\x00")
+}
+
+// hasValidatorOverrides reports whether any override has fields that affect the JVM invocation.
+func hasValidatorOverrides(overrides []configOverride) bool {
+	for _, ov := range overrides {
+		if len(ov.IGs) > 0 || len(ov.Profiles) > 0 || ov.BestPractice != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// applyOverridePostProcessing applies per-file severity filtering and suppress
+// rules from matching overrides. It returns the set of file paths whose issues
+// should not contribute to the exit code (fail-on: never).
+// Must be called after global suppress.Apply so that override suppress appends
+// to r.Suppressed rather than overwriting it.
+func applyOverridePostProcessing(results []*validator.Result, overrides []configOverride) map[string]struct{} {
+	if len(overrides) == 0 {
+		return nil
+	}
+	var neverFail map[string]struct{}
+	for _, r := range results {
+		matched := matchingOverrides(r.Filename, overrides)
+		if len(matched) == 0 {
+			continue
+		}
+		for _, ov := range matched {
+			if len(ov.Suppress) > 0 {
+				applySuppressToResult(r, ov.Suppress)
+			}
+			if ov.Severity != "" {
+				r.Issues = filterIssuesBySeverity(r.Issues, ov.Severity)
+				r.Valid = issuesValid(r.Issues)
+			}
+			if ov.FailOn == "never" {
+				if neverFail == nil {
+					neverFail = make(map[string]struct{})
+				}
+				neverFail[r.Filename] = struct{}{}
+			}
+		}
+	}
+	return neverFail
+}
+
+// applySuppressToResult applies rules to a single result, appending to r.Suppressed
+// (instead of replacing) to preserve suppression from earlier passes.
+func applySuppressToResult(r *validator.Result, rules []suppress.Rule) {
+	var active []validator.Issue
+	for _, issue := range r.Issues {
+		matched := false
+		for _, rule := range rules {
+			if rule.Matches(issue) {
+				issue.SuppressReason = rule.Reason
+				r.Suppressed = append(r.Suppressed, issue)
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			active = append(active, issue)
+		}
+	}
+	r.Issues = active
+	r.Valid = issuesValid(r.Issues)
+}
+
+var overrideSeverityLevels = map[string]int{
+	"information": 0,
+	"warning":     1,
+	"error":       2,
+	"fatal":       3,
+}
+
+// filterIssuesBySeverity keeps only issues at or above minSeverity.
+func filterIssuesBySeverity(issues []validator.Issue, minSeverity string) []validator.Issue {
+	min := overrideSeverityLevels[strings.ToLower(minSeverity)]
+	var out []validator.Issue
+	for _, iss := range issues {
+		if overrideSeverityLevels[iss.Severity] >= min {
+			out = append(out, iss)
+		}
+	}
+	return out
+}
+
+// issuesValid returns true when none of the issues are error or fatal severity.
+func issuesValid(issues []validator.Issue) bool {
+	for _, iss := range issues {
+		if iss.Severity == "error" || iss.Severity == "fatal" {
+			return false
+		}
+	}
+	return true
 }
 
 // isFilenameGlob returns true when the profile-map key looks like a filename
@@ -877,9 +1098,9 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 }
 
 // validateDir finds all .json/.xml files and validates them.
-// When a profile-map is set, files are grouped by their extra profiles and validated
-// in separate JVM invocations per group.
-func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string) ([]*validator.Result, error) {
+// Files are grouped by their merged validator options (profile-map + overrides)
+// and validated in one JVM invocation per group.
+func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
 		return nil, err
@@ -888,7 +1109,8 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return nil, nil
 	}
 
-	if len(profileMap) == 0 {
+	// Fast path: no per-file option overrides — single JVM invocation.
+	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) {
 		results, err := runWithCache(paths, opts)
 		if err != nil {
 			return nil, err
@@ -899,24 +1121,26 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return results, nil
 	}
 
-	// Group files by their extra-profile combination for minimal JVM invocations.
+	// Group files by their merged validator options for minimal JVM invocations.
 	type group struct {
 		paths []string
 		opts  validator.Options
 	}
 	groupMap := map[string]*group{}
 	for _, p := range paths {
+		g := opts
 		extra := resolveProfilesForPath(p, profileMap)
-		key := strings.Join(extra, "\x00")
+		if len(extra) > 0 {
+			g.Profiles = append(append([]string{}, g.Profiles...), extra...)
+		}
+		g = mergeOverrideOpts(g, matchingOverrides(p, overrides))
+		key := optsGroupKey(g)
 		if _, ok := groupMap[key]; !ok {
-			g := opts
-			g.Profiles = append(append([]string{}, opts.Profiles...), extra...)
 			groupMap[key] = &group{opts: g}
 		}
 		groupMap[key].paths = append(groupMap[key].paths, p)
 	}
 
-	// Sort groups for deterministic output order.
 	keys := make([]string, 0, len(groupMap))
 	for k := range groupMap {
 		keys = append(keys, k)
@@ -1109,12 +1333,15 @@ func parseSuppressFromConfig(raw interface{}) ([]suppress.Rule, error) {
 	return rules, nil
 }
 
-func checkMaxWarnings(results []*validator.Result) error {
+func checkMaxWarnings(results []*validator.Result, neverFailPaths map[string]struct{}) error {
 	if flagMaxWarnings < 0 {
 		return nil
 	}
 	count := 0
 	for _, r := range results {
+		if _, skip := neverFailPaths[r.Filename]; skip {
+			continue
+		}
 		for _, issue := range r.Issues {
 			if issue.Severity == "warning" {
 				count++
@@ -1128,7 +1355,7 @@ func checkMaxWarnings(results []*validator.Result) error {
 	return nil
 }
 
-func checkExitCode(results []*validator.Result) error {
+func checkExitCode(results []*validator.Result, neverFailPaths map[string]struct{}) error {
 	if flagFailOn == "never" {
 		return nil
 	}
@@ -1138,6 +1365,9 @@ func checkExitCode(results []*validator.Result) error {
 		return fmt.Errorf("unknown --fail-on value %q — use: error, warning, information, never", flagFailOn)
 	}
 	for _, r := range results {
+		if _, skip := neverFailPaths[r.Filename]; skip {
+			continue
+		}
 		for _, issue := range r.Issues {
 			if threshold[issue.Severity] >= min {
 				return errValidationFailed
