@@ -440,8 +440,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			}
 			results, err = extractEachAndValidate(in, opts)
 		} else if ndjson.IsNDJSON(in.Path) {
-			if flagExtract != "" || flagExtractEach != "" {
-				return fmt.Errorf("--extract and --extract-each are not supported for NDJSON input")
+			if flagExtractEach != "" {
+				return fmt.Errorf("--extract-each is not supported for NDJSON input")
 			}
 			results, err = validateNDJSON(in.Path, opts, profileMap, overrides)
 		} else {
@@ -1268,7 +1268,7 @@ func preprocessedInput(path string) (*input.Input, error) {
 }
 
 // validateNDJSON splits an NDJSON file into per-line temp files, optionally
-// applies --ignore preprocessing, and validates them in a single JVM invocation.
+// applies --extract / --ignore preprocessing, and validates them in a single JVM invocation.
 func validateNDJSON(path string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
 	ins, err := ndjson.Split(path)
 	if err != nil {
@@ -1284,7 +1284,7 @@ func validateNDJSON(path string, opts validator.Options, profileMap map[string][
 		return nil, nil
 	}
 
-	if len(flagIgnore) > 0 {
+	if flagExtract != "" || len(flagIgnore) > 0 {
 		for _, t := range ins {
 			if err := preprocessJSON(t); err != nil {
 				return nil, err
