@@ -18,14 +18,20 @@ var (
 	fileStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-func Terminal(result *validator.Result, minSeverity string, showSuppressed bool) {
+func Terminal(result *validator.Result, minSeverity string, showSuppressed bool, quiet bool) {
+	filtered := filterIssues(result.Issues, minSeverity)
+
+	// Under --quiet, skip files with no active issues (including those with only
+	// suppressed issues). The summary line is always printed by TerminalSummary.
+	if quiet && len(filtered) == 0 {
+		return
+	}
+
 	label := result.Label
 	if result.Cached {
 		label += dimStyle.Render(" ↩ cached")
 	}
 	fmt.Println(fileStyle.Render("▶ " + label))
-
-	filtered := filterIssues(result.Issues, minSeverity)
 
 	if len(filtered) == 0 && len(result.Suppressed) == 0 {
 		fmt.Println(successStyle.Render("  ✓ Valid"))
