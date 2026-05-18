@@ -113,6 +113,11 @@ ignore:
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
 
+# Validate each entry.resource inside a FHIR Bundle as a standalone resource.
+# The Bundle itself is still validated (structure); entry validation is additive.
+# Works for all Bundle types (transaction, batch, collection, document, searchset).
+# bundle-entries: true
+
 # Baseline file — suppress pre-existing issues and fail only on regressions.
 # Generate:  fhirlint validate resources/ --generate-baseline fhirlint-baseline.json
 # Use:       fhirlint validate resources/ --baseline fhirlint-baseline.json
