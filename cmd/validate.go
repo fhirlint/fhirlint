@@ -83,6 +83,7 @@ var (
 	flagLock                bool
 	flagGenerateBaseline    string
 	flagBaseline            string
+	flagBundleEntries       bool
 )
 
 var validateCmd = &cobra.Command{
@@ -172,6 +173,9 @@ func init() {
 	validateCmd.Flags().StringVar(&flagBaseline, "baseline", "",
 		"Baseline file — issues recorded here are suppressed; only new issues fail the build")
 	_ = viper.BindPFlag("baseline", validateCmd.Flags().Lookup("baseline"))
+	validateCmd.Flags().BoolVar(&flagBundleEntries, "bundle-entries", false,
+		"Also validate each entry.resource inside a FHIR Bundle as a standalone resource")
+	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -296,6 +300,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("baseline") && viper.IsSet("baseline") {
 		flagBaseline = viper.GetString("baseline")
+	}
+	if !cmd.Flags().Changed("bundle-entries") && viper.IsSet("bundle-entries") {
+		flagBundleEntries = viper.GetBool("bundle-entries")
 	}
 
 	// Merge .fhirlintignore patterns into the exclude list.
@@ -459,6 +466,26 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			}
 			rs[0].Label = in.Label
 			results = rs
+
+			// If --bundle-entries, also validate each entry.resource as a standalone resource.
+			if flagBundleEntries {
+				entryIns, berr := expandBundleEntries(in.Path)
+				if berr != nil {
+					return berr
+				}
+				if len(entryIns) > 0 {
+					defer func() {
+						for _, t := range entryIns {
+							t.Cleanup()
+						}
+					}()
+					entryResults, eerr := validateEntryInputs(entryIns, in.Path, opts, profileMap, overrides)
+					if eerr != nil {
+						return eerr
+					}
+					results = append(results, entryResults...)
+				}
+			}
 		}
 	}
 	if err != nil {
@@ -1213,6 +1240,79 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	return results, nil
 }
 
+// bundleEntryJSON holds just enough of an entry to extract the resource.
+type bundleEntryJSON struct {
+	Resource json.RawMessage `json:"resource"`
+}
+
+type bundleJSON struct {
+	ResourceType string            `json:"resourceType"`
+	Entry        []bundleEntryJSON `json:"entry"`
+}
+
+// expandBundleEntries reads path, and if it is a FHIR Bundle, writes each
+// entry.resource to a temp file. Returns nil when the file is not a Bundle or
+// has no entries. Labels use "basename → entry[N] (ResourceType/id)" format.
+// The caller must call Cleanup() on every returned Input.
+func expandBundleEntries(path string) ([]*input.Input, error) {
+	data, err := os.ReadFile(path) //nolint:gosec // validated upstream
+	if err != nil {
+		return nil, err
+	}
+	var b bundleJSON
+	if err := json.Unmarshal(data, &b); err != nil || b.ResourceType != "Bundle" {
+		return nil, nil
+	}
+	base := filepath.Base(path)
+	var ins []*input.Input
+	for i, entry := range b.Entry {
+		if len(entry.Resource) == 0 || string(entry.Resource) == "null" {
+			continue
+		}
+		var res struct {
+			ResourceType string `json:"resourceType"`
+			ID           string `json:"id"`
+		}
+		_ = json.Unmarshal(entry.Resource, &res)
+
+		label := fmt.Sprintf("%s → entry[%d]", base, i)
+		if res.ResourceType != "" {
+			if res.ID != "" {
+				label = fmt.Sprintf("%s → entry[%d] (%s/%s)", base, i, res.ResourceType, res.ID)
+			} else {
+				label = fmt.Sprintf("%s → entry[%d] (%s)", base, i, res.ResourceType)
+			}
+		}
+
+		f, ferr := os.CreateTemp("", "fhirlint-entry-*.json")
+		if ferr != nil {
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			return nil, fmt.Errorf("entry %d: %w", i, ferr)
+		}
+		_, writeErr := f.Write(entry.Resource)
+		closeErr := f.Close()
+		if writeErr != nil || closeErr != nil {
+			_ = os.Remove(f.Name())
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			if writeErr != nil {
+				return nil, writeErr
+			}
+			return nil, closeErr
+		}
+		ins = append(ins, &input.Input{
+			Source:   input.SourceFile,
+			Path:     f.Name(),
+			TempFile: f.Name(),
+			Label:    label,
+		})
+	}
+	return ins, nil
+}
+
 // preprocessedInput applies --extract and --ignore to path by writing the result
 // to a temp file. Returns an Input pointing to the temp file on success.
 // If no preprocessing flags are set, returns an Input wrapping the original path.
@@ -1265,6 +1365,49 @@ func preprocessedInput(path string) (*input.Input, error) {
 		TempFile: f.Name(),
 		Label:    path,
 	}, nil
+}
+
+// validateEntryInputs validates a set of bundle entry temp files, applying
+// profile-map per resource type and overrides via the bundle's source path.
+// Results get the entry label and bundlePath as Filename.
+func validateEntryInputs(ins []*input.Input, bundlePath string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+	type group struct {
+		paths  []string
+		labels []string
+		opts   validator.Options
+	}
+	groupMap := map[string]*group{}
+	for _, in := range ins {
+		g := optsWithProfileMap(opts, in.Path, profileMap) // resource-type based profile lookup
+		g = mergeOverrideOpts(g, matchingOverrides(bundlePath, overrides))
+		key := optsGroupKey(g)
+		if _, ok := groupMap[key]; !ok {
+			groupMap[key] = &group{opts: g}
+		}
+		groupMap[key].paths = append(groupMap[key].paths, in.Path)
+		groupMap[key].labels = append(groupMap[key].labels, in.Label)
+	}
+
+	keys := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var results []*validator.Result
+	for _, k := range keys {
+		g := groupMap[k]
+		rs, err := runWithCache(g.paths, g.opts)
+		if err != nil {
+			return nil, err
+		}
+		for i, r := range rs {
+			r.Filename = bundlePath
+			r.Label = g.labels[i]
+		}
+		results = append(results, rs...)
+	}
+	return results, nil
 }
 
 // validateNDJSON splits an NDJSON file into per-line temp files, optionally
@@ -1397,34 +1540,84 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return allResults, nil
 	}
 
+	// Expand bundle entries when --bundle-entries is set.
+	// Entry temp files are added to regularPaths so they go through the normal
+	// grouping. entryMetaMap tracks their bundle path and display label.
+	type entryMeta struct {
+		bundlePath string
+		label      string
+	}
+	entryMetaMap := make(map[string]entryMeta)
+	if flagBundleEntries {
+		var entryInputs []*input.Input
+		for _, p := range regularPaths {
+			ins, berr := expandBundleEntries(origPath(p))
+			if berr != nil {
+				return nil, berr
+			}
+			for _, in := range ins {
+				entryMetaMap[in.Path] = entryMeta{bundlePath: origPath(p), label: in.Label}
+				entryInputs = append(entryInputs, in)
+			}
+		}
+		if len(entryInputs) > 0 {
+			defer func() {
+				for _, in := range entryInputs {
+					in.Cleanup()
+				}
+			}()
+			for _, in := range entryInputs {
+				regularPaths = append(regularPaths, in.Path)
+			}
+		}
+	}
+
+	// remapResult fills r.Filename and r.Label from entryMetaMap or origPath.
+	remapResult := func(r *validator.Result) {
+		if meta, ok := entryMetaMap[r.Filename]; ok {
+			r.Filename = meta.bundlePath
+			r.Label = meta.label
+		} else {
+			r.Filename = origPath(r.Filename)
+			r.Label = r.Filename
+		}
+	}
+
 	// Fast path: no per-file option overrides — single JVM invocation.
-	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) {
+	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) && len(entryMetaMap) == 0 {
 		results, err := runWithCache(regularPaths, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, r := range results {
-			r.Filename = origPath(r.Filename)
-			r.Label = r.Filename
+			remapResult(r)
 		}
 		return append(allResults, results...), nil
 	}
 
 	// Group files by their merged validator options for minimal JVM invocations.
-	// Use the original path for profile-map / override lookups.
+	// Entry files use their resource type for profile-map lookup; override lookup
+	// uses the bundle path. Regular files use the original (pre-preprocessing) path.
 	type group struct {
 		paths []string
 		opts  validator.Options
 	}
 	groupMap := map[string]*group{}
 	for _, p := range regularPaths {
-		orig := origPath(p)
+		var profileLookupPath, overrideLookupPath string
+		if meta, ok := entryMetaMap[p]; ok {
+			profileLookupPath = p // temp file — peekResourceType reads the entry resource
+			overrideLookupPath = meta.bundlePath
+		} else {
+			profileLookupPath = origPath(p)
+			overrideLookupPath = origPath(p)
+		}
 		g := opts
-		extra := resolveProfilesForPath(orig, profileMap)
+		extra := resolveProfilesForPath(profileLookupPath, profileMap)
 		if len(extra) > 0 {
 			g.Profiles = append(append([]string{}, g.Profiles...), extra...)
 		}
-		g = mergeOverrideOpts(g, matchingOverrides(orig, overrides))
+		g = mergeOverrideOpts(g, matchingOverrides(overrideLookupPath, overrides))
 		key := optsGroupKey(g)
 		if _, ok := groupMap[key]; !ok {
 			groupMap[key] = &group{opts: g}
@@ -1445,8 +1638,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 			return nil, rerr
 		}
 		for _, r := range rs {
-			r.Filename = origPath(r.Filename)
-			r.Label = r.Filename
+			remapResult(r)
 		}
 		allResults = append(allResults, rs...)
 	}
