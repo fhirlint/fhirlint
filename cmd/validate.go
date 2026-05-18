@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -1334,7 +1333,6 @@ func expandBundleEntries(path string) ([]*input.Input, error) {
 // preprocessedInput applies --extract and --ignore to path by writing the result
 // to a temp file. Returns an Input pointing to the temp file on success.
 // If no preprocessing flags are set, returns an Input wrapping the original path.
-// For XML files when --extract is set, returns an error.
 // The caller must call Cleanup() on the returned Input.
 func preprocessedInput(path string) (*input.Input, error) {
 	if flagExtract == "" && len(flagIgnore) == 0 {
@@ -1345,11 +1343,7 @@ func preprocessedInput(path string) (*input.Input, error) {
 		return nil, err
 	}
 	if strings.HasPrefix(strings.TrimSpace(string(data)), "<") {
-		if flagExtract != "" {
-			return nil, fmt.Errorf("--extract is only supported for JSON input")
-		}
-		// XML + --ignore only: no preprocessing supported yet, pass through.
-		return &input.Input{Source: input.SourceFile, Path: path, Label: path}, nil
+		return preprocessedXMLInput(path, data)
 	}
 	raw := string(data)
 	if flagExtract != "" {
@@ -1382,6 +1376,49 @@ func preprocessedInput(path string) (*input.Input, error) {
 		Path:     f.Name(),
 		TempFile: f.Name(),
 		Label:    path,
+	}, nil
+}
+
+// preprocessedXMLInput applies --extract and/or --ignore to XML data and writes
+// the result to a temp .xml file. The caller must call Cleanup() on the returned Input.
+func preprocessedXMLInput(origPath string, data []byte) (*input.Input, error) {
+	result := data
+	var xmlErr error
+	if flagExtract != "" {
+		result, xmlErr = xmlExtract(result, flagExtract)
+		if xmlErr != nil {
+			return nil, xmlErr
+		}
+	}
+	if len(flagIgnore) > 0 {
+		paths := make([][]string, len(flagIgnore))
+		for i, ign := range flagIgnore {
+			paths[i] = xmlPathSegments(ign)
+		}
+		result, xmlErr = xmlDeletePaths(result, paths)
+		if xmlErr != nil {
+			return nil, fmt.Errorf("--ignore on XML: %w", xmlErr)
+		}
+	}
+	f, ferr := os.CreateTemp("", "fhirlint-dir-*.xml")
+	if ferr != nil {
+		return nil, fmt.Errorf("creating temp file: %w", ferr)
+	}
+	_, writeErr := f.Write(result)
+	closeErr := f.Close()
+	if writeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, writeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
+	return &input.Input{
+		Source:   input.SourceFile,
+		Path:     f.Name(),
+		TempFile: f.Name(),
+		Label:    origPath,
 	}, nil
 }
 
@@ -1670,14 +1707,28 @@ func preprocessJSON(in *input.Input) error {
 		return err
 	}
 
-	// Detect XML — skip JSON preprocessing
 	trimmed := strings.TrimSpace(string(data))
 	if strings.HasPrefix(trimmed, "<") {
+		result := data
+		var xmlErr error
 		if flagExtract != "" {
-			return fmt.Errorf("--extract is only supported for JSON input")
+			result, xmlErr = xmlExtract(result, flagExtract)
+			if xmlErr != nil {
+				return xmlErr
+			}
 		}
 		if len(flagIgnore) > 0 {
-			return applyXMLIgnore(in, data)
+			paths := make([][]string, len(flagIgnore))
+			for i, ign := range flagIgnore {
+				paths[i] = xmlPathSegments(ign)
+			}
+			result, xmlErr = xmlDeletePaths(result, paths)
+			if xmlErr != nil {
+				return fmt.Errorf("--ignore on XML: %w", xmlErr)
+			}
+		}
+		if flagExtract != "" || len(flagIgnore) > 0 {
+			return os.WriteFile(in.Path, result, 0600) //nolint:gosec
 		}
 		return nil
 	}
@@ -1748,23 +1799,6 @@ func deleteNestedKey(obj interface{}, parts []string) {
 			deleteNestedKey(item, parts)
 		}
 	}
-}
-
-func applyXMLIgnore(in *input.Input, data []byte) error {
-	// Minimal XML field removal: unmarshal → delete tag → re-marshal.
-	// For full XPath support this can be extended later.
-	var doc map[string]interface{}
-	if err := xml.Unmarshal(data, (*xmlMap)(&doc)); err != nil {
-		return fmt.Errorf("--ignore on XML is not yet supported for this document structure")
-	}
-	return nil
-}
-
-// xmlMap is a placeholder; full XML ignore support is a future enhancement.
-type xmlMap map[string]interface{}
-
-func (x *xmlMap) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	return fmt.Errorf("XML field ignoring is not yet supported — use --ignore with JSON input")
 }
 
 func outputFile(ext string) string {
