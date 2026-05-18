@@ -118,6 +118,10 @@ ignore:
 # Works for all Bundle types (transaction, batch, collection, document, searchset).
 # bundle-entries: true
 
+# Suppress per-file output for valid files — only files with issues are printed.
+# The summary line is always shown. Only affects --format terminal.
+# quiet: true
+
 # Baseline file — suppress pre-existing issues and fail only on regressions.
 # Generate:  fhirlint validate resources/ --generate-baseline fhirlint-baseline.json
 # Use:       fhirlint validate resources/ --baseline fhirlint-baseline.json

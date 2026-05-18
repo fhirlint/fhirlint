@@ -1,6 +1,9 @@
 package reporter
 
 import (
+	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
@@ -130,6 +133,70 @@ func TestTerminalSummary_FatalCount(t *testing.T) {
 	total := TerminalSummary(results, "information")
 	if total != 2 {
 		t.Errorf("expected total=2, got %d", total)
+	}
+}
+
+func TestTerminal_QuietSuppressesValidFiles(t *testing.T) {
+	// Capture stdout to verify nothing is printed for a valid file.
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	result := &validator.Result{Valid: true, Label: "ok.json", Issues: nil}
+	Terminal(result, "information", false, true)
+
+	_ = w.Close()
+	os.Stdout = old
+	var buf strings.Builder
+	_, _ = io.Copy(&buf, r)
+
+	if buf.Len() != 0 {
+		t.Errorf("expected no output for valid file under --quiet, got: %q", buf.String())
+	}
+}
+
+func TestTerminal_QuietShowsFilesWithIssues(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	result := &validator.Result{
+		Valid: false,
+		Label: "bad.json",
+		Issues: []validator.Issue{{Severity: "error", Message: "something wrong"}},
+	}
+	Terminal(result, "information", false, true)
+
+	_ = w.Close()
+	os.Stdout = old
+	var buf strings.Builder
+	_, _ = io.Copy(&buf, r)
+
+	if !strings.Contains(buf.String(), "bad.json") {
+		t.Errorf("expected file header for invalid file under --quiet, got: %q", buf.String())
+	}
+}
+
+func TestTerminal_QuietSuppressesValidWithSuppressedIssues(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	result := &validator.Result{
+		Valid: true,
+		Label: "ok.json",
+		Issues: nil,
+		Suppressed: []validator.Issue{{Severity: "warning", Message: "suppressed"}},
+	}
+	Terminal(result, "information", true, true)
+
+	_ = w.Close()
+	os.Stdout = old
+	var buf strings.Builder
+	_, _ = io.Copy(&buf, r)
+
+	if buf.Len() != 0 {
+		t.Errorf("expected no output for valid+suppressed file under --quiet, got: %q", buf.String())
 	}
 }
 

@@ -84,6 +84,7 @@ var (
 	flagGenerateBaseline    string
 	flagBaseline            string
 	flagBundleEntries       bool
+	flagQuiet               bool
 )
 
 var validateCmd = &cobra.Command{
@@ -176,6 +177,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagBundleEntries, "bundle-entries", false,
 		"Also validate each entry.resource inside a FHIR Bundle as a standalone resource")
 	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
+	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
+		"Suppress per-file output for valid files; only files with issues are printed")
+	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -303,6 +307,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("bundle-entries") && viper.IsSet("bundle-entries") {
 		flagBundleEntries = viper.GetBool("bundle-entries")
+	}
+	if !cmd.Flags().Changed("quiet") && viper.IsSet("quiet") {
+		flagQuiet = viper.GetBool("quiet")
 	}
 
 	// Merge .fhirlintignore patterns into the exclude list.
@@ -537,7 +544,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		switch strings.ToLower(format) {
 		case "terminal":
 			for _, r := range results {
-				reporter.Terminal(r, flagSeverity, flagShowSuppressed)
+				reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet)
 			}
 			reporter.TerminalSummary(results, flagSeverity)
 		case "json":
