@@ -76,7 +76,22 @@ var topLevelKeys = map[string]keySpec{
 	"timeout":               {kind: kindString},
 	"url-timeout":           {kind: kindString},
 	"baseline":              {kind: kindString},
+	"url":                   {kind: kindStringList},
+	"extract":               {kind: kindString},
+	"extract-each":          {kind: kindString},
+	"bundle-entries":        {kind: kindBool},
+	"quiet":                 {kind: kindBool},
+	"no-color":              {kind: kindBool},
 	"overrides":             {kind: kindOverrideList},
+}
+
+// KnownKeys returns the set of recognized top-level fhirlint.yml keys.
+func KnownKeys() map[string]struct{} {
+	out := make(map[string]struct{}, len(topLevelKeys))
+	for k := range topLevelKeys {
+		out[k] = struct{}{}
+	}
+	return out
 }
 
 var overrideKeys = map[string]keySpec{
