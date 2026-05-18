@@ -17,6 +17,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
@@ -439,6 +440,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			results, err = extractEachAndValidate(in, opts)
+		} else if ndjson.IsNDJSON(in.Path) {
+			if flagExtract != "" || flagExtractEach != "" {
+				return fmt.Errorf("--extract and --extract-each are not supported for NDJSON input")
+			}
+			results, err = validateNDJSON(in.Path, opts, profileMap, overrides)
 		} else {
 			// Apply --extract and --ignore on JSON input
 			if flagExtract != "" || len(flagIgnore) > 0 {
@@ -642,7 +648,7 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(fpath))
-		if ext != ".json" && ext != ".xml" {
+		if ext != ".json" && ext != ".xml" && ext != ".ndjson" {
 			return nil
 		}
 		paths = append(paths, fpath)
@@ -1208,9 +1214,53 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	return results, nil
 }
 
-// validateDir finds all .json/.xml files and validates them.
+// validateNDJSON splits an NDJSON file into per-line temp files, optionally
+// applies --ignore preprocessing, and validates them in a single JVM invocation.
+func validateNDJSON(path string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+	ins, err := ndjson.Split(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		for _, t := range ins {
+			t.Cleanup()
+		}
+	}()
+
+	if len(ins) == 0 {
+		return nil, nil
+	}
+
+	if len(flagIgnore) > 0 {
+		for _, t := range ins {
+			if err := preprocessJSON(t); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	paths := make([]string, len(ins))
+	for i, t := range ins {
+		paths[i] = t.Path
+	}
+
+	fileOpts := optsWithProfileMap(opts, path, profileMap)
+	fileOpts = mergeOverrideOpts(fileOpts, matchingOverrides(path, overrides))
+	rs, err := runWithCache(paths, fileOpts)
+	if err != nil {
+		return nil, err
+	}
+	for i, r := range rs {
+		r.Label = ins[i].Label
+		r.Filename = path
+	}
+	return rs, nil
+}
+
+// validateDir finds all .json/.xml/.ndjson files and validates them.
 // Files are grouped by their merged validator options (profile-map + overrides)
 // and validated in one JVM invocation per group.
+// NDJSON files are expanded into per-line resources before grouping.
 func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
@@ -1220,16 +1270,41 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return nil, nil
 	}
 
+	// Separate NDJSON files from regular files — they need per-line expansion.
+	var regularPaths, ndjsonPaths []string
+	for _, p := range paths {
+		if ndjson.IsNDJSON(p) {
+			ndjsonPaths = append(ndjsonPaths, p)
+		} else {
+			regularPaths = append(regularPaths, p)
+		}
+	}
+
+	var allResults []*validator.Result
+
+	// Validate NDJSON files.
+	for _, p := range ndjsonPaths {
+		rs, err := validateNDJSON(p, opts, profileMap, overrides)
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, rs...)
+	}
+
+	if len(regularPaths) == 0 {
+		return allResults, nil
+	}
+
 	// Fast path: no per-file option overrides — single JVM invocation.
 	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) {
-		results, err := runWithCache(paths, opts)
+		results, err := runWithCache(regularPaths, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, r := range results {
 			r.Label = r.Filename
 		}
-		return results, nil
+		return append(allResults, results...), nil
 	}
 
 	// Group files by their merged validator options for minimal JVM invocations.
@@ -1238,7 +1313,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		opts  validator.Options
 	}
 	groupMap := map[string]*group{}
-	for _, p := range paths {
+	for _, p := range regularPaths {
 		g := opts
 		extra := resolveProfilesForPath(p, profileMap)
 		if len(extra) > 0 {
@@ -1258,7 +1333,6 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 	}
 	sort.Strings(keys)
 
-	var allResults []*validator.Result
 	for _, k := range keys {
 		g := groupMap[k]
 		rs, rerr := runWithCache(g.paths, g.opts)
