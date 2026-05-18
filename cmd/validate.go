@@ -430,7 +430,6 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			if flagExtractEach != "" {
 				return fmt.Errorf("--extract-each cannot be used with a directory")
 			}
-			// Apply --ignore on directory inputs (--extract not supported for dirs)
 			results, err = validateDir(in.Path, opts, excludePatterns, profileMap, overrides)
 		} else if flagExtractEach != "" {
 			// Apply --ignore to outer document before extracting elements
@@ -1214,6 +1213,60 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	return results, nil
 }
 
+// preprocessedInput applies --extract and --ignore to path by writing the result
+// to a temp file. Returns an Input pointing to the temp file on success.
+// If no preprocessing flags are set, returns an Input wrapping the original path.
+// For XML files when --extract is set, returns an error.
+// The caller must call Cleanup() on the returned Input.
+func preprocessedInput(path string) (*input.Input, error) {
+	if flagExtract == "" && len(flagIgnore) == 0 {
+		return &input.Input{Source: input.SourceFile, Path: path, Label: path}, nil
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // validated upstream
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(strings.TrimSpace(string(data)), "<") {
+		if flagExtract != "" {
+			return nil, fmt.Errorf("--extract is only supported for JSON input")
+		}
+		// XML + --ignore only: no preprocessing supported yet, pass through.
+		return &input.Input{Source: input.SourceFile, Path: path, Label: path}, nil
+	}
+	raw := string(data)
+	if flagExtract != "" {
+		p := gjsonPath(flagExtract)
+		extracted := gjson.Get(raw, p)
+		if !extracted.Exists() {
+			return nil, fmt.Errorf("--extract: path %q not found in input", flagExtract)
+		}
+		raw = extracted.Raw
+	}
+	for _, ign := range flagIgnore {
+		raw = deleteJSONPath(raw, gjsonPath(ign))
+	}
+	f, ferr := os.CreateTemp("", "fhirlint-dir-*.json")
+	if ferr != nil {
+		return nil, fmt.Errorf("creating temp file: %w", ferr)
+	}
+	_, writeErr := f.WriteString(raw)
+	closeErr := f.Close()
+	if writeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, writeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
+	return &input.Input{
+		Source:   input.SourceFile,
+		Path:     f.Name(),
+		TempFile: f.Name(),
+		Label:    path,
+	}, nil
+}
+
 // validateNDJSON splits an NDJSON file into per-line temp files, optionally
 // applies --ignore preprocessing, and validates them in a single JVM invocation.
 func validateNDJSON(path string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
@@ -1295,6 +1348,55 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return allResults, nil
 	}
 
+	// Apply --extract / --ignore: preprocess each file into a temp copy.
+	// Files that fail (e.g. extract path not found) produce a synthetic error
+	// result and are skipped from validation.
+	tempPathToOrig := make(map[string]string)
+	if flagExtract != "" || len(flagIgnore) > 0 {
+		var preprocessedIns []*input.Input
+		for _, p := range regularPaths {
+			in, perr := preprocessedInput(p)
+			if perr != nil {
+				allResults = append(allResults, &validator.Result{
+					Filename: p,
+					Label:    p,
+					Valid:    false,
+					Issues: []validator.Issue{{
+						Severity:  "error",
+						Message:   perr.Error(),
+						MessageID: "fhirlint-preprocess",
+					}},
+				})
+				continue
+			}
+			preprocessedIns = append(preprocessedIns, in)
+			if in.TempFile != "" {
+				tempPathToOrig[in.Path] = p
+			}
+		}
+		defer func() {
+			for _, in := range preprocessedIns {
+				in.Cleanup()
+			}
+		}()
+		regularPaths = make([]string, len(preprocessedIns))
+		for i, in := range preprocessedIns {
+			regularPaths[i] = in.Path
+		}
+	}
+
+	// origPath maps a (possibly temp) validation path back to the original file path.
+	origPath := func(p string) string {
+		if orig, ok := tempPathToOrig[p]; ok {
+			return orig
+		}
+		return p
+	}
+
+	if len(regularPaths) == 0 {
+		return allResults, nil
+	}
+
 	// Fast path: no per-file option overrides — single JVM invocation.
 	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) {
 		results, err := runWithCache(regularPaths, opts)
@@ -1302,24 +1404,27 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 			return nil, err
 		}
 		for _, r := range results {
+			r.Filename = origPath(r.Filename)
 			r.Label = r.Filename
 		}
 		return append(allResults, results...), nil
 	}
 
 	// Group files by their merged validator options for minimal JVM invocations.
+	// Use the original path for profile-map / override lookups.
 	type group struct {
 		paths []string
 		opts  validator.Options
 	}
 	groupMap := map[string]*group{}
 	for _, p := range regularPaths {
+		orig := origPath(p)
 		g := opts
-		extra := resolveProfilesForPath(p, profileMap)
+		extra := resolveProfilesForPath(orig, profileMap)
 		if len(extra) > 0 {
 			g.Profiles = append(append([]string{}, g.Profiles...), extra...)
 		}
-		g = mergeOverrideOpts(g, matchingOverrides(p, overrides))
+		g = mergeOverrideOpts(g, matchingOverrides(orig, overrides))
 		key := optsGroupKey(g)
 		if _, ok := groupMap[key]; !ok {
 			groupMap[key] = &group{opts: g}
@@ -1340,6 +1445,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 			return nil, rerr
 		}
 		for _, r := range rs {
+			r.Filename = origPath(r.Filename)
 			r.Label = r.Filename
 		}
 		allResults = append(allResults, rs...)
