@@ -142,8 +142,7 @@ func Verify(lf *LockFile, igs []string, w io.Writer) error {
 		}
 		if got != entry.SHA256 {
 			return fmt.Errorf(
-				"lock file mismatch for %s: expected sha256 %s, got %s\n"+
-					"Run with --lock to update the lock file, or re-install the package.",
+				"lock file mismatch for %s: expected sha256 %s, got %s — run with --lock to update",
 				ig, entry.SHA256, got,
 			)
 		}
