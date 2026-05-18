@@ -11,6 +11,7 @@ Not every API response is a pure FHIR resource. Internal systems often wrap FHIR
 - [Combining with --url](#combining-with---url)
 - [JSONPath syntax](#jsonpath-syntax)
 - [Typical patterns](#typical-patterns)
+- [XML support](#xml-support)
 
 ---
 
@@ -242,3 +243,39 @@ fhirlint validate fixture.json --extract "$.expected.fhir"
 ```
 
 This lets you validate FHIR correctness without restructuring your test fixtures.
+
+---
+
+## XML support
+
+Both `--extract` and `--ignore` work on XML input using the same `$.element.child` path syntax.
+
+### `--ignore` on XML
+
+Strip fields from an XML resource before validation, just as with JSON:
+
+```bash
+fhirlint validate patient.xml --ignore "$.text" --ignore "$.meta.tag"
+```
+
+### `--extract` on XML
+
+For XML input, the path must point to the actual FHIR resource element — not a wrapper element. XML namespace injection is performed automatically when the extracted element does not declare its own namespace.
+
+```bash
+# Extract the Patient resource from a Bundle XML
+fhirlint validate bundle.xml --extract "$.entry.resource.Patient"
+```
+
+Note the difference from JSON: with JSON you can write `$.entry[0].resource` to get the resource object directly. With XML, you must name the concrete resource element (`Patient`, `Observation`, etc.) because the path navigates the element tree and namespace injection uses the element name.
+
+### Combining `--extract` and `--ignore` on XML
+
+```bash
+# Extract a Patient and strip a non-conformant meta extension
+fhirlint validate bundle.xml \
+  --extract "$.entry.resource.Patient" \
+  --ignore "$.meta.tag"
+```
+
+`--ignore` paths are applied to the extracted element, relative to its root.
