@@ -113,6 +113,12 @@ ignore:
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
 
+# Baseline file — suppress pre-existing issues and fail only on regressions.
+# Generate:  fhirlint validate resources/ --generate-baseline fhirlint-baseline.json
+# Use:       fhirlint validate resources/ --baseline fhirlint-baseline.json
+# Or set here to avoid repeating the flag on every run:
+# baseline: fhirlint-baseline.json
+
 # IG lock file — pin exact package versions for reproducible CI builds.
 # Run once with --lock to create/update fhirlint.lock:
 #   fhirlint validate --lock

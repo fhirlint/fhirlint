@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/localig"
@@ -79,6 +80,8 @@ var (
 	flagTimeout             string
 	flagURLTimeout          string
 	flagLock                bool
+	flagGenerateBaseline    string
+	flagBaseline            string
 )
 
 var validateCmd = &cobra.Command{
@@ -163,6 +166,11 @@ func init() {
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
 	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
 		"Write or update fhirlint.lock with SHA256 hashes of all resolved IG packages")
+	validateCmd.Flags().StringVar(&flagGenerateBaseline, "generate-baseline", "",
+		"Generate a baseline file from current issues (build always succeeds; re-run to update)")
+	validateCmd.Flags().StringVar(&flagBaseline, "baseline", "",
+		"Baseline file — issues recorded here are suppressed; only new issues fail the build")
+	_ = viper.BindPFlag("baseline", validateCmd.Flags().Lookup("baseline"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -284,6 +292,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("url-timeout") && viper.IsSet("url-timeout") {
 		flagURLTimeout = viper.GetString("url-timeout")
+	}
+	if !cmd.Flags().Changed("baseline") && viper.IsSet("baseline") {
+		flagBaseline = viper.GetString("baseline")
 	}
 
 	// Merge .fhirlintignore patterns into the exclude list.
@@ -467,6 +478,28 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// Must run after global suppress so that override suppress appends rather than overwrites.
 	neverFailPaths := applyOverridePostProcessing(results, overrides)
 
+	// Apply baseline suppression: issues recorded in the baseline are moved to
+	// r.Suppressed and do not contribute to the exit code.
+	var staleBaselineEntries int
+	if flagBaseline != "" {
+		bf, berr := baseline.Read(flagBaseline)
+		if berr != nil {
+			return fmt.Errorf("reading baseline %s: %w", flagBaseline, berr)
+		}
+		if bf != nil {
+			staleBaselineEntries = baseline.Apply(results, bf)
+		}
+	}
+
+	// Generate (or update) the baseline from the current active issues.
+	if flagGenerateBaseline != "" {
+		bf := baseline.Generate(results)
+		if werr := baseline.Write(flagGenerateBaseline, bf); werr != nil {
+			return fmt.Errorf("writing baseline %s: %w", flagGenerateBaseline, werr)
+		}
+		fmt.Fprintf(os.Stderr, "Baseline generated: %d entries written to %s\n", len(bf.Entries), flagGenerateBaseline)
+	}
+
 	// Render output(s)
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
@@ -511,6 +544,17 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	printUpdateNotice()
+
+	if staleBaselineEntries > 0 {
+		fmt.Fprintf(os.Stderr, "warn: %d baseline occurrence(s) no longer found — run --generate-baseline to update\n", staleBaselineEntries)
+	}
+
+	// When generating a baseline the build always succeeds: the point is to
+	// record the current state, not to enforce it.
+	if flagGenerateBaseline != "" {
+		return nil
+	}
+
 	if err := checkMaxWarnings(results, neverFailPaths); err != nil {
 		return err
 	}
