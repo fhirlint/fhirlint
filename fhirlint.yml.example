@@ -113,6 +113,12 @@ ignore:
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
 
+# IG lock file — pin exact package versions for reproducible CI builds.
+# Run once with --lock to create/update fhirlint.lock:
+#   fhirlint validate --lock
+# Commit fhirlint.lock to version control. On subsequent runs (without --lock)
+# fhirlint verifies cached packages against the recorded SHA256 hashes.
+
 # Per-glob overrides — apply different rules to specific files or directories.
 # Overrides are matched in order; later entries win on scalar conflicts (best-practice).
 # Slice fields (ig, profile, suppress) are appended to the global values.
