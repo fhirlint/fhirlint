@@ -44,6 +44,8 @@ func init() {
 	_ = viper.BindPFlag("jar", rootCmd.PersistentFlags().Lookup("jar"))
 	_ = viper.BindEnv("jar", "FHIRLINT_JAR")
 
+	rootCmd.Version = fhirlintVersion()
+
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(auditCmd)
