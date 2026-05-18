@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/profiles"
@@ -77,6 +78,7 @@ var (
 	flagCacheDir            string
 	flagTimeout             string
 	flagURLTimeout          string
+	flagLock                bool
 )
 
 var validateCmd = &cobra.Command{
@@ -159,6 +161,8 @@ func init() {
 		"Timeout for the Java validator process (e.g. 30s, 5m, 1h). Set to 0 to disable.")
 	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
+	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
+		"Write or update fhirlint.lock with SHA256 hashes of all resolved IG packages")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -496,11 +500,74 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Handle fhirlint.lock: verify existing lock, or write/update when --lock is set.
+	allIGs := collectAllIGs(opts.IGs, overrides)
+	if flagLock {
+		if lerr := runLockWrite(allIGs); lerr != nil {
+			return lerr
+		}
+	} else if lerr := runLockVerify(allIGs); lerr != nil {
+		return lerr
+	}
+
 	printUpdateNotice()
 	if err := checkMaxWarnings(results, neverFailPaths); err != nil {
 		return err
 	}
 	return checkExitCode(results, neverFailPaths)
+}
+
+// collectAllIGs gathers IGs from the base options and any validator-level overrides.
+func collectAllIGs(base []string, overrides []configOverride) []string {
+	seen := make(map[string]struct{}, len(base))
+	out := append([]string{}, base...)
+	for _, ig := range base {
+		seen[ig] = struct{}{}
+	}
+	for _, ov := range overrides {
+		for _, ig := range ov.IGs {
+			if _, ok := seen[ig]; !ok {
+				seen[ig] = struct{}{}
+				out = append(out, ig)
+			}
+		}
+	}
+	return out
+}
+
+// runLockWrite writes or updates fhirlint.lock with current IG hashes.
+func runLockWrite(igs []string) error {
+	lf, err := iglock.Read(iglock.LockFileName)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
+	}
+	if lf == nil {
+		lf = &iglock.LockFile{Packages: make(map[string]iglock.Entry)}
+	}
+	n, err := iglock.Update(lf, igs)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return nil
+	}
+	if err := iglock.Write(iglock.LockFileName, lf); err != nil {
+		return fmt.Errorf("writing %s: %w", iglock.LockFileName, err)
+	}
+	fmt.Fprintf(os.Stderr, "Lock file updated: %s (%d package(s))\n", iglock.LockFileName, n)
+	return nil
+}
+
+// runLockVerify verifies IGs against fhirlint.lock when the file exists.
+func runLockVerify(igs []string) error {
+	lf, err := iglock.Read(iglock.LockFileName)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
+	}
+	if lf == nil {
+		return nil
+	}
+	return iglock.Verify(lf, igs, os.Stderr)
 }
 
 // collectFHIRPaths returns all .json/.xml file paths for the given input,
