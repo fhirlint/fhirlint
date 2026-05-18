@@ -85,6 +85,7 @@ var (
 	flagBaseline            string
 	flagBundleEntries       bool
 	flagQuiet               bool
+	flagNoColor             bool
 )
 
 var validateCmd = &cobra.Command{
@@ -180,6 +181,9 @@ func init() {
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
+	validateCmd.Flags().BoolVar(&flagNoColor, "no-color", false,
+		"Disable ANSI color output")
+	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -310,6 +314,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("quiet") && viper.IsSet("quiet") {
 		flagQuiet = viper.GetBool("quiet")
+	}
+	if !cmd.Flags().Changed("no-color") && viper.IsSet("no-color") {
+		flagNoColor = viper.GetBool("no-color")
+	}
+
+	if flagNoColor {
+		reporter.DisableColors()
 	}
 
 	// Merge .fhirlintignore patterns into the exclude list.

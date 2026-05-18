@@ -6,7 +6,12 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fhirlint/fhirlint/internal/validator"
+	"github.com/muesli/termenv"
 )
+
+func DisableColors() {
+	lipgloss.DefaultRenderer().SetColorProfile(termenv.Ascii)
+}
 
 var (
 	fatalStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("13")).Bold(true)
