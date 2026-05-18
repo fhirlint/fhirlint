@@ -101,6 +101,38 @@ func TestTerminalSummary_ErrorCount(t *testing.T) {
 	}
 }
 
+func TestFilterIssues_FatalAlwaysShown(t *testing.T) {
+	issues := []validator.Issue{
+		{Severity: "fatal"},
+		{Severity: "error"},
+		{Severity: "warning"},
+		{Severity: "information"},
+	}
+	// fatal should survive even the strictest filter
+	got := filterIssues(issues, "error")
+	if len(got) != 2 {
+		t.Errorf("expected fatal+error with min=error, got %d issues", len(got))
+	}
+	for _, i := range got {
+		if i.Severity != "fatal" && i.Severity != "error" {
+			t.Errorf("unexpected severity %q in filtered result", i.Severity)
+		}
+	}
+}
+
+func TestTerminalSummary_FatalCount(t *testing.T) {
+	results := []*validator.Result{
+		{Valid: false, Issues: []validator.Issue{
+			{Severity: "fatal"},
+			{Severity: "error"},
+		}},
+	}
+	total := TerminalSummary(results, "information")
+	if total != 2 {
+		t.Errorf("expected total=2, got %d", total)
+	}
+}
+
 func TestTerminalSummary_WithSeverityFilter(t *testing.T) {
 	results := []*validator.Result{
 		{Valid: false, Issues: []validator.Issue{
