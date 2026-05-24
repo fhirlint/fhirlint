@@ -24,6 +24,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Input sources](#input-sources)
 - [Profiles & implementation guides](#profiles--implementation-guides)
 - [Output formats](#output-formats)
+- [Dataset statistics](#dataset-statistics)
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
 - [Explaining message IDs](#explaining-message-ids)
@@ -205,6 +206,42 @@ fhirlint validate ./fhir/ --quiet
 # Disable ANSI colors (useful for CI environments without color support)
 fhirlint validate patient.json --no-color
 ```
+
+---
+
+## Dataset statistics
+
+`fhirlint stats` gives a quick structural overview of a dataset — how many resources of each type, which profiles they declare, and an aggregate validation summary. Handy for CI health dashboards and spot-checking a FHIR export.
+
+```bash
+fhirlint stats ./fhir/
+```
+
+```
+Resource types
+  Observation        34
+  MedicationRequest  15
+  Patient            12
+  Medication          8
+
+Profiles declared
+  https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Medication  8
+  (none)                                                          61
+
+Validation summary
+  Files  69   Valid  64 (93%)   Warnings  18   Errors  3
+```
+
+Resource-type and profile counts are gathered **offline** by parsing each file (`.json`, `.ndjson`, `.xml`); each NDJSON line counts as a resource. The validation summary runs the validator — skip it for an instant, offline overview:
+
+```bash
+fhirlint stats ./fhir/ --no-validate
+
+# Machine-readable, for dashboards or badge generators
+fhirlint stats ./fhir/ --format json --output stats.json
+```
+
+`stats` is informational and always exits `0` on success (it never fails the build); use `validate` for CI gating. `--exclude` patterns and `.fhirlintignore` are respected, just like `validate`.
 
 ---
 
