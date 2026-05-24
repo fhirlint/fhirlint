@@ -1,0 +1,4 @@
+{
+  "description": "Minimal valid Patient with narrative and a coded gender",
+  "valid": true
+}

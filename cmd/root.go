@@ -68,6 +68,7 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(explainCmd)
 	rootCmd.AddCommand(diffCmd)
+	rootCmd.AddCommand(qualifyCmd)
 }
 
 func initConfig() {

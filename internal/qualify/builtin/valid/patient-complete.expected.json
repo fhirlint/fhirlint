@@ -1,0 +1,4 @@
+{
+  "description": "Fully-populated valid Patient (identifier, name, gender, birthDate)",
+  "valid": true
+}
