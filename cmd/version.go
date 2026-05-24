@@ -43,7 +43,15 @@ func fhirVersionName(v string) string {
 	}
 }
 
+// version is injected at release build time via GoReleaser ldflags
+// (-X github.com/fhirlint/fhirlint/cmd.version={{ .Tag }}). It is empty for
+// plain `go build`/`go install` builds, which fall back to debug.ReadBuildInfo.
+var version string
+
 func fhirlintVersion() string {
+	if version != "" {
+		return version
+	}
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return "unknown"
