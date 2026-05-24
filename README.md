@@ -27,6 +27,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
 - [Baseline mode](#baseline-mode)
+- [Comparing runs (change control)](#comparing-runs-change-control)
 - [Terminology server](#terminology-server)
 - [Watch mode](#watch-mode)
 - [Pipeline integration](#pipeline-integration)
@@ -290,6 +291,40 @@ baseline: fhirlint-baseline.json
 **Distinction from `--suppress`:** `--suppress` is for intentional, accepted deviations (permanent exceptions). Baseline mode is for managing technical debt — issues you plan to fix eventually but can't address right now.
 
 See [Baseline mode guide](docs/baseline.md) for a full CI workflow walkthrough.
+
+---
+
+## Comparing runs (change control)
+
+`fhirlint diff` compares two JSON reports and categorises every issue as new, resolved, or unchanged. In regulated environments (MDR, ISO 13485, IEC 62304) it produces machine-generated evidence that a change introduces no new validation issues — attach the output to a change request or store it in the Design History File.
+
+```bash
+# Produce a report on each side, then compare
+fhirlint validate ./fhir/ --format json --output baseline.json   # e.g. on main
+fhirlint validate ./fhir/ --format json --output current.json    # on the change
+
+fhirlint diff baseline.json current.json
+```
+
+```
+New issues (1)
+  ✗ ERROR medication-request-003.json  dom-4 @ MedicationRequest
+
+Resolved issues (2)
+  ✓      medication-001.json  dom-6 @ Medication
+  ✓      observation-012.json  TERMINOLOGY_TX_WARNING @ Observation
+
+Unchanged issues (14)
+  (use --show-unchanged to list)
+
+Summary: 1 new · 2 resolved · 14 unchanged
+```
+
+Issues are matched by file, message ID, and location (line/column shifts are ignored), so reformatting alone is never reported as a change.
+
+Exit codes make it CI-ready: `0` no new issues, `1` new issues found (breaks the build), `2` fhirlint itself failed (e.g. malformed input).
+
+`--format json` emits the structured diff; `--format sarif` emits **only the new issues**, so uploading it to GitHub Code Scanning annotates a pull request with just its regressions, free of pre-existing noise.
 
 ---
 

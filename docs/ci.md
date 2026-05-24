@@ -14,6 +14,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
 - [GitLab CI](#gitlab-ci)
 - [GitLab Code Quality (merge-request widget)](#gitlab-code-quality-merge-request-widget)
+- [Comparing runs in a pull request](#comparing-runs-in-a-pull-request)
 - [Exit codes](#exit-codes)
 - [Troubleshooting](#troubleshooting)
 
@@ -398,13 +399,36 @@ Each finding's `fingerprint` is derived from its file path, location, message ID
 
 ---
 
+## Comparing runs in a pull request
+
+`fhirlint diff` compares two JSON reports and fails only when a change introduces **new** issues — pre-existing ones don't break the build. This is the basis for change-control evidence under ISO 13485 / IEC 62304, and it keeps pull-request gating free of legacy noise.
+
+```yaml
+- name: Validate baseline (main branch)
+  run: |
+    git checkout main -- fhir/
+    fhirlint validate ./fhir/ --format json --output baseline.json
+
+- name: Validate current branch
+  run: |
+    git checkout HEAD -- fhir/
+    fhirlint validate ./fhir/ --format json --output current.json
+
+- name: Diff runs
+  run: fhirlint diff baseline.json current.json
+```
+
+The `diff` step exits `1` when there are new issues, failing the job. Add `--format sarif --output diff.sarif` and upload it with `github/codeql-action/upload-sarif` to annotate the PR with **only** the issues it introduced.
+
+---
+
 ## Exit codes
 
 | Exit code | Meaning |
 |-----------|---------|
-| `0` | Validation passed (or `--fail-on never`) |
-| `1` | Validation found issues at or above the `--fail-on` threshold |
-| `2` | fhirlint itself failed (missing Java, JAR download error, invalid flag, etc.) |
+| `0` | Validation passed (or `--fail-on never`); for `diff`, no new issues |
+| `1` | Validation found issues at or above the `--fail-on` threshold; for `diff`, new issues were found |
+| `2` | fhirlint itself failed (missing Java, JAR download error, invalid flag, malformed `diff` input, etc.) |
 
 Use `--fail-on warning` to catch warnings in CI as well. Use `--fail-on never` for reporting-only runs that should never break the build.
 
