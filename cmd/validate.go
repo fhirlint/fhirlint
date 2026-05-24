@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fhirlint/fhirlint/internal/baseline"
+	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
@@ -32,6 +34,18 @@ const defaultFHIRVersion = "4.0.1"
 // --fail-on threshold. Using a sentinel instead of os.Exit allows deferred
 // temp-file cleanup to run before the process exits.
 var errValidationFailed = errors.New("validation failed")
+
+// configOverride is a single entry in the overrides: config key.
+// Matching overrides are merged on top of the global config for each file.
+type configOverride struct {
+	Files        []string        // gitignore-style glob patterns
+	IGs          []string        // appended to global IGs for matching files
+	Profiles     []string        // appended to global profiles for matching files
+	BestPractice string          // replaces global best-practice for matching files
+	Severity     string          // filters issues to this level and above for matching files
+	FailOn       string          // "never" = matching files don't contribute to the exit code
+	Suppress     []suppress.Rule // additional suppress rules for matching files
+}
 
 var (
 	flagProfile             []string
@@ -65,6 +79,12 @@ var (
 	flagCacheDir            string
 	flagTimeout             string
 	flagURLTimeout          string
+	flagLock                bool
+	flagGenerateBaseline    string
+	flagBaseline            string
+	flagBundleEntries       bool
+	flagQuiet               bool
+	flagNoColor             bool
 )
 
 var validateCmd = &cobra.Command{
@@ -147,6 +167,22 @@ func init() {
 		"Timeout for the Java validator process (e.g. 30s, 5m, 1h). Set to 0 to disable.")
 	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
+	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
+		"Write or update fhirlint.lock with SHA256 hashes of all resolved IG packages")
+	validateCmd.Flags().StringVar(&flagGenerateBaseline, "generate-baseline", "",
+		"Generate a baseline file from current issues (build always succeeds; re-run to update)")
+	validateCmd.Flags().StringVar(&flagBaseline, "baseline", "",
+		"Baseline file — issues recorded here are suppressed; only new issues fail the build")
+	_ = viper.BindPFlag("baseline", validateCmd.Flags().Lookup("baseline"))
+	validateCmd.Flags().BoolVar(&flagBundleEntries, "bundle-entries", false,
+		"Also validate each entry.resource inside a FHIR Bundle as a standalone resource")
+	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
+	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
+		"Suppress per-file output for valid files; only files with issues are printed")
+	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
+	validateCmd.Flags().BoolVar(&flagNoColor, "no-color", false,
+		"Disable ANSI color output")
+	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -269,6 +305,22 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("url-timeout") && viper.IsSet("url-timeout") {
 		flagURLTimeout = viper.GetString("url-timeout")
 	}
+	if !cmd.Flags().Changed("baseline") && viper.IsSet("baseline") {
+		flagBaseline = viper.GetString("baseline")
+	}
+	if !cmd.Flags().Changed("bundle-entries") && viper.IsSet("bundle-entries") {
+		flagBundleEntries = viper.GetBool("bundle-entries")
+	}
+	if !cmd.Flags().Changed("quiet") && viper.IsSet("quiet") {
+		flagQuiet = viper.GetBool("quiet")
+	}
+	if !cmd.Flags().Changed("no-color") && viper.IsSet("no-color") {
+		flagNoColor = viper.GetBool("no-color")
+	}
+
+	if flagNoColor {
+		reporter.DisableColors()
+	}
 
 	// Merge .fhirlintignore patterns into the exclude list.
 	excludePatterns := append([]string{}, flagExclude...)
@@ -279,6 +331,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	profileMap := loadProfileMap()
+	overrides := loadOverrides()
 
 	var validatorTimeout time.Duration
 	if flagTimeout != "0" {
@@ -401,8 +454,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			if flagExtractEach != "" {
 				return fmt.Errorf("--extract-each cannot be used with a directory")
 			}
-			// Apply --ignore on directory inputs (--extract not supported for dirs)
-			results, err = validateDir(in.Path, opts, excludePatterns, profileMap)
+			results, err = validateDir(in.Path, opts, excludePatterns, profileMap, overrides)
 		} else if flagExtractEach != "" {
 			// Apply --ignore to outer document before extracting elements
 			if len(flagIgnore) > 0 {
@@ -411,6 +463,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			results, err = extractEachAndValidate(in, opts)
+		} else if ndjson.IsNDJSON(in.Path) {
+			if flagExtractEach != "" {
+				return fmt.Errorf("--extract-each is not supported for NDJSON input")
+			}
+			results, err = validateNDJSON(in.Path, opts, profileMap, overrides)
 		} else {
 			// Apply --extract and --ignore on JSON input
 			if flagExtract != "" || len(flagIgnore) > 0 {
@@ -419,12 +476,33 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			singleOpts := optsWithProfileMap(opts, in.Path, profileMap)
+			singleOpts = mergeOverrideOpts(singleOpts, matchingOverrides(in.Path, overrides))
 			rs, rerr2 := runWithCache([]string{in.Path}, singleOpts)
 			if rerr2 != nil {
 				return rerr2
 			}
 			rs[0].Label = in.Label
 			results = rs
+
+			// If --bundle-entries, also validate each entry.resource as a standalone resource.
+			if flagBundleEntries {
+				entryIns, berr := expandBundleEntries(in.Path)
+				if berr != nil {
+					return berr
+				}
+				if len(entryIns) > 0 {
+					defer func() {
+						for _, t := range entryIns {
+							t.Cleanup()
+						}
+					}()
+					entryResults, eerr := validateEntryInputs(entryIns, in.Path, opts, profileMap, overrides)
+					if eerr != nil {
+						return eerr
+					}
+					results = append(results, entryResults...)
+				}
+			}
 		}
 	}
 	if err != nil {
@@ -445,12 +523,38 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Apply per-file override post-processing: suppress, severity filter, fail-on tracking.
+	// Must run after global suppress so that override suppress appends rather than overwrites.
+	neverFailPaths := applyOverridePostProcessing(results, overrides)
+
+	// Apply baseline suppression: issues recorded in the baseline are moved to
+	// r.Suppressed and do not contribute to the exit code.
+	var staleBaselineEntries int
+	if flagBaseline != "" {
+		bf, berr := baseline.Read(flagBaseline)
+		if berr != nil {
+			return fmt.Errorf("reading baseline %s: %w", flagBaseline, berr)
+		}
+		if bf != nil {
+			staleBaselineEntries = baseline.Apply(results, bf)
+		}
+	}
+
+	// Generate (or update) the baseline from the current active issues.
+	if flagGenerateBaseline != "" {
+		bf := baseline.Generate(results)
+		if werr := baseline.Write(flagGenerateBaseline, bf); werr != nil {
+			return fmt.Errorf("writing baseline %s: %w", flagGenerateBaseline, werr)
+		}
+		fmt.Fprintf(os.Stderr, "Baseline generated: %d entries written to %s\n", len(bf.Entries), flagGenerateBaseline)
+	}
+
 	// Render output(s)
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
 		case "terminal":
 			for _, r := range results {
-				reporter.Terminal(r, flagSeverity, flagShowSuppressed)
+				reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet)
 			}
 			reporter.TerminalSummary(results, flagSeverity)
 		case "json":
@@ -478,11 +582,85 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Handle fhirlint.lock: verify existing lock, or write/update when --lock is set.
+	allIGs := collectAllIGs(opts.IGs, overrides)
+	if flagLock {
+		if lerr := runLockWrite(allIGs); lerr != nil {
+			return lerr
+		}
+	} else if lerr := runLockVerify(allIGs); lerr != nil {
+		return lerr
+	}
+
 	printUpdateNotice()
-	if err := checkMaxWarnings(results); err != nil {
+
+	if staleBaselineEntries > 0 {
+		fmt.Fprintf(os.Stderr, "warn: %d baseline occurrence(s) no longer found — run --generate-baseline to update\n", staleBaselineEntries)
+	}
+
+	// When generating a baseline the build always succeeds: the point is to
+	// record the current state, not to enforce it.
+	if flagGenerateBaseline != "" {
+		return nil
+	}
+
+	if err := checkMaxWarnings(results, neverFailPaths); err != nil {
 		return err
 	}
-	return checkExitCode(results)
+	return checkExitCode(results, neverFailPaths)
+}
+
+// collectAllIGs gathers IGs from the base options and any validator-level overrides.
+func collectAllIGs(base []string, overrides []configOverride) []string {
+	seen := make(map[string]struct{}, len(base))
+	out := append([]string{}, base...)
+	for _, ig := range base {
+		seen[ig] = struct{}{}
+	}
+	for _, ov := range overrides {
+		for _, ig := range ov.IGs {
+			if _, ok := seen[ig]; !ok {
+				seen[ig] = struct{}{}
+				out = append(out, ig)
+			}
+		}
+	}
+	return out
+}
+
+// runLockWrite writes or updates fhirlint.lock with current IG hashes.
+func runLockWrite(igs []string) error {
+	lf, err := iglock.Read(iglock.LockFileName)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
+	}
+	if lf == nil {
+		lf = &iglock.LockFile{Packages: make(map[string]iglock.Entry)}
+	}
+	n, err := iglock.Update(lf, igs)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return nil
+	}
+	if err := iglock.Write(iglock.LockFileName, lf); err != nil {
+		return fmt.Errorf("writing %s: %w", iglock.LockFileName, err)
+	}
+	fmt.Fprintf(os.Stderr, "Lock file updated: %s (%d package(s))\n", iglock.LockFileName, n)
+	return nil
+}
+
+// runLockVerify verifies IGs against fhirlint.lock when the file exists.
+func runLockVerify(igs []string) error {
+	lf, err := iglock.Read(iglock.LockFileName)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
+	}
+	if lf == nil {
+		return nil
+	}
+	return iglock.Verify(lf, igs, os.Stderr)
 }
 
 // collectFHIRPaths returns all .json/.xml file paths for the given input,
@@ -513,7 +691,7 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(fpath))
-		if ext != ".json" && ext != ".xml" {
+		if ext != ".json" && ext != ".xml" && ext != ".ndjson" {
 			return nil
 		}
 		paths = append(paths, fpath)
@@ -577,6 +755,209 @@ func loadProfileMap() map[string][]string {
 		}
 	}
 	return result
+}
+
+// loadOverrides parses the overrides: config key into a slice of configOverride.
+func loadOverrides() []configOverride {
+	raw := viper.Get("overrides")
+	if raw == nil {
+		return nil
+	}
+	items, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var overrides []configOverride
+	for _, item := range items {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		ov := configOverride{
+			Files:    toStringSlice(m["files"]),
+			IGs:      toStringSlice(m["ig"]),
+			Profiles: toStringSlice(m["profile"]),
+		}
+		if v, ok := m["best-practice"].(string); ok {
+			ov.BestPractice = v
+		}
+		if v, ok := m["severity"].(string); ok {
+			ov.Severity = v
+		}
+		if v, ok := m["fail-on"].(string); ok {
+			ov.FailOn = v
+		}
+		if v, ok := m["suppress"]; ok {
+			if rules, err := parseSuppressFromConfig(v); err == nil {
+				ov.Suppress = rules
+			}
+		}
+		if len(ov.Files) > 0 {
+			overrides = append(overrides, ov)
+		}
+	}
+	return overrides
+}
+
+// toStringSlice converts a config value to []string.
+func toStringSlice(v interface{}) []string {
+	if v == nil {
+		return nil
+	}
+	switch t := v.(type) {
+	case string:
+		return []string{t}
+	case []interface{}:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// matchingOverrides returns overrides whose file globs match filePath.
+// Overrides are returned in declaration order.
+func matchingOverrides(filePath string, overrides []configOverride) []configOverride {
+	if len(overrides) == 0 {
+		return nil
+	}
+	relSlash := filepath.ToSlash(filePath)
+	var matched []configOverride
+	for _, ov := range overrides {
+		for _, pattern := range ov.Files {
+			if matchesExclude(relSlash, pattern) {
+				matched = append(matched, ov)
+				break
+			}
+		}
+	}
+	return matched
+}
+
+// mergeOverrideOpts applies the JVM-level fields from matched overrides to opts.
+// Later overrides win on scalar conflicts; slice fields are appended.
+func mergeOverrideOpts(opts validator.Options, matched []configOverride) validator.Options {
+	for _, ov := range matched {
+		if len(ov.IGs) > 0 {
+			opts.IGs = append(append([]string{}, opts.IGs...), ov.IGs...)
+		}
+		if len(ov.Profiles) > 0 {
+			opts.Profiles = append(append([]string{}, opts.Profiles...), ov.Profiles...)
+		}
+		if ov.BestPractice != "" {
+			opts.BestPractice = ov.BestPractice
+		}
+	}
+	return opts
+}
+
+// optsGroupKey returns a stable string that uniquely identifies the JVM-level
+// options so that files with identical options can share a JVM invocation.
+func optsGroupKey(opts validator.Options) string {
+	return strings.Join([]string{
+		strings.Join(opts.Profiles, "\x01"),
+		strings.Join(opts.IGs, "\x01"),
+		opts.BestPractice,
+	}, "\x00")
+}
+
+// hasValidatorOverrides reports whether any override has fields that affect the JVM invocation.
+func hasValidatorOverrides(overrides []configOverride) bool {
+	for _, ov := range overrides {
+		if len(ov.IGs) > 0 || len(ov.Profiles) > 0 || ov.BestPractice != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// applyOverridePostProcessing applies per-file severity filtering and suppress
+// rules from matching overrides. It returns the set of file paths whose issues
+// should not contribute to the exit code (fail-on: never).
+// Must be called after global suppress.Apply so that override suppress appends
+// to r.Suppressed rather than overwriting it.
+func applyOverridePostProcessing(results []*validator.Result, overrides []configOverride) map[string]struct{} {
+	if len(overrides) == 0 {
+		return nil
+	}
+	var neverFail map[string]struct{}
+	for _, r := range results {
+		matched := matchingOverrides(r.Filename, overrides)
+		if len(matched) == 0 {
+			continue
+		}
+		for _, ov := range matched {
+			if len(ov.Suppress) > 0 {
+				applySuppressToResult(r, ov.Suppress)
+			}
+			if ov.Severity != "" {
+				r.Issues = filterIssuesBySeverity(r.Issues, ov.Severity)
+				r.Valid = issuesValid(r.Issues)
+			}
+			if ov.FailOn == "never" {
+				if neverFail == nil {
+					neverFail = make(map[string]struct{})
+				}
+				neverFail[r.Filename] = struct{}{}
+			}
+		}
+	}
+	return neverFail
+}
+
+// applySuppressToResult applies rules to a single result, appending to r.Suppressed
+// (instead of replacing) to preserve suppression from earlier passes.
+func applySuppressToResult(r *validator.Result, rules []suppress.Rule) {
+	var active []validator.Issue
+	for _, issue := range r.Issues {
+		matched := false
+		for _, rule := range rules {
+			if rule.Matches(issue) {
+				issue.SuppressReason = rule.Reason
+				r.Suppressed = append(r.Suppressed, issue)
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			active = append(active, issue)
+		}
+	}
+	r.Issues = active
+	r.Valid = issuesValid(r.Issues)
+}
+
+var overrideSeverityLevels = map[string]int{
+	"information": 0,
+	"warning":     1,
+	"error":       2,
+	"fatal":       3,
+}
+
+// filterIssuesBySeverity keeps only issues at or above minSeverity.
+func filterIssuesBySeverity(issues []validator.Issue, minSeverity string) []validator.Issue {
+	min := overrideSeverityLevels[strings.ToLower(minSeverity)]
+	var out []validator.Issue
+	for _, iss := range issues {
+		if overrideSeverityLevels[iss.Severity] >= min {
+			out = append(out, iss)
+		}
+	}
+	return out
+}
+
+// issuesValid returns true when none of the issues are error or fatal severity.
+func issuesValid(issues []validator.Issue) bool {
+	for _, iss := range issues {
+		if iss.Severity == "error" || iss.Severity == "fatal" {
+			return false
+		}
+	}
+	return true
 }
 
 // isFilenameGlob returns true when the profile-map key looks like a filename
@@ -876,10 +1257,262 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	return results, nil
 }
 
-// validateDir finds all .json/.xml files and validates them.
-// When a profile-map is set, files are grouped by their extra profiles and validated
-// in separate JVM invocations per group.
-func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string) ([]*validator.Result, error) {
+// bundleEntryJSON holds just enough of an entry to extract the resource.
+type bundleEntryJSON struct {
+	Resource json.RawMessage `json:"resource"`
+}
+
+type bundleJSON struct {
+	ResourceType string            `json:"resourceType"`
+	Entry        []bundleEntryJSON `json:"entry"`
+}
+
+// expandBundleEntries reads path, and if it is a FHIR Bundle, writes each
+// entry.resource to a temp file. Returns nil when the file is not a Bundle or
+// has no entries. Labels use "basename → entry[N] (ResourceType/id)" format.
+// The caller must call Cleanup() on every returned Input.
+func expandBundleEntries(path string) ([]*input.Input, error) {
+	data, err := os.ReadFile(path) //nolint:gosec // validated upstream
+	if err != nil {
+		return nil, err
+	}
+	var b bundleJSON
+	if err := json.Unmarshal(data, &b); err != nil || b.ResourceType != "Bundle" {
+		return nil, nil
+	}
+	base := filepath.Base(path)
+	var ins []*input.Input
+	for i, entry := range b.Entry {
+		if len(entry.Resource) == 0 || string(entry.Resource) == "null" {
+			continue
+		}
+		var res struct {
+			ResourceType string `json:"resourceType"`
+			ID           string `json:"id"`
+		}
+		_ = json.Unmarshal(entry.Resource, &res)
+
+		label := fmt.Sprintf("%s → entry[%d]", base, i)
+		if res.ResourceType != "" {
+			if res.ID != "" {
+				label = fmt.Sprintf("%s → entry[%d] (%s/%s)", base, i, res.ResourceType, res.ID)
+			} else {
+				label = fmt.Sprintf("%s → entry[%d] (%s)", base, i, res.ResourceType)
+			}
+		}
+
+		f, ferr := os.CreateTemp("", "fhirlint-entry-*.json")
+		if ferr != nil {
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			return nil, fmt.Errorf("entry %d: %w", i, ferr)
+		}
+		_, writeErr := f.Write(entry.Resource)
+		closeErr := f.Close()
+		if writeErr != nil || closeErr != nil {
+			_ = os.Remove(f.Name())
+			for _, t := range ins {
+				t.Cleanup()
+			}
+			if writeErr != nil {
+				return nil, writeErr
+			}
+			return nil, closeErr
+		}
+		ins = append(ins, &input.Input{
+			Source:   input.SourceFile,
+			Path:     f.Name(),
+			TempFile: f.Name(),
+			Label:    label,
+		})
+	}
+	return ins, nil
+}
+
+// preprocessedInput applies --extract and --ignore to path by writing the result
+// to a temp file. Returns an Input pointing to the temp file on success.
+// If no preprocessing flags are set, returns an Input wrapping the original path.
+// The caller must call Cleanup() on the returned Input.
+func preprocessedInput(path string) (*input.Input, error) {
+	if flagExtract == "" && len(flagIgnore) == 0 {
+		return &input.Input{Source: input.SourceFile, Path: path, Label: path}, nil
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // validated upstream
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(strings.TrimSpace(string(data)), "<") {
+		return preprocessedXMLInput(path, data)
+	}
+	raw := string(data)
+	if flagExtract != "" {
+		p := gjsonPath(flagExtract)
+		extracted := gjson.Get(raw, p)
+		if !extracted.Exists() {
+			return nil, fmt.Errorf("--extract: path %q not found in input", flagExtract)
+		}
+		raw = extracted.Raw
+	}
+	for _, ign := range flagIgnore {
+		raw = deleteJSONPath(raw, gjsonPath(ign))
+	}
+	f, ferr := os.CreateTemp("", "fhirlint-dir-*.json")
+	if ferr != nil {
+		return nil, fmt.Errorf("creating temp file: %w", ferr)
+	}
+	_, writeErr := f.WriteString(raw)
+	closeErr := f.Close()
+	if writeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, writeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
+	return &input.Input{
+		Source:   input.SourceFile,
+		Path:     f.Name(),
+		TempFile: f.Name(),
+		Label:    path,
+	}, nil
+}
+
+// preprocessedXMLInput applies --extract and/or --ignore to XML data and writes
+// the result to a temp .xml file. The caller must call Cleanup() on the returned Input.
+func preprocessedXMLInput(origPath string, data []byte) (*input.Input, error) {
+	result := data
+	var xmlErr error
+	if flagExtract != "" {
+		result, xmlErr = xmlExtract(result, flagExtract)
+		if xmlErr != nil {
+			return nil, xmlErr
+		}
+	}
+	if len(flagIgnore) > 0 {
+		paths := make([][]string, len(flagIgnore))
+		for i, ign := range flagIgnore {
+			paths[i] = xmlPathSegments(ign)
+		}
+		result, xmlErr = xmlDeletePaths(result, paths)
+		if xmlErr != nil {
+			return nil, fmt.Errorf("--ignore on XML: %w", xmlErr)
+		}
+	}
+	f, ferr := os.CreateTemp("", "fhirlint-dir-*.xml")
+	if ferr != nil {
+		return nil, fmt.Errorf("creating temp file: %w", ferr)
+	}
+	_, writeErr := f.Write(result)
+	closeErr := f.Close()
+	if writeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, writeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
+	return &input.Input{
+		Source:   input.SourceFile,
+		Path:     f.Name(),
+		TempFile: f.Name(),
+		Label:    origPath,
+	}, nil
+}
+
+// validateEntryInputs validates a set of bundle entry temp files, applying
+// profile-map per resource type and overrides via the bundle's source path.
+// Results get the entry label and bundlePath as Filename.
+func validateEntryInputs(ins []*input.Input, bundlePath string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+	type group struct {
+		paths  []string
+		labels []string
+		opts   validator.Options
+	}
+	groupMap := map[string]*group{}
+	for _, in := range ins {
+		g := optsWithProfileMap(opts, in.Path, profileMap) // resource-type based profile lookup
+		g = mergeOverrideOpts(g, matchingOverrides(bundlePath, overrides))
+		key := optsGroupKey(g)
+		if _, ok := groupMap[key]; !ok {
+			groupMap[key] = &group{opts: g}
+		}
+		groupMap[key].paths = append(groupMap[key].paths, in.Path)
+		groupMap[key].labels = append(groupMap[key].labels, in.Label)
+	}
+
+	keys := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var results []*validator.Result
+	for _, k := range keys {
+		g := groupMap[k]
+		rs, err := runWithCache(g.paths, g.opts)
+		if err != nil {
+			return nil, err
+		}
+		for i, r := range rs {
+			r.Filename = bundlePath
+			r.Label = g.labels[i]
+		}
+		results = append(results, rs...)
+	}
+	return results, nil
+}
+
+// validateNDJSON splits an NDJSON file into per-line temp files, optionally
+// applies --extract / --ignore preprocessing, and validates them in a single JVM invocation.
+func validateNDJSON(path string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+	ins, err := ndjson.Split(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		for _, t := range ins {
+			t.Cleanup()
+		}
+	}()
+
+	if len(ins) == 0 {
+		return nil, nil
+	}
+
+	if flagExtract != "" || len(flagIgnore) > 0 {
+		for _, t := range ins {
+			if err := preprocessJSON(t); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	paths := make([]string, len(ins))
+	for i, t := range ins {
+		paths[i] = t.Path
+	}
+
+	fileOpts := optsWithProfileMap(opts, path, profileMap)
+	fileOpts = mergeOverrideOpts(fileOpts, matchingOverrides(path, overrides))
+	rs, err := runWithCache(paths, fileOpts)
+	if err != nil {
+		return nil, err
+	}
+	for i, r := range rs {
+		r.Label = ins[i].Label
+		r.Filename = path
+	}
+	return rs, nil
+}
+
+// validateDir finds all .json/.xml/.ndjson files and validates them.
+// Files are grouped by their merged validator options (profile-map + overrides)
+// and validated in one JVM invocation per group.
+// NDJSON files are expanded into per-line resources before grouping.
+func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
 		return nil, err
@@ -888,42 +1521,171 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 		return nil, nil
 	}
 
-	if len(profileMap) == 0 {
-		results, err := runWithCache(paths, opts)
+	// Separate NDJSON files from regular files — they need per-line expansion.
+	var regularPaths, ndjsonPaths []string
+	for _, p := range paths {
+		if ndjson.IsNDJSON(p) {
+			ndjsonPaths = append(ndjsonPaths, p)
+		} else {
+			regularPaths = append(regularPaths, p)
+		}
+	}
+
+	var allResults []*validator.Result
+
+	// Validate NDJSON files.
+	for _, p := range ndjsonPaths {
+		rs, err := validateNDJSON(p, opts, profileMap, overrides)
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, rs...)
+	}
+
+	if len(regularPaths) == 0 {
+		return allResults, nil
+	}
+
+	// Apply --extract / --ignore: preprocess each file into a temp copy.
+	// Files that fail (e.g. extract path not found) produce a synthetic error
+	// result and are skipped from validation.
+	tempPathToOrig := make(map[string]string)
+	if flagExtract != "" || len(flagIgnore) > 0 {
+		var preprocessedIns []*input.Input
+		for _, p := range regularPaths {
+			in, perr := preprocessedInput(p)
+			if perr != nil {
+				allResults = append(allResults, &validator.Result{
+					Filename: p,
+					Label:    p,
+					Valid:    false,
+					Issues: []validator.Issue{{
+						Severity:  "error",
+						Message:   perr.Error(),
+						MessageID: "fhirlint-preprocess",
+					}},
+				})
+				continue
+			}
+			preprocessedIns = append(preprocessedIns, in)
+			if in.TempFile != "" {
+				tempPathToOrig[in.Path] = p
+			}
+		}
+		defer func() {
+			for _, in := range preprocessedIns {
+				in.Cleanup()
+			}
+		}()
+		regularPaths = make([]string, len(preprocessedIns))
+		for i, in := range preprocessedIns {
+			regularPaths[i] = in.Path
+		}
+	}
+
+	// origPath maps a (possibly temp) validation path back to the original file path.
+	origPath := func(p string) string {
+		if orig, ok := tempPathToOrig[p]; ok {
+			return orig
+		}
+		return p
+	}
+
+	if len(regularPaths) == 0 {
+		return allResults, nil
+	}
+
+	// Expand bundle entries when --bundle-entries is set.
+	// Entry temp files are added to regularPaths so they go through the normal
+	// grouping. entryMetaMap tracks their bundle path and display label.
+	type entryMeta struct {
+		bundlePath string
+		label      string
+	}
+	entryMetaMap := make(map[string]entryMeta)
+	if flagBundleEntries {
+		var entryInputs []*input.Input
+		for _, p := range regularPaths {
+			ins, berr := expandBundleEntries(origPath(p))
+			if berr != nil {
+				return nil, berr
+			}
+			for _, in := range ins {
+				entryMetaMap[in.Path] = entryMeta{bundlePath: origPath(p), label: in.Label}
+				entryInputs = append(entryInputs, in)
+			}
+		}
+		if len(entryInputs) > 0 {
+			defer func() {
+				for _, in := range entryInputs {
+					in.Cleanup()
+				}
+			}()
+			for _, in := range entryInputs {
+				regularPaths = append(regularPaths, in.Path)
+			}
+		}
+	}
+
+	// remapResult fills r.Filename and r.Label from entryMetaMap or origPath.
+	remapResult := func(r *validator.Result) {
+		if meta, ok := entryMetaMap[r.Filename]; ok {
+			r.Filename = meta.bundlePath
+			r.Label = meta.label
+		} else {
+			r.Filename = origPath(r.Filename)
+			r.Label = r.Filename
+		}
+	}
+
+	// Fast path: no per-file option overrides — single JVM invocation.
+	if len(profileMap) == 0 && !hasValidatorOverrides(overrides) && len(entryMetaMap) == 0 {
+		results, err := runWithCache(regularPaths, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, r := range results {
-			r.Label = r.Filename
+			remapResult(r)
 		}
-		return results, nil
+		return append(allResults, results...), nil
 	}
 
-	// Group files by their extra-profile combination for minimal JVM invocations.
+	// Group files by their merged validator options for minimal JVM invocations.
+	// Entry files use their resource type for profile-map lookup; override lookup
+	// uses the bundle path. Regular files use the original (pre-preprocessing) path.
 	type group struct {
 		paths []string
 		opts  validator.Options
 	}
 	groupMap := map[string]*group{}
-	for _, p := range paths {
-		extra := resolveProfilesForPath(p, profileMap)
-		key := strings.Join(extra, "\x00")
+	for _, p := range regularPaths {
+		var profileLookupPath, overrideLookupPath string
+		if meta, ok := entryMetaMap[p]; ok {
+			profileLookupPath = p // temp file — peekResourceType reads the entry resource
+			overrideLookupPath = meta.bundlePath
+		} else {
+			profileLookupPath = origPath(p)
+			overrideLookupPath = origPath(p)
+		}
+		g := opts
+		extra := resolveProfilesForPath(profileLookupPath, profileMap)
+		if len(extra) > 0 {
+			g.Profiles = append(append([]string{}, g.Profiles...), extra...)
+		}
+		g = mergeOverrideOpts(g, matchingOverrides(overrideLookupPath, overrides))
+		key := optsGroupKey(g)
 		if _, ok := groupMap[key]; !ok {
-			g := opts
-			g.Profiles = append(append([]string{}, opts.Profiles...), extra...)
 			groupMap[key] = &group{opts: g}
 		}
 		groupMap[key].paths = append(groupMap[key].paths, p)
 	}
 
-	// Sort groups for deterministic output order.
 	keys := make([]string, 0, len(groupMap))
 	for k := range groupMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var allResults []*validator.Result
 	for _, k := range keys {
 		g := groupMap[k]
 		rs, rerr := runWithCache(g.paths, g.opts)
@@ -931,7 +1693,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 			return nil, rerr
 		}
 		for _, r := range rs {
-			r.Label = r.Filename
+			remapResult(r)
 		}
 		allResults = append(allResults, rs...)
 	}
@@ -945,14 +1707,28 @@ func preprocessJSON(in *input.Input) error {
 		return err
 	}
 
-	// Detect XML — skip JSON preprocessing
 	trimmed := strings.TrimSpace(string(data))
 	if strings.HasPrefix(trimmed, "<") {
+		result := data
+		var xmlErr error
 		if flagExtract != "" {
-			return fmt.Errorf("--extract is only supported for JSON input")
+			result, xmlErr = xmlExtract(result, flagExtract)
+			if xmlErr != nil {
+				return xmlErr
+			}
 		}
 		if len(flagIgnore) > 0 {
-			return applyXMLIgnore(in, data)
+			paths := make([][]string, len(flagIgnore))
+			for i, ign := range flagIgnore {
+				paths[i] = xmlPathSegments(ign)
+			}
+			result, xmlErr = xmlDeletePaths(result, paths)
+			if xmlErr != nil {
+				return fmt.Errorf("--ignore on XML: %w", xmlErr)
+			}
+		}
+		if flagExtract != "" || len(flagIgnore) > 0 {
+			return os.WriteFile(in.Path, result, 0600) //nolint:gosec
 		}
 		return nil
 	}
@@ -1025,23 +1801,6 @@ func deleteNestedKey(obj interface{}, parts []string) {
 	}
 }
 
-func applyXMLIgnore(in *input.Input, data []byte) error {
-	// Minimal XML field removal: unmarshal → delete tag → re-marshal.
-	// For full XPath support this can be extended later.
-	var doc map[string]interface{}
-	if err := xml.Unmarshal(data, (*xmlMap)(&doc)); err != nil {
-		return fmt.Errorf("--ignore on XML is not yet supported for this document structure")
-	}
-	return nil
-}
-
-// xmlMap is a placeholder; full XML ignore support is a future enhancement.
-type xmlMap map[string]interface{}
-
-func (x *xmlMap) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	return fmt.Errorf("XML field ignoring is not yet supported — use --ignore with JSON input")
-}
-
 func outputFile(ext string) string {
 	if flagOutput == "" {
 		return ""
@@ -1109,12 +1868,15 @@ func parseSuppressFromConfig(raw interface{}) ([]suppress.Rule, error) {
 	return rules, nil
 }
 
-func checkMaxWarnings(results []*validator.Result) error {
+func checkMaxWarnings(results []*validator.Result, neverFailPaths map[string]struct{}) error {
 	if flagMaxWarnings < 0 {
 		return nil
 	}
 	count := 0
 	for _, r := range results {
+		if _, skip := neverFailPaths[r.Filename]; skip {
+			continue
+		}
 		for _, issue := range r.Issues {
 			if issue.Severity == "warning" {
 				count++
@@ -1128,7 +1890,7 @@ func checkMaxWarnings(results []*validator.Result) error {
 	return nil
 }
 
-func checkExitCode(results []*validator.Result) error {
+func checkExitCode(results []*validator.Result, neverFailPaths map[string]struct{}) error {
 	if flagFailOn == "never" {
 		return nil
 	}
@@ -1138,6 +1900,9 @@ func checkExitCode(results []*validator.Result) error {
 		return fmt.Errorf("unknown --fail-on value %q — use: error, warning, information, never", flagFailOn)
 	}
 	for _, r := range results {
+		if _, skip := neverFailPaths[r.Filename]; skip {
+			continue
+		}
 		for _, issue := range r.Issues {
 			if threshold[issue.Severity] >= min {
 				return errValidationFailed

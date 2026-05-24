@@ -1,0 +1,381 @@
+// Package configcheck validates a fhirlint.yml config file for unknown keys,
+// invalid enum values, and type errors. It reads the raw YAML so that it can
+// report line numbers and catch keys that viper silently ignores.
+package configcheck
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
+	"go.yaml.in/yaml/v3"
+)
+
+// Issue is a single validation problem found in the config file.
+type Issue struct {
+	Line    int
+	Key     string // may be empty for file-level problems
+	Message string
+}
+
+func (i Issue) String() string {
+	if i.Line > 0 {
+		return fmt.Sprintf("line %d: %s", i.Line, i.Message)
+	}
+	return i.Message
+}
+
+type valueKind int
+
+const (
+	kindString     valueKind = iota
+	kindBool
+	kindInt
+	kindEnum
+	kindStringList
+	kindEnumList
+	kindSuppressList
+	kindOverrideList
+	kindMap
+)
+
+type keySpec struct {
+	kind   valueKind
+	values []string // valid enum members for kindEnum and kindEnumList
+}
+
+var topLevelKeys = map[string]keySpec{
+	"severity":              {kind: kindEnum, values: []string{"information", "warning", "error"}},
+	"fail-on":               {kind: kindEnum, values: []string{"error", "warning", "information", "never"}},
+	"max-warnings":          {kind: kindInt},
+	"fhir-version":          {kind: kindEnum, values: []string{"4.0.1", "4.3.0", "5.0.0"}},
+	"profile":               {kind: kindStringList},
+	"profile-map":           {kind: kindMap},
+	"ig":                    {kind: kindStringList},
+	"codesystem":            {kind: kindStringList},
+	"valueset":              {kind: kindStringList},
+	"format":                {kind: kindEnumList, values: []string{"terminal", "json", "html", "junit", "sarif"}},
+	"output":                {kind: kindString},
+	"ignore":                {kind: kindStringList},
+	"exclude":               {kind: kindStringList},
+	"no-terminology-server": {kind: kindBool},
+	"terminology-server":    {kind: kindString},
+	"allow-insecure-tx":     {kind: kindBool},
+	"best-practice":         {kind: kindEnum, values: []string{"ignore", "hint", "warning", "error"}},
+	"tx-cache":              {kind: kindString},
+	"tx-log":                {kind: kindString},
+	"locale":                {kind: kindString},
+	"allow-example-urls":    {kind: kindBool},
+	"watch":                 {kind: kindEnum, values: []string{"single", "all"}},
+	"watch-interval":        {kind: kindInt},
+	"suppress":              {kind: kindSuppressList},
+	"show-suppressed":       {kind: kindBool},
+	"cache":                 {kind: kindBool},
+	"cache-dir":             {kind: kindString},
+	"timeout":               {kind: kindString},
+	"url-timeout":           {kind: kindString},
+	"baseline":              {kind: kindString},
+	"url":                   {kind: kindStringList},
+	"extract":               {kind: kindString},
+	"extract-each":          {kind: kindString},
+	"bundle-entries":        {kind: kindBool},
+	"quiet":                 {kind: kindBool},
+	"no-color":              {kind: kindBool},
+	"overrides":             {kind: kindOverrideList},
+}
+
+// KnownKeys returns the set of recognized top-level fhirlint.yml keys.
+func KnownKeys() map[string]struct{} {
+	out := make(map[string]struct{}, len(topLevelKeys))
+	for k := range topLevelKeys {
+		out[k] = struct{}{}
+	}
+	return out
+}
+
+var overrideKeys = map[string]keySpec{
+	"files":         {kind: kindStringList},
+	"ig":            {kind: kindStringList},
+	"profile":       {kind: kindStringList},
+	"best-practice": {kind: kindEnum, values: []string{"ignore", "hint", "warning", "error"}},
+	"severity":      {kind: kindEnum, values: []string{"information", "warning", "error", "fatal"}},
+	"fail-on":       {kind: kindEnum, values: []string{"error", "warning", "information", "never"}},
+	"suppress":      {kind: kindSuppressList},
+}
+
+var suppressKeys = map[string]struct{}{
+	"messageId": {}, "messageid": {},
+	"constraint": {}, "expression": {}, "pattern": {},
+	"severity": {}, "reason": {},
+}
+
+// Check reads the YAML config file at path and returns all validation issues.
+// Returns nil, nil if the file does not exist (not an error — config is optional).
+func Check(path string) ([]Issue, error) {
+	data, err := os.ReadFile(path) //nolint:gosec // caller-supplied path
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return []Issue{{Message: fmt.Sprintf("YAML parse error: %v", err)}}, nil
+	}
+	if doc.Kind == 0 || len(doc.Content) == 0 {
+		return nil, nil // empty file
+	}
+
+	root := doc.Content[0]
+	return checkMapping(root, topLevelKeys), nil
+}
+
+// checkMapping validates every key/value pair in a YAML mapping node.
+func checkMapping(node *yaml.Node, specs map[string]keySpec) []Issue {
+	if node.Kind != yaml.MappingNode {
+		return nil
+	}
+	var issues []Issue
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+		key := keyNode.Value
+		line := keyNode.Line
+
+		spec, ok := specs[key]
+		if !ok {
+			msg := fmt.Sprintf("unknown key %q", key)
+			if sug := suggest(key, keysOf(specs)); sug != "" {
+				msg += fmt.Sprintf(" (did you mean %q?)", sug)
+			}
+			issues = append(issues, Issue{Line: line, Key: key, Message: msg})
+			continue
+		}
+		issues = append(issues, validateValue(key, line, valNode, spec)...)
+	}
+	return issues
+}
+
+// validateValue checks that a YAML value node matches the expected keySpec.
+func validateValue(key string, line int, node *yaml.Node, spec keySpec) []Issue {
+	switch spec.kind {
+	case kindString:
+		if node.Kind != yaml.ScalarNode {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a string", key)}}
+		}
+
+	case kindBool:
+		if node.Kind != yaml.ScalarNode || (node.Value != "true" && node.Value != "false") {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a boolean (true or false), got %q", key, node.Value)}}
+		}
+
+	case kindInt:
+		if node.Kind != yaml.ScalarNode {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be an integer", key)}}
+		}
+		if _, err := strconv.Atoi(node.Value); err != nil {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be an integer, got %q", key, node.Value)}}
+		}
+
+	case kindEnum:
+		if node.Kind != yaml.ScalarNode {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a string", key)}}
+		}
+		if !contains(spec.values, node.Value) {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("invalid value %q for %q (allowed: %s)", node.Value, key, strings.Join(spec.values, ", "))}}
+		}
+
+	case kindStringList:
+		return checkStringList(key, line, node)
+
+	case kindEnumList:
+		return checkEnumList(key, line, node, spec.values)
+
+	case kindSuppressList:
+		return checkSuppressList(key, line, node)
+
+	case kindOverrideList:
+		return checkOverrideList(key, line, node)
+
+	case kindMap:
+		// No structural validation for maps
+	}
+	return nil
+}
+
+func checkStringList(key string, line int, node *yaml.Node) []Issue {
+	// Accept a single scalar as a one-element list.
+	if node.Kind == yaml.ScalarNode {
+		return nil
+	}
+	if node.Kind != yaml.SequenceNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a list of strings", key)}}
+	}
+	var issues []Issue
+	for _, item := range node.Content {
+		if item.Kind != yaml.ScalarNode {
+			issues = append(issues, Issue{Line: item.Line, Key: key, Message: fmt.Sprintf("%q items must be strings", key)})
+		}
+	}
+	return issues
+}
+
+func checkEnumList(key string, line int, node *yaml.Node, allowed []string) []Issue {
+	issues := checkStringList(key, line, node)
+	if len(issues) > 0 {
+		return issues
+	}
+	if node.Kind == yaml.ScalarNode {
+		if !contains(allowed, node.Value) {
+			return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("invalid value %q for %q (allowed: %s)", node.Value, key, strings.Join(allowed, ", "))}}
+		}
+		return nil
+	}
+	for _, item := range node.Content {
+		if item.Kind == yaml.ScalarNode && !contains(allowed, item.Value) {
+			issues = append(issues, Issue{Line: item.Line, Key: key, Message: fmt.Sprintf("invalid value %q for %q (allowed: %s)", item.Value, key, strings.Join(allowed, ", "))})
+		}
+	}
+	return issues
+}
+
+func checkSuppressList(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind != yaml.SequenceNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a list", key)}}
+	}
+	var issues []Issue
+	for _, item := range node.Content {
+		if item.Kind == yaml.ScalarNode {
+			continue // string rule like "messageId:dom-6"
+		}
+		if item.Kind != yaml.MappingNode {
+			issues = append(issues, Issue{Line: item.Line, Key: key, Message: "suppress rule must be a string or map"})
+			continue
+		}
+		issues = append(issues, checkSuppressMap(item)...)
+	}
+	return issues
+}
+
+func checkSuppressMap(node *yaml.Node) []Issue {
+	var issues []Issue
+	hasType := false
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		k := node.Content[i].Value
+		line := node.Content[i].Line
+		if _, ok := suppressKeys[k]; !ok {
+			msg := fmt.Sprintf("unknown suppress key %q", k)
+			issues = append(issues, Issue{Line: line, Key: k, Message: msg})
+			continue
+		}
+		if k == "messageId" || k == "messageid" || k == "constraint" || k == "expression" || k == "pattern" {
+			hasType = true
+		}
+		if k == "severity" {
+			valNode := node.Content[i+1]
+			allowed := []string{"information", "warning", "error", "fatal"}
+			if !contains(allowed, valNode.Value) {
+				issues = append(issues, Issue{Line: line, Key: k, Message: fmt.Sprintf("invalid value %q for suppress severity (allowed: %s)", valNode.Value, strings.Join(allowed, ", "))})
+			}
+		}
+	}
+	if !hasType {
+		issues = append(issues, Issue{Line: node.Line, Message: "suppress rule must have one of: messageId, constraint, expression, pattern"})
+	}
+	return issues
+}
+
+func checkOverrideList(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind != yaml.SequenceNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a list", key)}}
+	}
+	var issues []Issue
+	for _, item := range node.Content {
+		if item.Kind != yaml.MappingNode {
+			issues = append(issues, Issue{Line: item.Line, Key: key, Message: "override entry must be a map"})
+			continue
+		}
+		issues = append(issues, checkOverrideMap(item)...)
+	}
+	return issues
+}
+
+func checkOverrideMap(node *yaml.Node) []Issue {
+	issues := checkMapping(node, overrideKeys)
+	// Warn if files: is missing (required for matching to work).
+	hasFiles := false
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == "files" {
+			hasFiles = true
+			break
+		}
+	}
+	if !hasFiles {
+		issues = append(issues, Issue{Line: node.Line, Message: "override entry is missing required key \"files\""})
+	}
+	return issues
+}
+
+// suggest returns the closest key from candidates if the edit distance is ≤ 3.
+func suggest(typo string, candidates []string) string {
+	best, bestDist := "", len(typo)+1
+	for _, c := range candidates {
+		d := levenshtein(typo, c)
+		if d < bestDist {
+			bestDist, best = d, c
+		}
+	}
+	if bestDist <= 3 {
+		return best
+	}
+	return ""
+}
+
+func levenshtein(a, b string) int {
+	la, lb := len(a), len(b)
+	dp := make([]int, lb+1)
+	for j := range dp {
+		dp[j] = j
+	}
+	for i := 1; i <= la; i++ {
+		prev := dp[0]
+		dp[0] = i
+		for j := 1; j <= lb; j++ {
+			tmp := dp[j]
+			if a[i-1] == b[j-1] {
+				dp[j] = prev
+			} else {
+				m := dp[j]
+				if dp[j-1] < m {
+					m = dp[j-1]
+				}
+				if prev < m {
+					m = prev
+				}
+				dp[j] = 1 + m
+			}
+			prev = tmp
+		}
+	}
+	return dp[lb]
+}
+
+func keysOf(m map[string]keySpec) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
+func contains(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

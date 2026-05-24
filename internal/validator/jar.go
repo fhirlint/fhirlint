@@ -188,19 +188,31 @@ func formatBytes(n int64) string {
 }
 
 func downloadJAR(dest string) error {
-	resp, err := http.Get(jarURL) //nolint:gosec,noctx // known URL, no user input
+	return downloadJARFrom(jarURL, dest)
+}
+
+func downloadJARFrom(url, dest string) error {
+	// GitHub redirects /releases/latest/download/ → /releases/download/VERSION/ → CDN.
+	// The final URL is a CDN URL without the version; capture it from the intermediate redirect.
+	var version string
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+			if m := versionFromURL.FindStringSubmatch(req.URL.String()); len(m) == 2 {
+				version = m[1]
+			}
+			return nil
+		},
+	}
+	resp, err := client.Get(url) //nolint:gosec,noctx // known URL, no user input
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, jarURL)
+		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
 
-	// Extract version from the final URL after redirect (e.g. .../releases/download/6.9.7/...)
-	var version string
-	if m := versionFromURL.FindStringSubmatch(resp.Request.URL.String()); len(m) == 2 {
-		version = m[1]
+	if version != "" {
 		_ = saveValidatorVersion(version)
 	}
 

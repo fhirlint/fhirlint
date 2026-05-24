@@ -320,3 +320,53 @@ func TestProgressWriter_NoTotal_ShowsBytesOnly(t *testing.T) {
 		t.Errorf("expected no percentage without known total, got %q", out.String())
 	}
 }
+
+// TestDownloadJARFrom_CapturesVersionFromRedirect verifies that the version is
+// extracted from an intermediate redirect URL (e.g. GitHub's versioned URL)
+// even when the final URL is a CDN URL that does not contain the version.
+func TestDownloadJARFrom_CapturesVersionFromRedirect(t *testing.T) {
+	jarContent := append(zipMagic, []byte("fake jar body")...)
+
+	// Simulate: latest → versioned GitHub URL → CDN (final, no version in URL)
+	cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(jarContent)
+	}))
+	defer cdn.Close()
+
+	var versionedURL string
+	gh := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/releases/latest/download/validator_cli.jar":
+			http.Redirect(w, r, versionedURL, http.StatusFound)
+		case "/releases/download/6.9.7/validator_cli.jar":
+			http.Redirect(w, r, cdn.URL+"/validator_cli.jar", http.StatusFound)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer gh.Close()
+
+	versionedURL = gh.URL + "/releases/download/6.9.7/validator_cli.jar"
+
+	tmp := t.TempDir()
+	t.Setenv("FHIRLINT_CACHE_DIR", tmp)
+
+	dest := tmp + "/validator_cli.jar"
+	if err := downloadJARFrom(gh.URL+"/releases/latest/download/validator_cli.jar", dest); err != nil {
+		t.Fatalf("downloadJARFrom() error: %v", err)
+	}
+
+	vp, err := cache.ValidatorVersionPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(vp) //nolint:gosec // test path
+	if err != nil {
+		t.Fatalf("version file not written: %v", err)
+	}
+	got := strings.TrimSpace(string(data))
+	if got != "6.9.7" {
+		t.Errorf("expected version %q, got %q", "6.9.7", got)
+	}
+}
