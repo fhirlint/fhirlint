@@ -10,7 +10,7 @@ func TestFlagCompletions_KeyFlags(t *testing.T) {
 		"fail-on":       {"error", "warning", "information", "never"},
 		"best-practice": {"ignore", "hint", "warning", "error"},
 		"severity":      {"information", "warning", "error"},
-		"format":        {"terminal", "json", "html", "junit", "sarif"},
+		"format":        {"terminal", "json", "html", "junit", "sarif", "markdown"},
 		"watch":         {"single", "all"},
 	}
 	for flag, want := range cases {

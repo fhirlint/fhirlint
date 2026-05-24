@@ -43,7 +43,7 @@ ig:
 # valueset:
 #   - ./valuesets/internal-drug-valueset.json
 
-# Output format: terminal | json | html (repeatable)
+# Output format: terminal | json | html | junit | sarif | markdown (repeatable)
 format:
   - terminal
 
