@@ -66,6 +66,7 @@ func init() {
 	rootCmd.AddCommand(auditCmd)
 	rootCmd.AddCommand(profilesCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(explainCmd)
 	rootCmd.AddCommand(diffCmd)
 }
 
