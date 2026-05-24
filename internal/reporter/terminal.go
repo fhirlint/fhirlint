@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/fhirlint/fhirlint/internal/explain"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/muesli/termenv"
 )
@@ -44,6 +45,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed bool,
 		return
 	}
 
+	hinted := map[string]bool{}
 	for _, issue := range filtered {
 		var prefix string
 		var style lipgloss.Style
@@ -64,6 +66,11 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed bool,
 		fmt.Println(style.Render(prefix) + issue.Message)
 		if issue.Location != "" {
 			fmt.Println(dimStyle.Render("           @ " + issue.Location))
+		}
+		// Surface a hint once per message ID when we can explain it.
+		if issue.MessageID != "" && !hinted[issue.MessageID] && explain.Known(issue.MessageID) {
+			hinted[issue.MessageID] = true
+			fmt.Println(dimStyle.Render("           ↳ Run: fhirlint explain " + issue.MessageID))
 		}
 	}
 

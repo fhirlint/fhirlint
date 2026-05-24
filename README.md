@@ -26,6 +26,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Output formats](#output-formats)
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
+- [Explaining message IDs](#explaining-message-ids)
 - [Baseline mode](#baseline-mode)
 - [Comparing runs (change control)](#comparing-runs-change-control)
 - [Terminology server](#terminology-server)
@@ -260,6 +261,47 @@ suppress:
   - expression: Patient.text
     severity: warning   # only suppress warnings on this field
 ```
+
+---
+
+## Explaining message IDs
+
+Validation output references message IDs like `dom-6` or `ele-1` without saying what they mean. `fhirlint explain` looks one up — what the rule is, where it comes from, and how to fix it — fully offline, no JAR required.
+
+```bash
+fhirlint explain dom-6
+```
+
+```
+dom-6 — A resource should have narrative for robust management
+Defined in: FHIR R4 Core (best-practice invariant on DomainResource)
+
+  Every DomainResource should contain a human-readable narrative in the
+  `text` field ...
+
+How to fix:
+  Add a `text` field to your resource:
+  ...
+
+Suppress if intentional:
+  fhirlint validate ... --suppress messageId:dom-6
+```
+
+When a message ID has a built-in explanation, terminal output appends a hint so you know help is one command away:
+
+```
+  ⚠ WARN   A resource should have narrative for robust management
+           @ Patient
+           ↳ Run: fhirlint explain dom-6
+```
+
+List every ID with a built-in explanation:
+
+```bash
+fhirlint explain --list
+```
+
+fhirlint ships explanations for common FHIR core invariants (`dom-*`, `ele-1`, `ext-1`, `bdl-*`, `obs-*`); the set grows over time. Unknown IDs exit non-zero with a pointer to the [HL7 FHIR specification](https://hl7.org/fhir/).
 
 ---
 

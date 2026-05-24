@@ -161,8 +161,8 @@ func TestTerminal_QuietShowsFilesWithIssues(t *testing.T) {
 	os.Stdout = w
 
 	result := &validator.Result{
-		Valid: false,
-		Label: "bad.json",
+		Valid:  false,
+		Label:  "bad.json",
 		Issues: []validator.Issue{{Severity: "error", Message: "something wrong"}},
 	}
 	Terminal(result, "information", false, true)
@@ -183,9 +183,9 @@ func TestTerminal_QuietSuppressesValidWithSuppressedIssues(t *testing.T) {
 	os.Stdout = w
 
 	result := &validator.Result{
-		Valid: true,
-		Label: "ok.json",
-		Issues: nil,
+		Valid:      true,
+		Label:      "ok.json",
+		Issues:     nil,
 		Suppressed: []validator.Issue{{Severity: "warning", Message: "suppressed"}},
 	}
 	Terminal(result, "information", true, true)
@@ -197,6 +197,37 @@ func TestTerminal_QuietSuppressesValidWithSuppressedIssues(t *testing.T) {
 
 	if buf.Len() != 0 {
 		t.Errorf("expected no output for valid+suppressed file under --quiet, got: %q", buf.String())
+	}
+}
+
+func TestTerminal_ExplainHint(t *testing.T) {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	result := &validator.Result{
+		Valid: false,
+		Label: "bad.json",
+		Issues: []validator.Issue{
+			{Severity: "warning", Message: "narrative missing", MessageID: "dom-6"},
+			{Severity: "warning", Message: "narrative missing again", MessageID: "dom-6"},
+			{Severity: "error", Message: "mystery", MessageID: "NOT_KNOWN"},
+		},
+	}
+	Terminal(result, "information", false, false)
+
+	_ = w.Close()
+	os.Stdout = old
+	var buf strings.Builder
+	_, _ = io.Copy(&buf, r)
+	out := buf.String()
+
+	// Hint appears for a known ID, exactly once (deduped), and not for unknown IDs.
+	if n := strings.Count(out, "fhirlint explain dom-6"); n != 1 {
+		t.Errorf("expected the dom-6 hint exactly once, got %d\n%s", n, out)
+	}
+	if strings.Contains(out, "fhirlint explain NOT_KNOWN") {
+		t.Errorf("did not expect a hint for an unknown message ID\n%s", out)
 	}
 }
 
