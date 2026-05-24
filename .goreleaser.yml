@@ -18,7 +18,7 @@ builds:
       - goos: windows
         goarch: arm64
     ldflags:
-      - -s -w
+      - -s -w -X github.com/fhirlint/fhirlint/cmd.version={{ .Tag }}
 
 archives:
   - formats:

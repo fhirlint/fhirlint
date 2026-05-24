@@ -112,3 +112,55 @@ ignore:
 #   - pattern: ".*example\\.org.*"               # suppress by regex match on message text
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
+
+# Validate each entry.resource inside a FHIR Bundle as a standalone resource.
+# The Bundle itself is still validated (structure); entry validation is additive.
+# Works for all Bundle types (transaction, batch, collection, document, searchset).
+# bundle-entries: true
+
+# Suppress per-file output for valid files — only files with issues are printed.
+# The summary line is always shown. Only affects --format terminal.
+# quiet: true
+
+# Disable ANSI color output (useful for CI environments that don't support color).
+# no-color: true
+
+# Baseline file — suppress pre-existing issues and fail only on regressions.
+# Generate:  fhirlint validate resources/ --generate-baseline fhirlint-baseline.json
+# Use:       fhirlint validate resources/ --baseline fhirlint-baseline.json
+# Or set here to avoid repeating the flag on every run:
+# baseline: fhirlint-baseline.json
+
+# IG lock file — pin exact package versions for reproducible CI builds.
+# Run once with --lock to create/update fhirlint.lock:
+#   fhirlint validate --lock
+# Commit fhirlint.lock to version control. On subsequent runs (without --lock)
+# fhirlint verifies cached packages against the recorded SHA256 hashes.
+
+# Per-glob overrides — apply different rules to specific files or directories.
+# Overrides are matched in order; later entries win on scalar conflicts (best-practice).
+# Slice fields (ig, profile, suppress) are appended to the global values.
+# Files not matching any override use the global config.
+#
+# Overridable fields:
+#   ig            — appended to global IGs (separate JVM invocation per unique combination)
+#   profile       — appended to global profiles
+#   best-practice — replaces global best-practice (ignore | hint | warning | error)
+#   severity      — hides issues below this level for matching files (information | warning | error | fatal)
+#   fail-on       — set to "never" so matching files never cause a non-zero exit code
+#   suppress      — additional suppress rules, same format as the global suppress list
+#
+# overrides:
+#   - files: ["src/fhir/kbv/**"]
+#     ig:
+#       - kbv.basis#1.5.0
+#     profile:
+#       - https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0
+#
+#   - files: ["tests/fixtures/legacy/**"]
+#     severity: error            # only fail on hard errors in legacy fixtures
+#     suppress:
+#       - messageId: UNKNOWN_CODESYSTEM
+#
+#   - files: ["tests/fixtures/invalid/**"]
+#     fail-on: never             # intentionally invalid — never block CI

@@ -26,14 +26,17 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Output formats](#output-formats)
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
+- [Baseline mode](#baseline-mode)
 - [Terminology server](#terminology-server)
 - [Watch mode](#watch-mode)
 - [Pipeline integration](#pipeline-integration)
 - [Configuration file](#configuration-file-fhirlintymll)
+- [Validating the configuration file](#validating-the-configuration-file)
 - [Configuration reference](#configuration-reference)
 - [Built-in profile aliases](#built-in-profile-aliases)
 - [JAR management](#jar-management)
 - [Go library](#go-library)
+- [Guides](#guides)
 - [Contributing](#contributing)
 
 ---
@@ -108,7 +111,7 @@ Or use the Docker image directly in a workflow step:
 # Single file
 fhirlint validate patient.json
 
-# Directory — all .json and .xml files, single JVM invocation
+# Directory — all .json, .xml, and .ndjson files, single JVM invocation
 fhirlint validate ./fhir/resources/
 
 # Stdin
@@ -121,11 +124,18 @@ fhirlint validate \
   --url https://my-api/fhir/Medication/abc \
   --url https://my-api/fhir/MedicationRequest/xyz
 
+# FHIR Bulk Data export (.ndjson) — each line validated as a separate resource
+fhirlint validate export-Patient.ndjson
+
 # Extract each element of a JSON array and validate separately
 fhirlint validate api-response.json --extract-each "$.medications"
+
+# Also validate each entry.resource inside a Bundle as a standalone resource
+fhirlint validate bundle.json --bundle-entries
+fhirlint validate ./fhir/ --bundle-entries
 ```
 
-When validating multiple resources (directory, multiple `--url`, or `--extract-each`), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead.
+When validating multiple resources (directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead.
 
 ---
 
@@ -182,6 +192,12 @@ fhirlint validate patient.json --format terminal --format json --output results.
 # Filter by minimum severity
 fhirlint validate patient.json --severity warning   # hide information
 fhirlint validate patient.json --severity error     # errors only
+
+# Suppress output for valid files (only show files with issues)
+fhirlint validate ./fhir/ --quiet
+
+# Disable ANSI colors (useful for CI environments without color support)
+fhirlint validate patient.json --no-color
 ```
 
 ---
@@ -201,6 +217,8 @@ fhirlint validate patient.json --ignore "$.meta.tag" --ignore "$.text"
 ```
 
 `--extract` and `--extract-each` are mutually exclusive. `--extract-each` labels each result as `filename[0] (ResourceType/id)` for easy identification.
+
+Both `--extract` and `--ignore` also work on XML input using the same `$.element.child` path syntax. For `--extract` on XML, the path must point to the actual FHIR resource element (e.g., `$.entry.resource.Patient`) since XML namespaces are injected automatically. See [Validating partial JSON](docs/extract.md) for details.
 
 ---
 
@@ -238,6 +256,37 @@ suppress:
   - expression: Patient.text
     severity: warning   # only suppress warnings on this field
 ```
+
+---
+
+## Baseline mode
+
+When adopting fhirlint on an existing codebase, there may be many pre-existing issues that you can't fix all at once. Baseline mode lets you capture the current state and only fail the build on new regressions.
+
+```bash
+# Generate a baseline from current issues (the build always succeeds here)
+fhirlint validate ./fhir/ --generate-baseline fhirlint-baseline.json
+
+# Use the baseline: only new issues (regressions) fail the build
+fhirlint validate ./fhir/ --baseline fhirlint-baseline.json
+
+# Regenerate when the codebase intentionally changes
+fhirlint validate ./fhir/ --generate-baseline fhirlint-baseline.json
+```
+
+Issues recorded in the baseline are suppressed on subsequent runs. New issues that were not in the baseline still fail the build according to `--fail-on`. When the codebase is fixed and an issue no longer appears, fhirlint emits a warning (`warn: N baseline occurrence(s) no longer found`) — regenerate the baseline to remove the stale entries.
+
+Commit `fhirlint-baseline.json` to version control so the suppressed issues are visible and reviewable by the team.
+
+You can also set the baseline file in `fhirlint.yml`:
+
+```yaml
+baseline: fhirlint-baseline.json
+```
+
+**Distinction from `--suppress`:** `--suppress` is for intentional, accepted deviations (permanent exceptions). Baseline mode is for managing technical debt — issues you plan to fix eventually but can't address right now.
+
+See [Baseline mode guide](docs/baseline.md) for a full CI workflow walkthrough.
 
 ---
 
@@ -317,7 +366,43 @@ fhirlint validate patient.json --fail-on warning
 fhirlint validate patient.json --fail-on never
 ```
 
-Example GitHub Actions workflow:
+### IG lock file
+
+`--lock` writes a `fhirlint.lock` file containing SHA256 hashes of all resolved IG packages. On subsequent runs (without `--lock`), fhirlint verifies that cached packages match the recorded hashes, ensuring reproducible builds.
+
+```bash
+# Generate or update the lock file
+fhirlint validate ./fhir/ --lock
+
+# Subsequent runs verify the lock automatically (no flag needed)
+fhirlint validate ./fhir/
+```
+
+Commit `fhirlint.lock` to version control. This prevents silent package changes from affecting CI results.
+
+### Result caching
+
+`--cache` caches validation results per file content hash (keyed by content hash + FHIR version + profiles + IGs). Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.
+
+```bash
+fhirlint validate ./fhir/ --cache
+fhirlint validate ./fhir/ --cache --cache-dir .fhirlint-cache/
+```
+
+Cache the result directory in CI with `actions/cache`:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .fhirlint-cache
+    key: fhirlint-results-${{ runner.os }}-${{ hashFiles('fhirlint.yml', 'fhir/**') }}
+    restore-keys: fhirlint-results-${{ runner.os }}-
+
+- name: Validate FHIR resources
+  run: fhirlint validate ./fhir/ --cache --cache-dir .fhirlint-cache/
+```
+
+### Example GitHub Actions workflow
 
 ```yaml
 - name: Validate FHIR resources
@@ -325,6 +410,7 @@ Example GitHub Actions workflow:
     fhirlint validate ./fhir/ \
       --format json --output fhir-report.json \
       --tx-cache .fhirlint-tx-cache/ \
+      --cache --cache-dir .fhirlint-cache/ \
       --fail-on error
 
 - uses: actions/upload-artifact@v4
@@ -366,7 +452,25 @@ locale: de
 allow-example-urls: true
 ```
 
-A fully annotated example is provided in [`fhirlint.yml.example`](fhirlint.yml.example).
+A fully annotated example is provided in [`fhirlint.yml.example`](fhirlint.yml.example), including documentation for `overrides:` (per-glob IGs, profiles, severity, and suppress rules) and `profile-map:` (automatically apply profiles based on resource type or filename glob).
+
+---
+
+## Validating the configuration file
+
+`fhirlint config check` validates the `fhirlint.yml` in the current directory:
+
+```bash
+fhirlint config check
+```
+
+It reports:
+- Unknown keys and likely typos (with "did you mean?" suggestions)
+- Wrong value types (e.g. a string where a boolean is expected)
+- Invalid enum values (e.g. an unknown `severity` or `fail-on` value)
+- Malformed suppress rules
+
+Exit code `0` means the configuration is valid; exit code `1` means issues were found.
 
 ---
 
@@ -385,18 +489,32 @@ A fully annotated example is provided in [`fhirlint.yml.example`](fhirlint.yml.e
 | `--output`, `-o` | stdout | Output file for `json`/`html` reports |
 | `--severity`, `-s` | `information` | Minimum severity to display: `information`, `warning`, `error` |
 | `--fail-on` | `error` | Exit non-zero when issues at this level or above are found: `error`, `warning`, `never` |
+| `--max-warnings` | `-1` | Exit non-zero when warning count exceeds N (`-1` = disabled) |
+| `--exclude` | — | Exclude files/dirs matching pattern (repeatable, gitignore-style) |
+| `--bundle-entries` | `false` | Also validate each `entry.resource` in a FHIR Bundle separately |
 | `--url` | — | Fetch and validate from an HTTP endpoint (repeatable) |
+| `--url-timeout` | `30s` | Timeout for HTTP fetches via `--url` |
 | `--extract` | — | JSONPath to extract from input before validating |
 | `--extract-each` | — | JSONPath to an array — validates each element separately |
 | `--ignore` | — | JSONPath field to remove before validating (repeatable) |
 | `--suppress` | — | Silence a known issue: `messageId:X`, `constraint:X`, or `expression:X` (repeatable) |
 | `--show-suppressed` | `false` | Show suppressed issues with a muted `↷ SUPP` label |
+| `--baseline` | — | Baseline file — only new issues (regressions) fail the build |
+| `--generate-baseline` | — | Generate a baseline file from current issues |
 | `--no-terminology-server` | `false` | Disable terminology server — no data sent to `tx.fhir.org` |
 | `--terminology-server` | — | Custom terminology server URL |
 | `--tx-cache` | — | Terminology cache directory (`n/a` to disable) |
+| `--allow-insecure-tx` | `false` | Suppress warning when terminology server uses HTTP |
+| `--tx-log` | — | Write terminology request log to file |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |
 | `--best-practice` | — | Best-practice constraint handling: `ignore`, `hint`, `warning`, `error` |
+| `--timeout` | `5m` | Timeout for the Java validator process |
+| `--cache` | `false` | Cache validation results per file hash |
+| `--cache-dir` | — | Directory for result cache (default: `~/.fhirlint/result-cache/`) |
+| `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |
+| `--quiet`, `-q` | `false` | Suppress per-file output for valid files (terminal format only) |
+| `--no-color` | `false` | Disable ANSI color output |
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
 | `--watch-interval` | — | Polling interval for `--watch` in milliseconds |
 | `--jar` | — | Path to a local validator JAR (overrides auto-download; also via `FHIRLINT_JAR`) |
@@ -416,18 +534,30 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `output` | string | `--output` |
 | `severity` | string | `--severity` |
 | `fail-on` | string | `--fail-on` |
+| `max-warnings` | int | `--max-warnings` |
+| `exclude` | list | `--exclude` |
+| `bundle-entries` | bool | `--bundle-entries` |
 | `url` | list | `--url` |
+| `url-timeout` | string | `--url-timeout` |
 | `extract` | string | `--extract` |
 | `extract-each` | string | `--extract-each` |
 | `ignore` | list | `--ignore` |
 | `suppress` | list | `--suppress` |
 | `show-suppressed` | bool | `--show-suppressed` |
+| `baseline` | string | `--baseline` |
 | `no-terminology-server` | bool | `--no-terminology-server` |
 | `terminology-server` | string | `--terminology-server` |
 | `tx-cache` | string | `--tx-cache` |
+| `allow-insecure-tx` | bool | `--allow-insecure-tx` |
+| `tx-log` | string | `--tx-log` |
 | `locale` | string | `--locale` |
 | `allow-example-urls` | bool | `--allow-example-urls` |
 | `best-practice` | string | `--best-practice` |
+| `timeout` | string | `--timeout` |
+| `cache` | bool | `--cache` |
+| `cache-dir` | string | `--cache-dir` |
+| `quiet` | bool | `--quiet` |
+| `no-color` | bool | `--no-color` |
 | `watch` | string | `--watch` |
 | `watch-interval` | int | `--watch-interval` |
 
@@ -523,8 +653,9 @@ The library requires Java 17+ and downloads the validator JAR on first use (~250
 Detailed guides for common workflows:
 
 - [CI/CD Integration](docs/ci.md) — GitHub Actions & GitLab CI setup, JAR and terminology caching, report artifacts
-- [Validating partial JSON](docs/extract.md) — `--extract` and `--extract-each` for non-FHIR API wrappers and array responses
+- [Validating partial JSON](docs/extract.md) — `--extract` and `--extract-each` for non-FHIR API wrappers and array responses, including XML support
 - [Suppression rules](docs/suppression.md) — when to suppress vs. fix, selector types, committing decisions to `fhirlint.yml`
+- [Baseline mode](docs/baseline.md) — incremental adoption, managing technical debt, CI regression detection
 - [German FHIR profiles](docs/german-profiles.md) — KBV, MII, DiGA: aliases, version pinning, combining profiles
 
 ## Contributing
