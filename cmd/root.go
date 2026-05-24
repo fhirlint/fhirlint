@@ -26,12 +26,27 @@ Configuration can be stored in fhirlint.yml or .fhirlint.yml in the project root
 HL7® FHIR® is a registered trademark of Health Level Seven International.`,
 }
 
+// exitErr lets a command request a specific process exit code from its RunE.
+// Commands that don't use it fall back to exit code 1 on any error.
+type exitErr struct {
+	code int
+	err  error
+}
+
+func (e *exitErr) Error() string { return e.err.Error() }
+func (e *exitErr) Unwrap() error { return e.err }
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		code := 1
+		var ee *exitErr
+		if errors.As(err, &ee) {
+			code = ee.code
+		}
 		if !errors.Is(err, errValidationFailed) {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
-		os.Exit(1)
+		os.Exit(code)
 	}
 }
 
@@ -51,6 +66,7 @@ func init() {
 	rootCmd.AddCommand(auditCmd)
 	rootCmd.AddCommand(profilesCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(diffCmd)
 }
 
 func initConfig() {
