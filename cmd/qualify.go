@@ -128,7 +128,7 @@ func runQualify(_ *cobra.Command, _ []string) error {
 	for _, format := range flagQualifyFormat {
 		switch strings.ToLower(format) {
 		case "terminal":
-			qualify.Terminal(os.Stdout, report)
+			fmt.Print(qualify.Terminal(report))
 		case "html":
 			if err := qualify.HTML(report, qualifyOutputFile("html")); err != nil {
 				return &exitErr{code: 2, err: fmt.Errorf("html report: %w", err)}

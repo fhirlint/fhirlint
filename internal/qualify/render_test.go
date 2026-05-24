@@ -29,9 +29,7 @@ func sampleReport(qualified bool) *Report {
 }
 
 func TestTerminal_ContainsKeyLines(t *testing.T) {
-	var b strings.Builder
-	Terminal(&b, sampleReport(true))
-	out := b.String()
+	out := Terminal(sampleReport(true))
 	for _, want := range []string{
 		"Operational Qualification",
 		"Tool version:  v9.9.9",
@@ -47,9 +45,7 @@ func TestTerminal_ContainsKeyLines(t *testing.T) {
 }
 
 func TestTerminal_NotQualified(t *testing.T) {
-	var b strings.Builder
-	Terminal(&b, sampleReport(false))
-	out := b.String()
+	out := Terminal(sampleReport(false))
 	if !strings.Contains(out, "Result: NOT QUALIFIED ✗") {
 		t.Errorf("expected NOT QUALIFIED banner, got:\n%s", out)
 	}
@@ -64,7 +60,7 @@ func TestJSON_RoundTrips(t *testing.T) {
 	if err := JSON(sampleReport(true), dest); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(dest)
+	data, err := os.ReadFile(dest) //nolint:gosec // test reads its own temp file
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +79,7 @@ func TestHTML_ContainsBannerAndCases(t *testing.T) {
 	if err := HTML(sampleReport(true), dest); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(dest)
+	data, err := os.ReadFile(dest) //nolint:gosec // test reads its own temp file
 	if err != nil {
 		t.Fatal(err)
 	}

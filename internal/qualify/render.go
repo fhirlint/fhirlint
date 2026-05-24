@@ -4,21 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"os"
+	"strings"
 )
 
-// Terminal writes a concise human-readable qualification summary to w.
-func Terminal(w io.Writer, r *Report) {
-	fmt.Fprintln(w, "fhirlint Computer System Validation — Operational Qualification")
-	fmt.Fprintf(w, "  Tool version:  %s\n", r.ToolVersion)
-	fmt.Fprintf(w, "  JAR version:   %s\n", r.JARVersion)
-	fmt.Fprintf(w, "  JAR SHA256:    %s\n", r.JARSHA256)
-	fmt.Fprintf(w, "  FHIR version:  %s\n", r.FHIRVersion)
-	fmt.Fprintf(w, "  Terminology:   %s\n", r.Terminology)
-	fmt.Fprintf(w, "  Timestamp:     %s\n\n", r.Timestamp)
-
-	fmt.Fprintf(w, "Test cases: %d passed · %d failed\n\n", r.Passed, r.Failed)
+// Terminal renders a concise human-readable qualification summary.
+func Terminal(r *Report) string {
+	lines := []string{
+		"fhirlint Computer System Validation — Operational Qualification",
+		fmt.Sprintf("  Tool version:  %s", r.ToolVersion),
+		fmt.Sprintf("  JAR version:   %s", r.JARVersion),
+		fmt.Sprintf("  JAR SHA256:    %s", r.JARSHA256),
+		fmt.Sprintf("  FHIR version:  %s", r.FHIRVersion),
+		fmt.Sprintf("  Terminology:   %s", r.Terminology),
+		fmt.Sprintf("  Timestamp:     %s", r.Timestamp),
+		"",
+		fmt.Sprintf("Test cases: %d passed · %d failed", r.Passed, r.Failed),
+		"",
+	}
 
 	width := 0
 	for _, c := range r.Cases {
@@ -31,15 +34,16 @@ func Terminal(w io.Writer, r *Report) {
 		if !c.Pass {
 			status = "FAIL"
 		}
-		fmt.Fprintf(w, "  %s  %-*s  → %s\n", status, width, c.Name, c.Detail)
+		lines = append(lines, fmt.Sprintf("  %s  %-*s  → %s", status, width, c.Name, c.Detail))
 	}
 
-	fmt.Fprintln(w)
+	lines = append(lines, "")
 	if r.Qualified {
-		fmt.Fprintln(w, "Result: QUALIFIED ✓")
+		lines = append(lines, "Result: QUALIFIED ✓")
 	} else {
-		fmt.Fprintln(w, "Result: NOT QUALIFIED ✗")
+		lines = append(lines, "Result: NOT QUALIFIED ✗")
 	}
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // JSON writes the report as indented JSON. Empty dest writes to stdout.
