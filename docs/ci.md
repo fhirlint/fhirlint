@@ -10,6 +10,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [Uploading reports as artifacts](#uploading-reports-as-artifacts)
 - [JUnit XML test results](#junit-xml-test-results)
 - [SARIF output for GitHub Code Scanning](#sarif-output-for-github-code-scanning)
+- [Markdown summary as a PR comment](#markdown-summary-as-a-pr-comment)
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
 - [GitLab CI](#gitlab-ci)
 - [Exit codes](#exit-codes)
@@ -259,6 +260,42 @@ Combine with terminal output to see results in the log and as Code Scanning aler
     fhirlint validate ./fhir/ \
       --format terminal \
       --format sarif --output fhir-results.sarif \
+      --fail-on error
+```
+
+---
+
+## Markdown summary as a PR comment
+
+`--format markdown` produces a self-contained summary suitable for posting directly as a GitHub pull-request comment. It contains a counts table and a per-file table of issues; fully valid files are omitted and suppressed issues are tucked into a collapsed `<details>` block to keep the comment concise. The `--severity` filter is respected.
+
+```yaml
+- name: Validate FHIR resources
+  run: fhirlint validate ./fhir/ --format markdown --output fhir-report.md --fail-on error
+
+- name: Post PR comment
+  if: always() && github.event_name == 'pull_request'
+  uses: actions/github-script@v7
+  with:
+    script: |
+      const fs = require('fs')
+      const body = fs.readFileSync('fhir-report.md', 'utf8')
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body
+      })
+```
+
+Omitting `--output` prints the Markdown to stdout, the same as every other format. Combine with `terminal` to keep readable logs while still producing the comment:
+
+```yaml
+- name: Validate FHIR resources
+  run: |
+    fhirlint validate ./fhir/ \
+      --format terminal \
+      --format markdown --output fhir-report.md \
       --fail-on error
 ```
 
