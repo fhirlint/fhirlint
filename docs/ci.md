@@ -13,6 +13,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [Markdown summary as a PR comment](#markdown-summary-as-a-pr-comment)
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
 - [GitLab CI](#gitlab-ci)
+- [GitLab Code Quality (merge-request widget)](#gitlab-code-quality-merge-request-widget)
 - [Exit codes](#exit-codes)
 - [Troubleshooting](#troubleshooting)
 
@@ -364,6 +365,36 @@ fhir-validation:
       - fhir-report.json
     expire_in: 30 days
 ```
+
+---
+
+## GitLab Code Quality (merge-request widget)
+
+`--format codeclimate` produces a [CodeClimate-format](https://docs.gitlab.com/ee/ci/testing/code_quality.html#implement-a-custom-tool) JSON report that GitLab's **Code Quality** feature ingests and renders inline on the merge request — new and resolved findings appear directly in the MR widget. Unlike SARIF (which GitLab only surfaces on Ultimate), Code Quality is available on all tiers.
+
+Wire it up by writing the report to a `codequality` artifact:
+
+```yaml
+# .gitlab-ci.yml
+fhir-validation:
+  image: eclipse-temurin:17
+  stage: test
+  before_script:
+    - apt-get update -qq && apt-get install -qq curl
+    - |
+      FHIRLINT_VERSION=$(curl -s https://api.github.com/repos/fhirlint/fhirlint/releases/latest \
+        | grep '"tag_name"' | cut -d'"' -f4)
+      curl -sL "https://github.com/fhirlint/fhirlint/releases/download/${FHIRLINT_VERSION}/fhirlint_${FHIRLINT_VERSION#v}_linux_amd64.tar.gz" \
+        | tar xz && mv fhirlint /usr/local/bin/
+  script:
+    - fhirlint validate ./fhir/ --format codeclimate --output gl-code-quality.json --fail-on error
+  artifacts:
+    when: always
+    reports:
+      codequality: gl-code-quality.json
+```
+
+Each finding's `fingerprint` is derived from its file path, location, message ID, and message, so it stays stable across runs — that is what lets GitLab tell genuinely new findings apart from pre-existing ones. The `--severity` filter is respected, and FHIR severities map onto the CodeClimate scale (`fatal` → `critical`, `error` → `major`, `warning` → `minor`, `information` → `info`).
 
 ---
 

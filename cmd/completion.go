@@ -21,6 +21,6 @@ func registerFlagCompletions(cmd *cobra.Command) {
 	complete("fail-on", []string{"error", "warning", "information", "never"})
 	complete("best-practice", []string{"ignore", "hint", "warning", "error"})
 	complete("severity", []string{"information", "warning", "error"})
-	complete("format", []string{"terminal", "json", "html", "junit", "sarif", "markdown"})
+	complete("format", []string{"terminal", "json", "html", "junit", "sarif", "markdown", "codeclimate"})
 	complete("watch", []string{"single", "all"})
 }

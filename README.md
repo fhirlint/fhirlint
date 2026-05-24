@@ -10,7 +10,7 @@
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
-`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON, HTML, JUnit, SARIF, and Markdown reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA).
+`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON, HTML, JUnit, SARIF, Markdown, and CodeClimate reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA).
 
 The validator JAR is downloaded automatically on first use — no manual setup required.
 
@@ -185,6 +185,9 @@ fhirlint validate ./fhir/ --format sarif --output results.sarif
 
 # Markdown summary (for posting as a GitHub PR comment)
 fhirlint validate ./fhir/ --format markdown --output report.md
+
+# CodeClimate report (for GitLab Code Quality merge-request widget)
+fhirlint validate ./fhir/ --format codeclimate --output gl-code-quality.json
 
 # Multiple formats in one run
 fhirlint validate patient.json --format terminal --format json --output results.json
