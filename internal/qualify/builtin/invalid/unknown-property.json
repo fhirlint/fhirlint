@@ -1,0 +1,5 @@
+{
+  "resourceType": "Patient",
+  "gender": "male",
+  "notARealField": true
+}

@@ -1,0 +1,4 @@
+{
+  "description": "A resource with no resourceType must be rejected",
+  "valid": false
+}

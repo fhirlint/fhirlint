@@ -1,0 +1,8 @@
+{
+  "resourceType": "Patient",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient with an invalid gender code</div>"
+  },
+  "gender": "frog"
+}

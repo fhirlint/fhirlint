@@ -29,6 +29,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Explaining message IDs](#explaining-message-ids)
 - [Baseline mode](#baseline-mode)
 - [Comparing runs (change control)](#comparing-runs-change-control)
+- [Computer System Validation (qualify)](#computer-system-validation-qualify)
 - [Terminology server](#terminology-server)
 - [Watch mode](#watch-mode)
 - [Pipeline integration](#pipeline-integration)
@@ -367,6 +368,65 @@ Issues are matched by file, message ID, and location (line/column shifts are ign
 Exit codes make it CI-ready: `0` no new issues, `1` new issues found (breaks the build), `2` fhirlint itself failed (e.g. malformed input).
 
 `--format json` emits the structured diff; `--format sarif` emits **only the new issues**, so uploading it to GitHub Code Scanning annotates a pull request with just its regressions, free of pre-existing noise.
+
+---
+
+## Computer System Validation (qualify)
+
+Medical-device teams running fhirlint in a validated process must perform Computer System Validation (CSV) before production use. `fhirlint qualify` runs the tool against a built-in set of known-valid and known-invalid FHIR resources and produces a formal **Operational Qualification (OQ)** report — documented evidence that fhirlint correctly accepts valid resources and rejects invalid ones.
+
+```bash
+fhirlint qualify
+```
+
+```
+fhirlint Computer System Validation — Operational Qualification
+  Tool version:  v1.0.0
+  JAR version:   6.9.7
+  JAR SHA256:    aba1fe09...
+  FHIR version:  4.0.1
+  Terminology:   offline
+  Timestamp:     2026-05-24T16:03:10Z
+
+Test cases: 7 passed · 0 failed
+
+  PASS  invalid/patient-bad-gender.json    → error detected (expected)
+  PASS  valid/patient-complete.json        → accepted, no errors (expected)
+  ...
+
+Result: QUALIFIED ✓
+```
+
+It exits `0` when qualified, `1` when any case fails, and `2` on a tool error. Validation runs **offline** by default (no terminology server) so results are reproducible; pass `--terminology-server <url>` to validate against a live server.
+
+The report records everything needed for traceability — tool version, validator JAR version and SHA256, FHIR version, timestamp, and per-case results:
+
+```bash
+# HTML for a Design History File (print to PDF from any browser for QMS upload)
+fhirlint qualify --format html --output qualification-report.html
+
+# JSON for automated CSV pipelines
+fhirlint qualify --format json --output qualification-report.json
+```
+
+### Custom test suites
+
+Supply your own cases alongside the built-in ones. Each FHIR file needs a companion `<name>.expected.json`:
+
+```bash
+fhirlint qualify --test-suite ./qualification/test-cases/
+```
+
+```jsonc
+// patient-no-gender.expected.json
+{
+  "description": "Patient without the required gender element",
+  "valid": false,                    // false = the tool must report an error
+  "messageIds": ["dom-6"]            // optional: these message IDs must appear
+}
+```
+
+> **Regulatory context:** ISO 13485 §7.6 (verification of monitoring equipment), IEC 62304 §8.1 (validation of software tools used in development), FDA 21 CFR Part 11 (validation of computerised systems), GAMP 5 Category 4 (IQ/OQ/PQ documentation).
 
 ---
 

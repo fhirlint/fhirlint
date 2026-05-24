@@ -1,0 +1,4 @@
+{
+  "description": "Patient.active is a boolean; the string \"yes\" must be rejected",
+  "valid": false
+}

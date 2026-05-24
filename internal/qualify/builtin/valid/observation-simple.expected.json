@@ -1,0 +1,4 @@
+{
+  "description": "Valid Observation with required status and code and a UCUM quantity",
+  "valid": true
+}
