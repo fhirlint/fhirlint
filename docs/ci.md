@@ -12,6 +12,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [SARIF output for GitHub Code Scanning](#sarif-output-for-github-code-scanning)
 - [Markdown summary as a PR comment](#markdown-summary-as-a-pr-comment)
 - [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
+- [GitLab CI/CD Component](#gitlab-cicd-component)
 - [GitLab CI](#gitlab-ci)
 - [GitLab Code Quality (merge-request widget)](#gitlab-code-quality-merge-request-widget)
 - [Comparing runs in a pull request](#comparing-runs-in-a-pull-request)
@@ -335,6 +336,24 @@ With this file in place the CI step simplifies to:
 CLI flags always override `fhirlint.yml` values, so you can still pass `--fail-on never` locally while the config enforces `fail-on: error` in CI.
 
 ---
+
+## GitLab CI/CD Component
+
+The quickest way to validate FHIR on GitLab is the published CI/CD Component — one `include` wires up validation with a per-file test report and a Code Quality widget, using the prebuilt image (JRE + validator JAR bundled, no setup):
+
+```yaml
+include:
+  - component: $CI_SERVER_FQDN/<group>/fhirlint/fhirlint@1.1.0
+    inputs:
+      path: ./fhir/
+      fail-on: error
+```
+
+Inputs: `stage`, `path`, `image-version` (pin to a release, e.g. `1.1.0`), `fail-on`, `severity`, `profile`, `ig`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
+
+> Pin `image-version` to a release rather than `latest` for reproducible pipelines, matching the component version you include.
+
+If you prefer to wire it up by hand, the raw `.gitlab-ci.yml` below does the same thing.
 
 ## GitLab CI
 
