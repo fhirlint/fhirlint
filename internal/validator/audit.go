@@ -64,19 +64,48 @@ func (a Advisory) AffectsVersion(version string) bool {
 	return false
 }
 
-// rangeAffects checks whether version falls within a simple "< X.Y.Z" range
-// as used in GitHub advisory data for the validator JAR.
+// rangeAffects reports whether version satisfies a GitHub advisory version
+// range. A range is a comma-separated set of constraints that must all hold,
+// e.g. "< 6.9.4", "<= 6.9.6", or ">= 6.0.0, < 6.9.4". Unrecognised constraints
+// are treated as not matching.
 func rangeAffects(rangeStr, version string) bool {
-	r := strings.TrimSpace(rangeStr)
-	if strings.HasPrefix(r, "< ") {
-		upper := strings.TrimSpace(strings.TrimPrefix(r, "< "))
-		return semverLess(version, upper)
+	rangeStr = strings.TrimSpace(rangeStr)
+	if rangeStr == "" {
+		return false
+	}
+	for _, part := range strings.Split(rangeStr, ",") {
+		if !constraintSatisfied(strings.TrimSpace(part), version) {
+			return false
+		}
+	}
+	return true
+}
+
+// constraintSatisfied evaluates a single constraint like "< 6.9.4" or "<= 6.9.6".
+func constraintSatisfied(constraint, version string) bool {
+	// Two-character operators must be checked before their single-char prefixes.
+	for _, op := range []string{"<=", ">=", "==", "<", ">", "="} {
+		if strings.HasPrefix(constraint, op) {
+			cmp := semverCompare(version, strings.TrimSpace(constraint[len(op):]))
+			switch op {
+			case "<":
+				return cmp < 0
+			case "<=":
+				return cmp <= 0
+			case ">":
+				return cmp > 0
+			case ">=":
+				return cmp >= 0
+			case "=", "==":
+				return cmp == 0
+			}
+		}
 	}
 	return false
 }
 
-// semverLess returns true if a < b for "X.Y.Z"-style version strings.
-func semverLess(a, b string) bool {
+// semverCompare returns -1, 0, or 1 comparing "X.Y.Z"-style version strings.
+func semverCompare(a, b string) int {
 	ap := strings.Split(a, ".")
 	bp := strings.Split(b, ".")
 	for i := range 3 {
@@ -88,13 +117,13 @@ func semverLess(a, b string) bool {
 			bv, _ = strconv.Atoi(bp[i])
 		}
 		if av < bv {
-			return true
+			return -1
 		}
 		if av > bv {
-			return false
+			return 1
 		}
 	}
-	return false
+	return 0
 }
 
 // Audit checks the validator JAR version and queries the GitHub Security Advisory database.

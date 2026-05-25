@@ -67,6 +67,14 @@ tar xzf fhirlint_*_darwin_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 Windows: download the `.zip` from the [releases page](https://github.com/fhirlint/fhirlint/releases) and add `fhirlint.exe` to your `PATH`.
 
+### Homebrew (macOS)
+
+```bash
+brew install fhirlint/tap/fhirlint
+```
+
+This installs a JRE (`openjdk@17`) as a dependency, so no separate Java setup is needed. Upgrade with `brew upgrade fhirlint`.
+
 ### go install
 
 ```bash
@@ -87,6 +95,21 @@ The image includes a JRE — no separate Java installation required.
 
 ### GitHub Actions
 
+Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
+
+```yaml
+- uses: fhirlint/fhirlint@v1
+  with:
+    path: ./fhir/
+    fail-on: error
+    severity: warning
+```
+
+Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
+
+<details>
+<summary>Manual install (any runner / OS)</summary>
+
 ```yaml
 - name: Install fhirlint
   env:
@@ -106,6 +129,8 @@ Or use the Docker image directly in a workflow step:
   with:
     args: validate /github/workspace/fhir/ --fail-on error
 ```
+
+</details>
 
 ---
 

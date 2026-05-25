@@ -72,14 +72,11 @@ func TestCheckForUpdate_ReturnsEmptyWhenUpToDate(t *testing.T) {
 }
 
 func TestCheckForUpdate_ReturnsEmptyWhenVersionUnknown(t *testing.T) {
-	vp, _ := cache.ValidatorVersionPath()
-	orig, _ := os.ReadFile(vp) //nolint:gosec
-	_ = os.Remove(vp)
-	defer func() {
-		if orig != nil {
-			_ = os.WriteFile(vp, orig, 0600) //nolint:gosec
-		}
-	}()
+	// Redirect the cache to an empty temp HOME so there is no version file AND
+	// no JAR — otherwise ValidatorVersion() falls back to the real JAR's
+	// manifest and reports a concrete version, which makes this case unreachable
+	// (and the test fails whenever a JAR is installed, e.g. in the integration job).
+	t.Setenv("HOME", t.TempDir())
 
 	got := CheckForUpdate()
 	if got != "" {

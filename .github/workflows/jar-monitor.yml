@@ -5,38 +5,55 @@ on:
     - cron: '0 7 * * 1'   # Weekly, Monday 07:00 UTC
   workflow_dispatch:
 
+permissions:
+  issues: write
+
 jobs:
   check-advisories:
-    name: Check hapifhir advisories
+    name: Check advisories affecting the latest JAR
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-
     steps:
-      - name: Query GitHub Security Advisories
-        id: advisories
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Audit against the *latest* validator JAR using fhirlint itself, so we
+      # only alert when a published advisory actually affects the version users
+      # would run — not merely because historical advisories exist.
+      - name: Audit latest JAR
         run: |
-          count=$(gh api repos/hapifhir/org.hl7.fhir.core/security-advisories --jq 'length' 2>/dev/null || echo "0")
-          echo "count=$count" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          docker run --rm --entrypoint sh ghcr.io/fhirlint/fhirlint:latest -c \
+            'fhirlint update >/dev/null 2>&1 || true; fhirlint audit --format json' > audit.json
+          cat audit.json
 
-      - name: Open issue if advisories found
-        if: steps.advisories.outputs.count != '0'
+      - name: File or resolve advisory issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          ADVISORY_COUNT: ${{ steps.advisories.outputs.count }}
         run: |
-          count="$ADVISORY_COUNT"
-          existing=$(gh issue list --label "security,jar" --state open --json number --jq 'length')
-          if [ "$existing" -gt "0" ]; then
-            echo "Issue already open, skipping."
+          set -euo pipefail
+          affecting=$(jq '.affecting | length' audit.json)
+          latest=$(jq -r '.latestVersion // "unknown"' audit.json)
+          existing=$(gh issue list --label security --label jar --state open --json number --jq '.[0].number // ""')
+
+          if [ "$affecting" -eq 0 ]; then
+            echo "No advisory affects the latest JAR ($latest)."
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "Resolved automatically: no published advisory affects the latest validator JAR (\`$latest\`). Closing."
+              gh issue close "$existing"
+            fi
             exit 0
           fi
-          printf 'The GitHub Security Advisory database lists **%s** advisory/advisories for [hapifhir/org.hl7.fhir.core](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories).\n\n**Action required:**\n1. Review the advisories at the link above.\n2. Check whether the current latest JAR release includes a fix.\n3. Update the README / SECURITY.md if the minimum safe version changes.\n4. Close this issue once resolved.\n\nUsers can check their installation with: `fhirlint audit`\nUsers can update with: `fhirlint update`\n' \
-            "$count" > /tmp/issue-body.txt
-          gh issue create \
-            --title "Security: $count advisory/advisories found for hapifhir/org.hl7.fhir.core" \
-            --label "security" \
-            --body-file /tmp/issue-body.txt
+
+          echo "$affecting advisory/advisories affect the latest JAR ($latest)."
+          body=$(jq -r --arg latest "$latest" '
+            "The latest HL7 FHIR Validator JAR (`\($latest)`) is affected by \(.affecting | length) published security advisory/advisories:\n\n"
+            + ([.affecting[] | "- **\(.severity)** [\(.ghsaId)](\(.url)) — \(.summary)"] | join("\n"))
+            + "\n\n**Action:** run `fhirlint update` then `fhirlint audit` to confirm; see SECURITY.md. Close this issue once upstream ships a fixed release and the audit is clean."
+          ' audit.json)
+
+          if [ -n "$existing" ]; then
+            printf '%s\n' "$body" | gh issue comment "$existing" --body-file -
+          else
+            printf '%s\n' "$body" | gh issue create \
+              --title "Security: latest validator JAR ($latest) affected by advisories" \
+              --label security --label jar \
+              --body-file -
+          fi
