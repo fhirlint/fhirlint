@@ -21,7 +21,7 @@ fhirlint downloads and runs the official **[HL7 FHIR Validator](https://github.c
 fhirlint audit
 ```
 
-This checks whether your local JAR is outdated and queries the GitHub Security Advisory database for known advisories against the upstream repository.
+This checks whether your local JAR is outdated and queries the GitHub Security Advisory database, reporting only the advisories that **affect your installed version**. Add `--format json` for machine-readable output (used by automation and dashboards).
 
 ### Updating the JAR
 
@@ -40,4 +40,4 @@ fhirlint always downloads the **latest** release of the JAR. There is no pinned 
 
 ### Monitoring
 
-fhirlint checks for new JAR versions automatically (once per 24 hours) and notifies you after `fhirlint validate` or `fhirlint version`. The maintainers run a weekly automated check against the GitHub Advisory database and will open a GitHub issue if advisories are published.
+fhirlint checks for new JAR versions automatically (once per 24 hours) and notifies you after `fhirlint validate` or `fhirlint version`. The maintainers run a weekly automated check (`fhirlint audit`) against the **latest** JAR release and open a GitHub issue only when a published advisory actually affects that release — not merely because historical advisories exist. The issue is closed automatically once a fixed release lands.
