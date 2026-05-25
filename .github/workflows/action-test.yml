@@ -1,0 +1,29 @@
+name: Action self-test
+
+on:
+  push:
+    branches: [main]
+    paths: ['action.yml', '.github/workflows/action-test.yml']
+  pull_request:
+    paths: ['action.yml', '.github/workflows/action-test.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  run-action:
+    name: Composite action smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      # Exercise the action end to end: it installs the latest release and runs
+      # validate. fail-on never keeps the smoke test green regardless of the
+      # fixtures' validity — we are testing the action wrapper, not the rules.
+      - name: Run fhirlint action
+        uses: ./
+        with:
+          path: testdata/
+          fail-on: never

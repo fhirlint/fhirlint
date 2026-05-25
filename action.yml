@@ -1,0 +1,98 @@
+name: 'fhirlint'
+description: 'Validate FHIR resources against profiles and implementation guides'
+author: 'fhirlint'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'File or directory of FHIR resources to validate'
+    required: false
+    default: ''
+  url:
+    description: 'Validate a FHIR resource fetched from an HTTP URL instead of a path'
+    required: false
+    default: ''
+  profile:
+    description: 'Profile alias or URL (one per line, or comma-separated, for multiple)'
+    required: false
+    default: ''
+  ig:
+    description: 'Implementation guide package(s), e.g. kbv.basis#1.5.0 (one per line)'
+    required: false
+    default: ''
+  severity:
+    description: 'Minimum severity to display: information | warning | error'
+    required: false
+    default: 'information'
+  fail-on:
+    description: 'Exit non-zero at this severity or above: error | warning | information | never'
+    required: false
+    default: 'error'
+  format:
+    description: 'Output format: terminal | json | html | junit | sarif | markdown | codeclimate'
+    required: false
+    default: 'terminal'
+  output:
+    description: 'Write the report to this file (stdout if omitted)'
+    required: false
+    default: ''
+  version:
+    description: "fhirlint version to install — a release tag (e.g. v1.1.0) or 'latest'"
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install fhirlint
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        FHIRLINT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if [ "$FHIRLINT_VERSION" = "latest" ]; then
+          gh release download --repo fhirlint/fhirlint --pattern '*linux_amd64.tar.gz'
+        else
+          gh release download "$FHIRLINT_VERSION" --repo fhirlint/fhirlint --pattern '*linux_amd64.tar.gz'
+        fi
+        tar xzf fhirlint_*_linux_amd64.tar.gz
+        sudo mv fhirlint /usr/local/bin/
+        rm -f fhirlint_*_linux_amd64.tar.gz
+        fhirlint version
+
+    - name: Run fhirlint
+      shell: bash
+      env:
+        IN_PATH: ${{ inputs.path }}
+        IN_URL: ${{ inputs.url }}
+        IN_PROFILE: ${{ inputs.profile }}
+        IN_IG: ${{ inputs.ig }}
+        IN_SEVERITY: ${{ inputs.severity }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+        IN_FORMAT: ${{ inputs.format }}
+        IN_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        args=(validate)
+        if [ -n "$IN_PATH" ]; then args+=("$IN_PATH"); fi
+        if [ -n "$IN_URL" ]; then args+=(--url "$IN_URL"); fi
+        # profile/ig accept multiple values, one per line or comma-separated
+        if [ -n "$IN_PROFILE" ]; then
+          while IFS= read -r p; do
+            if [ -n "$p" ]; then args+=(--profile "$p"); fi
+          done <<< "${IN_PROFILE//,/$'\n'}"
+        fi
+        if [ -n "$IN_IG" ]; then
+          while IFS= read -r g; do
+            if [ -n "$g" ]; then args+=(--ig "$g"); fi
+          done <<< "${IN_IG//,/$'\n'}"
+        fi
+        if [ -n "$IN_SEVERITY" ]; then args+=(--severity "$IN_SEVERITY"); fi
+        if [ -n "$IN_FAIL_ON" ]; then args+=(--fail-on "$IN_FAIL_ON"); fi
+        if [ -n "$IN_FORMAT" ]; then args+=(--format "$IN_FORMAT"); fi
+        if [ -n "$IN_OUTPUT" ]; then args+=(--output "$IN_OUTPUT"); fi
+        echo "+ fhirlint ${args[*]}"
+        fhirlint "${args[@]}"
