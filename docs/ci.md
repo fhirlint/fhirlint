@@ -343,7 +343,7 @@ The quickest way to validate FHIR on GitLab is the published CI/CD Component —
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/<group>/fhirlint/fhirlint@1.1.0
+  - component: gitlab.com/fhirlint/fhirlint/fhirlint@1.1.0
     inputs:
       path: ./fhir/
       fail-on: error
