@@ -98,7 +98,7 @@ The image includes a JRE — no separate Java installation required.
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1
+- uses: fhirlint/fhirlint@v1.1.0
   with:
     path: ./fhir/
     fail-on: error
