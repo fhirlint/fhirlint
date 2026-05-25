@@ -87,6 +87,21 @@ The image includes a JRE — no separate Java installation required.
 
 ### GitHub Actions
 
+Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
+
+```yaml
+- uses: fhirlint/fhirlint@v1
+  with:
+    path: ./fhir/
+    fail-on: error
+    severity: warning
+```
+
+Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
+
+<details>
+<summary>Manual install (any runner / OS)</summary>
+
 ```yaml
 - name: Install fhirlint
   env:
@@ -106,6 +121,8 @@ Or use the Docker image directly in a workflow step:
   with:
     args: validate /github/workspace/fhir/ --fail-on error
 ```
+
+</details>
 
 ---
 
