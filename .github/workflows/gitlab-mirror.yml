@@ -36,7 +36,9 @@ jobs:
             echo "GITLAB_MIRROR_REPO variable to enable it. Skipping."
             exit 0
           fi
-          git push --force --prune \
+          # Push from the remote-tracking ref so this works on both branch and
+          # tag triggers — on a tag, HEAD is detached and refs/heads/main is absent.
+          git push --force \
             "https://oauth2:${GITLAB_MIRROR_TOKEN}@${GITLAB_MIRROR_REPO}.git" \
-            "+refs/heads/main:refs/heads/main" \
+            "+refs/remotes/origin/main:refs/heads/main" \
             "+refs/tags/*:refs/tags/*"
