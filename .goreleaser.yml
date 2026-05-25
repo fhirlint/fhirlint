@@ -29,6 +29,27 @@ archives:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
+homebrew_casks:
+  - name: fhirlint
+    repository:
+      owner: fhirlint
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/fhirlint/fhirlint"
+    description: "Lightweight CLI for validating FHIR resources against profiles and implementation guides"
+    # fhirlint shells out to the HL7 FHIR Validator JAR, which needs a JRE.
+    dependencies:
+      - formula: openjdk@17
+    # Remove the macOS quarantine attribute so the unsigned binary runs without
+    # a Gatekeeper prompt.
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/fhirlint"]
+          end
+
 checksum:
   name_template: "checksums.txt"
 

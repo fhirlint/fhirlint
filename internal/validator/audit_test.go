@@ -4,22 +4,21 @@ import (
 	"testing"
 )
 
-func TestSemverLess(t *testing.T) {
+func TestSemverCompare(t *testing.T) {
 	tests := []struct {
 		a, b string
-		want bool
+		want int
 	}{
-		{"6.9.3", "6.9.4", true},
-		{"6.9.4", "6.9.4", false},
-		{"6.9.7", "6.9.4", false},
-		{"5.6.91", "5.6.92", true},
-		{"6.0.0", "6.0.1", true},
-		{"6.1.0", "6.0.9", false},
-		{"7.0.0", "6.9.9", false},
+		{"6.9.3", "6.9.4", -1},
+		{"6.9.4", "6.9.4", 0},
+		{"6.9.7", "6.9.4", 1},
+		{"5.6.91", "5.6.92", -1},
+		{"6.1.0", "6.0.9", 1},
+		{"7.0.0", "6.9.9", 1},
 	}
 	for _, tc := range tests {
-		if got := semverLess(tc.a, tc.b); got != tc.want {
-			t.Errorf("semverLess(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+		if got := semverCompare(tc.a, tc.b); got != tc.want {
+			t.Errorf("semverCompare(%q, %q) = %d, want %d", tc.a, tc.b, got, tc.want)
 		}
 	}
 }
@@ -33,8 +32,17 @@ func TestRangeAffects(t *testing.T) {
 		{"< 6.9.4", "6.9.3", true},
 		{"< 6.9.4", "6.9.4", false},
 		{"< 6.9.4", "6.9.7", false},
-		{"< 5.6.92", "5.6.91", true},
-		{"< 5.6.92", "5.6.92", false},
+		// "<=" must be honoured (the ReDoS advisory uses "<= 6.9.6").
+		{"<= 6.9.6", "6.9.6", true},
+		{"<= 6.9.6", "6.9.7", false},
+		{"<= 6.9.6", "6.9.5", true},
+		// Compound ranges: all constraints must hold.
+		{">= 6.0.0, < 6.9.4", "6.5.0", true},
+		{">= 6.0.0, < 6.9.4", "6.9.7", false},
+		{">= 6.0.0, < 6.9.4", "5.9.0", false},
+		// Exact match.
+		{"= 6.9.4", "6.9.4", true},
+		{"= 6.9.4", "6.9.5", false},
 		{"unsupported", "6.9.7", false},
 		{"", "6.9.7", false},
 	}
