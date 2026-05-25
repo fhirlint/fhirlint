@@ -67,6 +67,14 @@ tar xzf fhirlint_*_darwin_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 Windows: download the `.zip` from the [releases page](https://github.com/fhirlint/fhirlint/releases) and add `fhirlint.exe` to your `PATH`.
 
+### Homebrew (macOS)
+
+```bash
+brew install fhirlint/tap/fhirlint
+```
+
+This installs a JRE (`openjdk@17`) as a dependency, so no separate Java setup is needed. Upgrade with `brew upgrade fhirlint`.
+
 ### go install
 
 ```bash
