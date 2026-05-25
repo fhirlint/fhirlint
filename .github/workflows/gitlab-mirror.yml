@@ -1,0 +1,42 @@
+name: Mirror to GitLab
+
+# Pushes main and release tags to the read-only GitLab mirror that hosts the
+# CI/CD Component (the GitLab CI/CD Catalog requires components to live in a
+# GitLab project). Configure with:
+#   - secret GITLAB_MIRROR_TOKEN  — a GitLab token with write_repository scope
+#   - variable GITLAB_MIRROR_REPO — the host/path, e.g. gitlab.com/my-group/fhirlint
+# Until both are set the job no-ops, so it is safe to merge ahead of setup.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Push to GitLab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push to GitLab mirror
+        env:
+          GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          GITLAB_MIRROR_REPO: ${{ vars.GITLAB_MIRROR_REPO }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GITLAB_MIRROR_TOKEN:-}" ] || [ -z "${GITLAB_MIRROR_REPO:-}" ]; then
+            echo "GitLab mirror not configured — set the GITLAB_MIRROR_TOKEN secret and"
+            echo "GITLAB_MIRROR_REPO variable to enable it. Skipping."
+            exit 0
+          fi
+          git push --force --prune \
+            "https://oauth2:${GITLAB_MIRROR_TOKEN}@${GITLAB_MIRROR_REPO}.git" \
+            "+refs/heads/main:refs/heads/main" \
+            "+refs/tags/*:refs/tags/*"

@@ -1,0 +1,54 @@
+spec:
+  inputs:
+    stage:
+      default: test
+      description: Pipeline stage the validation job runs in.
+    path:
+      default: "."
+      description: File or directory of FHIR resources to validate.
+    image-version:
+      default: latest
+      description: >-
+        fhirlint Docker image tag. Pin to a release (e.g. "1.1.0") for
+        reproducible builds rather than relying on "latest".
+    fail-on:
+      default: error
+      description: "Exit non-zero at this severity or above: error | warning | information | never."
+    severity:
+      default: information
+      description: "Minimum severity to display: information | warning | error."
+    profile:
+      default: ""
+      description: Profile alias or URL to validate against (optional).
+    ig:
+      default: ""
+      description: Implementation guide package, e.g. kbv.basis#1.5.0 (optional).
+---
+fhirlint:
+  stage: $[[ inputs.stage ]]
+  image:
+    name: ghcr.io/fhirlint/fhirlint:$[[ inputs.image-version ]]
+    # Override the image's ENTRYPOINT so GitLab runs the script via the shell.
+    entrypoint: [""]
+  script:
+    - |
+      PROFILE_ARG=""
+      IG_ARG=""
+      if [ -n "$[[ inputs.profile ]]" ]; then PROFILE_ARG="--profile $[[ inputs.profile ]]"; fi
+      if [ -n "$[[ inputs.ig ]]" ]; then IG_ARG="--ig $[[ inputs.ig ]]"; fi
+      fhirlint validate "$[[ inputs.path ]]" \
+        --fail-on "$[[ inputs.fail-on ]]" \
+        --severity "$[[ inputs.severity ]]" \
+        --format terminal --format junit --format codeclimate \
+        --output gl-report \
+        $PROFILE_ARG $IG_ARG
+  artifacts:
+    when: always
+    paths:
+      - gl-report.xml
+      - gl-report.json
+    reports:
+      # Per-file pass/fail in the pipeline's Tests tab.
+      junit: gl-report.xml
+      # Inline findings in the merge-request Code Quality widget.
+      codequality: gl-report.json
