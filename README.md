@@ -28,6 +28,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
 - [Explaining message IDs](#explaining-message-ids)
+- [Evaluating FHIRPath expressions](#evaluating-fhirpath-expressions)
 - [Baseline mode](#baseline-mode)
 - [Comparing runs (change control)](#comparing-runs-change-control)
 - [Computer System Validation (qualify)](#computer-system-validation-qualify)
@@ -365,6 +366,48 @@ fhirlint explain --list
 ```
 
 fhirlint ships explanations for common FHIR core invariants (`dom-*`, `ele-1`, `ext-1`, `bdl-*`, `obs-*`); the set grows over time. Unknown IDs exit non-zero with a pointer to the [HL7 FHIR specification](https://hl7.org/fhir/).
+
+---
+
+## Evaluating FHIRPath expressions
+
+FHIRPath is the expression language behind FHIR invariants/constraints (`dom-6`, `ele-1`, …), slicing discriminators, and search parameters. When an invariant fails and it's unclear *why*, `fhirlint fhirpath` evaluates an expression — or a sub-expression of the failing rule — against your real resource so you can see exactly what it returns.
+
+```bash
+# Navigate a resource
+fhirlint fhirpath "Patient.name.given" patient.json
+
+# From stdin (JSON and XML auto-detected, like validate)
+cat patient.json | fhirlint fhirpath "Observation.value.exists()"
+
+# Test a boolean invariant
+fhirlint fhirpath "contact.all(name or telecom or address or organization)" patient.json
+
+# Filtered navigation (e.g. a slicing discriminator)
+fhirlint fhirpath "identifier.where(system='http://fhir.de/sid/gkv/kvid-10')" patient.json
+```
+
+A single value is printed plainly, multiple items are indexed, and an empty result set is shown as `(empty)` so "no match" is distinguishable from an error:
+
+```
+[0] Erika
+[1] Maria
+```
+
+Machine-readable output for scripting composes in pipelines:
+
+```bash
+fhirlint fhirpath "Patient.name.given" patient.json --format json
+```
+
+```json
+{
+  "expression": "Patient.name.given",
+  "result": ["Erika", "Maria"]
+}
+```
+
+Evaluation is an **inspection aid, not a pass/fail gate** — an empty or `false` result still exits `0`. Only a malformed expression, an unparseable resource, or a tool failure exits `2`. `--fhir-version` (default `4.0.1`) sets the context version. Terminology is disabled for speed and offline use, so expressions that need a terminology server (e.g. `memberOf`) aren't supported. First run needs Java 17+ and the validator JAR (the same one `validate` downloads).
 
 ---
 
