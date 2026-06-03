@@ -134,6 +134,24 @@ Or use the Docker image directly in a workflow step:
 
 </details>
 
+### Use as a Claude Code plugin
+
+Validate FHIR resources from inside an agentic [Claude Code](https://claude.com/claude-code) session. The plugin is a thin wrapper around the `fhirlint` binary: Claude runs it, **interprets** the validator's findings, and fixes the offending resource in place.
+
+```
+/plugin marketplace add fhirlint/fhirlint
+/plugin install fhirlint@fhirlint
+```
+
+This installs two skills:
+
+- **validate** — runs `fhirlint validate`, explains the issues, and proposes/applies fixes to your resources.
+- **audit** — runs `fhirlint audit` to check the validator JAR for updates and known security advisories.
+
+Just ask Claude to "validate the FHIR resources in this project" and the skill activates.
+
+**Requirements:** the plugin calls the `fhirlint` binary, so it must be on your `PATH` (install via Homebrew or `go install`, above). The first validation downloads the validator JAR (~250 MB) and needs **Java 17+** — the first run may take a minute and is not a hang.
+
 ---
 
 ## Input sources

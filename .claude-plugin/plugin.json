@@ -1,0 +1,13 @@
+{
+  "name": "fhirlint",
+  "description": "Validate FHIR resources from inside Claude Code: runs the fhirlint CLI, interprets the HL7 validator's findings, and fixes the offending resource in place.",
+  "version": "1.1.0",
+  "author": {
+    "name": "fhirlint",
+    "url": "https://github.com/fhirlint/fhirlint"
+  },
+  "homepage": "https://github.com/fhirlint/fhirlint#use-as-a-claude-code-plugin",
+  "repository": "https://github.com/fhirlint/fhirlint",
+  "license": "Apache-2.0",
+  "keywords": ["fhir", "hl7", "validation", "validator", "healthcare", "kbv", "mii", "diga"]
+}
