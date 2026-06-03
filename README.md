@@ -31,6 +31,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Evaluating FHIRPath expressions](#evaluating-fhirpath-expressions)
 - [Baseline mode](#baseline-mode)
 - [Comparing runs (change control)](#comparing-runs-change-control)
+- [Comparing profiles](#comparing-profiles)
 - [Computer System Validation (qualify)](#computer-system-validation-qualify)
 - [Terminology server](#terminology-server)
 - [Watch mode](#watch-mode)
@@ -473,6 +474,49 @@ Issues are matched by file, message ID, and location (line/column shifts are ign
 Exit codes make it CI-ready: `0` no new issues, `1` new issues found (breaks the build), `2` fhirlint itself failed (e.g. malformed input).
 
 `--format json` emits the structured diff; `--format sarif` emits **only the new issues**, so uploading it to GitHub Code Scanning annotates a pull request with just its regressions, free of pre-existing noise.
+
+---
+
+## Comparing profiles
+
+`fhirlint compare` diffs two **StructureDefinitions (profiles)** and reports how their constraints differ. This is *profile* diffing — distinct from `fhirlint diff` above, which compares two *validation reports* at the instance level:
+
+| Command | Compares | Answers |
+| --- | --- | --- |
+| `fhirlint diff` | two validation **reports** (`validate --format json`) | "did this change introduce new validation issues?" |
+| `fhirlint compare` | two **profiles** (StructureDefinitions) | "how do these two profiles' constraints differ?" |
+
+It surfaces the validator's built-in `ComparisonService`. Each side is a local StructureDefinition file or a profile from an IG package; package aliases (e.g. `kbv-basis`) resolve just like `validate --profile`.
+
+```bash
+# Two versions of the same profile — what might break on upgrade?
+fhirlint compare \
+  --left  kbv.basis#1.4.0 --left-profile  KBV_PR_Base_Patient \
+  --right kbv.basis#1.5.0 --right-profile KBV_PR_Base_Patient
+
+# Local house profile vs. published base profile
+fhirlint compare \
+  --left  ./profiles/our-patient.json \
+  --right kbv.basis#1.5.0 --right-profile KBV_PR_Base_Patient
+
+# Two local files
+fhirlint compare --left ./a.json --right ./b.json
+```
+
+For a local file the canonical URL is read from the file; for a package, name the profile with `--left-profile` / `--right-profile` (its canonical URL or id). Use `--ig` to load extra packages needed for resolution.
+
+```
+Comparing http://example.org/.../KBV_PR_Base_Patient → http://example.org/.../KBV_PR_Base_Patient
+  3 difference(s)
+
+  ✗ StructureDefinition.version  Values for version differ: '1.4.0' vs '1.5.0'
+  ~ Patient.birthDate            Element minimum cardinalities differ: '0' vs '1'
+  ~ Patient.name                 Added constraint: kbv-1
+```
+
+`--format json` emits the structured difference list (severity, path, message) for CI gating; `--format html` writes the validator's full side-by-side comparison site (to `--output`, default `./fhirlint-compare`), suitable for attaching to migration notes or a Design History File.
+
+Exit codes mirror `diff`: `0` no differences, `1` differences found (breaks the build), `2` fhirlint itself failed (e.g. an unresolved profile). Terminology is disabled, so comparison is fast and offline. First run needs Java 17+ and the validator JAR (the same one `validate` downloads).
 
 ---
 
