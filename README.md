@@ -152,6 +152,49 @@ Just ask Claude to "validate the FHIR resources in this project" and the skill a
 
 **Requirements:** the plugin calls the `fhirlint` binary, so it must be on your `PATH` (install via Homebrew or `go install`, above). The first validation downloads the validator JAR (~250 MB) and needs **Java 17+** — the first run may take a minute and is not a hang.
 
+#### Auto-validation hook (opt-in)
+
+The plugin also ships a `PostToolUse` hook that validates a FHIR resource **automatically right after Claude edits it** and feeds any errors back into the session, so the model can fix the resource it just touched without you asking.
+
+It is **opt-in** — installing the plugin does not change your editing behaviour. Enable it by setting an environment variable:
+
+```bash
+export FHIRLINT_AUTOVALIDATE=1   # in your shell profile
+```
+
+or per-project in `.claude/settings.json`:
+
+```json
+{
+  "env": { "FHIRLINT_AUTOVALIDATE": "1" }
+}
+```
+
+Unset the variable (or set it to `0`) to disable it again.
+
+The hook is deliberately quiet:
+
+- It runs only on the **file just edited** (`.json`/`.xml`) and only when that file is a FHIR resource (has a `resourceType` / the FHIR namespace), so unrelated files are skipped — no validation storms.
+- It surfaces **errors only**. Advisory warnings (e.g. `dom-6`) would nag on every edit; use the **validate** skill or `fhirlint validate` to see those.
+- It honours your `fhirlint.yml`, `.fhirlintignore`, and suppression rules, so its output matches the CLI.
+- It **stays idle until the validator JAR is cached**, so an automatic edit never triggers a surprise ~250 MB download. Run `fhirlint validate` once (or let the validate skill run) to prime it. (`jq` is also required for the hook.)
+
+#### Team rollout
+
+Commit the marketplace and plugin to your repo's `.claude/settings.json` so the whole team gets it on trust:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "fhirlint": { "source": { "source": "github", "repo": "fhirlint/fhirlint" } }
+  },
+  "enabledPlugins": { "fhirlint@fhirlint": true },
+  "env": { "FHIRLINT_AUTOVALIDATE": "1" }
+}
+```
+
+Drop the `env` line to ship the skills without the auto-validation hook.
+
 ---
 
 ## Input sources
