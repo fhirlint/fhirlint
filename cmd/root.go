@@ -70,6 +70,7 @@ func init() {
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(qualifyCmd)
 	rootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(fhirpathCmd)
 }
 
 func initConfig() {
