@@ -9,5 +9,6 @@
   "homepage": "https://github.com/fhirlint/fhirlint#use-as-a-claude-code-plugin",
   "repository": "https://github.com/fhirlint/fhirlint",
   "license": "Apache-2.0",
-  "keywords": ["fhir", "hl7", "validation", "validator", "healthcare", "kbv", "mii", "diga"]
+  "keywords": ["fhir", "hl7", "validation", "validator", "healthcare", "kbv", "mii", "diga"],
+  "hooks": "./hooks/hooks.json"
 }
