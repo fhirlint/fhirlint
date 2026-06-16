@@ -39,7 +39,7 @@ inputs:
     required: false
     default: ''
   version:
-    description: "fhirlint version to install — a release tag (e.g. v1.1.0) or 'latest'"
+    description: "fhirlint version to install — a release tag (e.g. v1.3.0) or 'latest'"
     required: false
     default: 'latest'
 
