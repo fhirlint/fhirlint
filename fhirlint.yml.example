@@ -84,6 +84,19 @@ ignore:
 # Useful for test fixtures and documentation examples
 # allow-example-urls: true
 
+# Jurisdiction for country-specific bindings (default: derived from locale)
+# Relevant for national profiles such as KBV / MII / DiGA
+# jurisdiction: urn:iso:std:iso:3166#DE
+
+# Downgrade coded-display mismatch errors to warnings
+# Reduces noise when display strings drift from the terminology server
+# display-issues-are-warnings: true
+
+# Load message translations from .po files at runtime (repeatable)
+# Overrides the validator's built-in messages, e.g. for German output
+# po:
+#   - validator-messages-de.po
+
 # Suppress warning when terminology server URL uses HTTP instead of HTTPS
 # Only set this for local or internal servers where encryption is not required
 # allow-insecure-tx: true

@@ -23,20 +23,23 @@ func TestToInternalOpts_ExplicitFHIRVersion(t *testing.T) {
 
 func TestToInternalOpts_AllFields(t *testing.T) {
 	in := Options{
-		FHIRVersion:         "4.3.0",
-		Profiles:            []string{"http://example.com/profile"},
-		IGs:                 []string{"kbv.basis#1.5.0"},
-		NoTerminologyServer: true,
-		TerminologyServer:   "https://my-tx.example.com",
-		BestPractice:        "ignore",
-		TxCache:             "/tmp/tx",
-		Locale:              "de",
-		AllowExampleURLs:    true,
-		AllowInsecureTx:     true,
-		TxLog:               "/tmp/tx.log",
-		JARPath:             "/opt/validator.jar",
-		Timeout:             5 * time.Minute,
-		HTTPTimeout:         45 * time.Second,
+		FHIRVersion:              "4.3.0",
+		Profiles:                 []string{"http://example.com/profile"},
+		IGs:                      []string{"kbv.basis#1.5.0"},
+		NoTerminologyServer:      true,
+		TerminologyServer:        "https://my-tx.example.com",
+		BestPractice:             "ignore",
+		TxCache:                  "/tmp/tx",
+		Locale:                   "de",
+		AllowExampleURLs:         true,
+		AllowInsecureTx:          true,
+		TxLog:                    "/tmp/tx.log",
+		Jurisdiction:             "urn:iso:std:iso:3166#DE",
+		DisplayIssuesAreWarnings: true,
+		POFiles:                  []string{"validator-messages-de.po"},
+		JARPath:                  "/opt/validator.jar",
+		Timeout:                  5 * time.Minute,
+		HTTPTimeout:              45 * time.Second,
 	}
 	out := toInternalOpts(in)
 
@@ -72,6 +75,15 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 	}
 	if out.TxLog != "/tmp/tx.log" {
 		t.Errorf("TxLog: got %q", out.TxLog)
+	}
+	if out.Jurisdiction != "urn:iso:std:iso:3166#DE" {
+		t.Errorf("Jurisdiction: got %q", out.Jurisdiction)
+	}
+	if !out.DisplayIssuesAreWarnings {
+		t.Error("DisplayIssuesAreWarnings should be true")
+	}
+	if len(out.POFiles) != 1 || out.POFiles[0] != "validator-messages-de.po" {
+		t.Errorf("POFiles: got %v", out.POFiles)
 	}
 	if out.JARPath != "/opt/validator.jar" {
 		t.Errorf("JARPath: got %q", out.JARPath)

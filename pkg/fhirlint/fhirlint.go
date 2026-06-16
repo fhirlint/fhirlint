@@ -64,6 +64,17 @@ type Options struct {
 	// TxLog writes a terminology server request log to the given file path.
 	TxLog string
 
+	// Jurisdiction sets the jurisdiction for country-specific bindings,
+	// e.g. "urn:iso:std:iso:3166#DE". Empty derives it from the locale.
+	Jurisdiction string
+
+	// DisplayIssuesAreWarnings downgrades coded-display mismatch errors to warnings.
+	DisplayIssuesAreWarnings bool
+
+	// POFiles lists .po translation files loaded at runtime to override
+	// the validator's built-in messages (e.g. "validator-messages-de.po").
+	POFiles []string
+
 	// JARPath overrides the auto-downloaded validator JAR with a local copy.
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
@@ -211,19 +222,22 @@ func toInternalOpts(opts Options) validator.Options {
 	}
 
 	return validator.Options{
-		FHIRVersion:         fhirVersion,
-		Profiles:            resolvedProfiles,
-		IGs:                 opts.IGs,
-		NoTerminologyServer: opts.NoTerminologyServer,
-		TerminologyServer:   opts.TerminologyServer,
-		BestPractice:        opts.BestPractice,
-		TxCache:             opts.TxCache,
-		Locale:              opts.Locale,
-		AllowExampleURLs:    opts.AllowExampleURLs,
-		AllowInsecureTx:     opts.AllowInsecureTx,
-		TxLog:               opts.TxLog,
-		JARPath:             opts.JARPath,
-		Timeout:             opts.Timeout,
+		FHIRVersion:              fhirVersion,
+		Profiles:                 resolvedProfiles,
+		IGs:                      opts.IGs,
+		NoTerminologyServer:      opts.NoTerminologyServer,
+		TerminologyServer:        opts.TerminologyServer,
+		BestPractice:             opts.BestPractice,
+		TxCache:                  opts.TxCache,
+		Locale:                   opts.Locale,
+		AllowExampleURLs:         opts.AllowExampleURLs,
+		AllowInsecureTx:          opts.AllowInsecureTx,
+		TxLog:                    opts.TxLog,
+		Jurisdiction:             opts.Jurisdiction,
+		DisplayIssuesAreWarnings: opts.DisplayIssuesAreWarnings,
+		POFiles:                  opts.POFiles,
+		JARPath:                  opts.JARPath,
+		Timeout:                  opts.Timeout,
 	}
 }
 

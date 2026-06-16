@@ -195,6 +195,49 @@ func TestConfigFile_AllowExampleURLsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_JurisdictionFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "jurisdiction: urn:iso:std:iso:3166#DE\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetString("jurisdiction"); got != "urn:iso:std:iso:3166#DE" {
+		t.Errorf("jurisdiction = %q, want %q", got, "urn:iso:std:iso:3166#DE")
+	}
+}
+
+func TestConfigFile_DisplayIssuesAreWarningsFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "display-issues-are-warnings: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetBool("display-issues-are-warnings"); !got {
+		t.Error("display-issues-are-warnings should be true")
+	}
+}
+
+func TestConfigFile_POFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "po:\n  - validator-messages-de.po\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	po := viper.GetStringSlice("po")
+	if len(po) != 1 || po[0] != "validator-messages-de.po" {
+		t.Errorf("po = %v, want [validator-messages-de.po]", po)
+	}
+}
+
 func TestConfigFile_ExcludeFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

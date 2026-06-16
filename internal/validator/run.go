@@ -16,7 +16,7 @@ import (
 
 // Issue is our internal representation, mapped from OperationOutcome.issue.
 type Issue struct {
-	Severity       string `json:"severity"`                 // fatal | error | warning | information
+	Severity       string `json:"severity"` // fatal | error | warning | information
 	Message        string `json:"message"`
 	Location       string `json:"location"`
 	MessageID      string `json:"messageId"`
@@ -27,7 +27,7 @@ type Issue struct {
 type Result struct {
 	Filename   string  `json:"filename"`
 	Label      string  `json:"label"` // human-readable source (path, URL, "stdin")
-	Valid       bool    `json:"valid"`
+	Valid      bool    `json:"valid"`
 	Issues     []Issue `json:"issues"`
 	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
 	Cached     bool    `json:"cached,omitempty"`     // true when result came from the result cache
@@ -60,19 +60,22 @@ type extItem struct {
 }
 
 type Options struct {
-	FHIRVersion         string
-	Profiles            []string
-	IGs                 []string
-	NoTerminologyServer bool
-	TerminologyServer   string
-	BestPractice       string        // ignore | hint | warning | error (empty = JAR default)
-	TxCache            string        // path to terminology cache dir, or "n/a" to disable
-	Locale             string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
-	AllowExampleURLs   bool          // pass -allow-example-urls to suppress example.org warnings
-	AllowInsecureTx    bool          // suppress HTTP terminology server warning
-	TxLog              string        // path to write terminology server request log (-txLog)
-	JARPath            string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
-	Timeout            time.Duration // 0 means no timeout
+	FHIRVersion              string
+	Profiles                 []string
+	IGs                      []string
+	NoTerminologyServer      bool
+	TerminologyServer        string
+	BestPractice             string        // ignore | hint | warning | error (empty = JAR default)
+	TxCache                  string        // path to terminology cache dir, or "n/a" to disable
+	Locale                   string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
+	AllowExampleURLs         bool          // pass -allow-example-urls to suppress example.org warnings
+	AllowInsecureTx          bool          // suppress HTTP terminology server warning
+	TxLog                    string        // path to write terminology server request log (-txLog)
+	Jurisdiction             string        // jurisdiction for country-specific bindings, e.g. "urn:iso:std:iso:3166#DE" (-jurisdiction)
+	DisplayIssuesAreWarnings bool          // downgrade coded-display mismatches to warnings (-display-issues-are-warnings)
+	POFiles                  []string      // .po translation override files loaded at runtime (-po, repeatable)
+	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	Timeout                  time.Duration // 0 means no timeout
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -115,6 +118,15 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.TxLog != "" {
 		args = append(args, "-txLog", opts.TxLog)
+	}
+	if opts.Jurisdiction != "" {
+		args = append(args, "-jurisdiction", opts.Jurisdiction)
+	}
+	if opts.DisplayIssuesAreWarnings {
+		args = append(args, "-display-issues-are-warnings")
+	}
+	for _, po := range opts.POFiles {
+		args = append(args, "-po", po)
 	}
 	return args
 }
@@ -323,7 +335,6 @@ func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, er
 		return nil, fmt.Errorf("unexpected resourceType %q in validator output\nstderr: %s", peek.ResourceType, stderr)
 	}
 }
-
 
 // formatDuration formats a duration for display, removing redundant zero components
 // (e.g. "5m0s" → "5m", "1h0m0s" → "1h").
