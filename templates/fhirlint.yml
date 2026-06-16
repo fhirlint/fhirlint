@@ -9,7 +9,7 @@ spec:
     image-version:
       default: latest
       description: >-
-        fhirlint Docker image tag. Pin to a release (e.g. "1.1.0") for
+        fhirlint Docker image tag. Pin to a release (e.g. "1.3.0") for
         reproducible builds rather than relying on "latest".
     fail-on:
       default: error
