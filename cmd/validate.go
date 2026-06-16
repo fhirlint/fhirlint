@@ -16,8 +16,8 @@ import (
 	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
-	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/localig"
+	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
@@ -48,43 +48,46 @@ type configOverride struct {
 }
 
 var (
-	flagProfile             []string
-	flagIG                  []string
-	flagFHIRVersion         string
-	flagFormat              []string
-	flagOutput              string
-	flagSeverity            string
-	flagFailOn              string
-	flagURLs                []string
-	flagExtract             string
-	flagIgnore              []string
-	flagNoTerminologyServer bool
-	flagTerminologyServer   string
-	flagBestPractice        string
-	flagTxCache             string
-	flagLocale              string
-	flagAllowExampleURLs    bool
-	flagAllowInsecureTx     bool
-	flagExclude             []string
-	flagTxLog               string
-	flagMaxWarnings         int
-	flagWatch               string
-	flagWatchInterval       int
-	flagSuppress            []string
-	flagShowSuppressed      bool
-	flagExtractEach         string
-	flagCodeSystem          []string
-	flagValueSet            []string
-	flagCache               bool
-	flagCacheDir            string
-	flagTimeout             string
-	flagURLTimeout          string
-	flagLock                bool
-	flagGenerateBaseline    string
-	flagBaseline            string
-	flagBundleEntries       bool
-	flagQuiet               bool
-	flagNoColor             bool
+	flagProfile                  []string
+	flagIG                       []string
+	flagFHIRVersion              string
+	flagFormat                   []string
+	flagOutput                   string
+	flagSeverity                 string
+	flagFailOn                   string
+	flagURLs                     []string
+	flagExtract                  string
+	flagIgnore                   []string
+	flagNoTerminologyServer      bool
+	flagTerminologyServer        string
+	flagBestPractice             string
+	flagTxCache                  string
+	flagLocale                   string
+	flagAllowExampleURLs         bool
+	flagAllowInsecureTx          bool
+	flagExclude                  []string
+	flagTxLog                    string
+	flagJurisdiction             string
+	flagDisplayIssuesAreWarnings bool
+	flagPO                       []string
+	flagMaxWarnings              int
+	flagWatch                    string
+	flagWatchInterval            int
+	flagSuppress                 []string
+	flagShowSuppressed           bool
+	flagExtractEach              string
+	flagCodeSystem               []string
+	flagValueSet                 []string
+	flagCache                    bool
+	flagCacheDir                 string
+	flagTimeout                  string
+	flagURLTimeout               string
+	flagLock                     bool
+	flagGenerateBaseline         string
+	flagBaseline                 string
+	flagBundleEntries            bool
+	flagQuiet                    bool
+	flagNoColor                  bool
 )
 
 var validateCmd = &cobra.Command{
@@ -154,6 +157,12 @@ func init() {
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
 		"Suppress warnings about example.org and similar placeholder URLs")
+	validateCmd.Flags().StringVar(&flagJurisdiction, "jurisdiction", "",
+		"Jurisdiction for country-specific bindings, e.g. urn:iso:std:iso:3166#DE (default: derived from locale)")
+	validateCmd.Flags().BoolVar(&flagDisplayIssuesAreWarnings, "display-issues-are-warnings", false,
+		"Downgrade coded-display mismatch errors to warnings")
+	validateCmd.Flags().StringArrayVar(&flagPO, "po", nil,
+		"Load message translations from a .po file at runtime, e.g. validator-messages-de.po (repeatable)")
 	validateCmd.Flags().StringVar(&flagWatch, "watch", "",
 		"Watch for file changes and re-validate: single (changed files only) or all (all files on any change)")
 	validateCmd.Flags().Lookup("watch").NoOptDefVal = "single"
@@ -206,6 +215,9 @@ func init() {
 	_ = viper.BindPFlag("tx-log", validateCmd.Flags().Lookup("tx-log"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
+	_ = viper.BindPFlag("jurisdiction", validateCmd.Flags().Lookup("jurisdiction"))
+	_ = viper.BindPFlag("display-issues-are-warnings", validateCmd.Flags().Lookup("display-issues-are-warnings"))
+	_ = viper.BindPFlag("po", validateCmd.Flags().Lookup("po"))
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
 	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
 	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
@@ -283,6 +295,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("allow-example-urls") && viper.IsSet("allow-example-urls") {
 		flagAllowExampleURLs = viper.GetBool("allow-example-urls")
+	}
+	if !cmd.Flags().Changed("jurisdiction") && viper.IsSet("jurisdiction") {
+		flagJurisdiction = viper.GetString("jurisdiction")
+	}
+	if !cmd.Flags().Changed("display-issues-are-warnings") && viper.IsSet("display-issues-are-warnings") {
+		flagDisplayIssuesAreWarnings = viper.GetBool("display-issues-are-warnings")
+	}
+	if !cmd.Flags().Changed("po") && viper.IsSet("po") {
+		flagPO = viper.GetStringSlice("po")
 	}
 	if !cmd.Flags().Changed("watch") && viper.IsSet("watch") {
 		flagWatch = viper.GetString("watch")
@@ -378,19 +399,22 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	opts := validator.Options{
-		FHIRVersion:         flagFHIRVersion,
-		Profiles:            resolvedProfiles,
-		IGs:                 flagIG,
-		NoTerminologyServer: flagNoTerminologyServer,
-		TerminologyServer:   flagTerminologyServer,
-		BestPractice:        flagBestPractice,
-		TxCache:             flagTxCache,
-		Locale:              flagLocale,
-		AllowExampleURLs:    flagAllowExampleURLs,
-		AllowInsecureTx:     flagAllowInsecureTx,
-		TxLog:               flagTxLog,
-		JARPath:             viper.GetString("jar"),
-		Timeout:             validatorTimeout,
+		FHIRVersion:              flagFHIRVersion,
+		Profiles:                 resolvedProfiles,
+		IGs:                      flagIG,
+		NoTerminologyServer:      flagNoTerminologyServer,
+		TerminologyServer:        flagTerminologyServer,
+		BestPractice:             flagBestPractice,
+		TxCache:                  flagTxCache,
+		Locale:                   flagLocale,
+		AllowExampleURLs:         flagAllowExampleURLs,
+		AllowInsecureTx:          flagAllowInsecureTx,
+		TxLog:                    flagTxLog,
+		Jurisdiction:             flagJurisdiction,
+		DisplayIssuesAreWarnings: flagDisplayIssuesAreWarnings,
+		POFiles:                  flagPO,
+		JARPath:                  viper.GetString("jar"),
+		Timeout:                  validatorTimeout,
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.

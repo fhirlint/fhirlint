@@ -333,6 +333,46 @@ func TestBuildArgs_TxLogEmpty_Omitted(t *testing.T) {
 	mustNotContain(t, args, "-txLog")
 }
 
+func TestBuildArgs_Jurisdiction(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:  "4.0.1",
+		Jurisdiction: "urn:iso:std:iso:3166#DE",
+	})
+	mustContainPair(t, args, "-jurisdiction", "urn:iso:std:iso:3166#DE")
+}
+
+func TestBuildArgs_JurisdictionEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-jurisdiction")
+}
+
+func TestBuildArgs_DisplayIssuesAreWarnings(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:              "4.0.1",
+		DisplayIssuesAreWarnings: true,
+	})
+	mustContain(t, args, "-display-issues-are-warnings")
+}
+
+func TestBuildArgs_DisplayIssuesAreWarningsFalse_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-display-issues-are-warnings")
+}
+
+func TestBuildArgs_POFiles(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion: "4.0.1",
+		POFiles:     []string{"validator-messages-de.po", "rendering-phrases-de.po"},
+	})
+	mustContainPair(t, args, "-po", "validator-messages-de.po")
+	mustContainPair(t, args, "-po", "rendering-phrases-de.po")
+}
+
+func TestBuildArgs_POFilesEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-po")
+}
+
 func TestValidateFHIRVersion_Valid(t *testing.T) {
 	for _, v := range []string{"4.0.1", "4.3.0", "5.0.0"} {
 		if err := validateFHIRVersion(v); err != nil {

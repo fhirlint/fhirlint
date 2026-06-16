@@ -592,7 +592,7 @@ fhirlint qualify
 ```
 fhirlint Computer System Validation — Operational Qualification
   Tool version:  v1.0.0
-  JAR version:   6.9.7
+  JAR version:   6.9.10
   JAR SHA256:    aba1fe09...
   FHIR version:  4.0.1
   Terminology:   offline
@@ -858,6 +858,9 @@ Exit code `0` means the configuration is valid; exit code `1` means issues were 
 | `--tx-log` | — | Write terminology request log to file |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |
+| `--jurisdiction` | — | Jurisdiction for country-specific bindings, e.g. `urn:iso:std:iso:3166#DE` |
+| `--display-issues-are-warnings` | `false` | Downgrade coded-display mismatch errors to warnings |
+| `--po` | — | Load message translations from a `.po` file at runtime (repeatable) |
 | `--best-practice` | — | Best-practice constraint handling: `ignore`, `hint`, `warning`, `error` |
 | `--timeout` | `5m` | Timeout for the Java validator process |
 | `--cache` | `false` | Cache validation results per file hash |
@@ -902,6 +905,9 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `tx-log` | string | `--tx-log` |
 | `locale` | string | `--locale` |
 | `allow-example-urls` | bool | `--allow-example-urls` |
+| `jurisdiction` | string | `--jurisdiction` |
+| `display-issues-are-warnings` | bool | `--display-issues-are-warnings` |
+| `po` | list | `--po` |
 | `best-practice` | string | `--best-practice` |
 | `timeout` | string | `--timeout` |
 | `cache` | bool | `--cache` |
