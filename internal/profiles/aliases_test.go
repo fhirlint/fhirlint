@@ -14,6 +14,10 @@ func TestResolve_KnownAliases(t *testing.T) {
 		{"kbv-patient", "kbv.basis#1.5.0"},
 		{"mii", "de.medizininformatikinitiative.kerndatensatz#2024.0.0"},
 		{"diga", "de.bfarm.diga#1.2.0"},
+		{"us-core", "hl7.fhir.us.core#9.0.0"},
+		{"ips", "hl7.fhir.uv.ips#2.0.1"},
+		{"ipa", "hl7.fhir.uv.ipa#1.1.0"},
+		{"uk-core", "fhir.r4.ukcore.stu2#2.0.2"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.alias, func(t *testing.T) {

@@ -31,6 +31,8 @@ fhirlint profiles
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
 
+fhirlint also ships international aliases (`us-core`, `ips`, `ipa`, `uk-core`) — run `fhirlint profiles` or see the [Built-in profile aliases](../README.md#built-in-profile-aliases) table for the full list.
+
 ---
 
 ## KBV — Kassenärztliche Bundesvereinigung
