@@ -230,6 +230,60 @@ rules:
 	}
 }
 
+func TestCheck_ValidLint(t *testing.T) {
+	path := writeConfig(t, `
+lint:
+  id-kebab-case: warning
+  profile-name-pascalcase: error
+  canonical-url-pattern:
+    severity: error
+    base: "https://example.org/fhir/"
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) != 0 {
+		t.Errorf("expected no issues for valid lint config, got: %v", issues)
+	}
+}
+
+func TestCheck_Lint_UnknownRule(t *testing.T) {
+	path := writeConfig(t, `
+lint:
+  no-such-rule: warning
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue for unknown lint rule")
+	}
+	if !strings.Contains(issues[0].Message, "unknown lint rule") {
+		t.Errorf("expected 'unknown lint rule' in message, got: %q", issues[0].Message)
+	}
+}
+
+func TestCheck_Lint_InvalidSeverity(t *testing.T) {
+	path := writeConfig(t, `
+lint:
+  id-kebab-case: critical
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue for invalid lint severity")
+	}
+}
+
+func TestCheck_Lint_MissingRequiredParam(t *testing.T) {
+	path := writeConfig(t, `
+lint:
+  canonical-url-pattern: error
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue when required param is missing")
+	}
+	if !strings.Contains(issues[0].Message, "base") {
+		t.Errorf("expected 'base' in message, got: %q", issues[0].Message)
+	}
+}
+
 func TestCheck_ValidOverride(t *testing.T) {
 	path := writeConfig(t, `
 overrides:

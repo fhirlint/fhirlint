@@ -21,6 +21,7 @@ var configOnlyKeys = map[string]bool{
 	"profile-map": true,
 	"overrides":   true,
 	"rules":       true,
+	"lint":        true,
 }
 
 // TestAllValidateFlagsKnownToConfigCheck ensures every --validate flag (except

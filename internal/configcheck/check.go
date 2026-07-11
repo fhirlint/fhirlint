@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fhirlint/fhirlint/internal/lint"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -38,6 +39,7 @@ const (
 	kindSuppressList
 	kindOverrideList
 	kindRuleList
+	kindLintMap
 	kindMap
 )
 
@@ -88,6 +90,7 @@ var topLevelKeys = map[string]keySpec{
 	"no-color":                    {kind: kindBool},
 	"overrides":                   {kind: kindOverrideList},
 	"rules":                       {kind: kindRuleList},
+	"lint":                        {kind: kindLintMap},
 }
 
 // KnownKeys returns the set of recognized top-level fhirlint.yml keys.
@@ -211,6 +214,9 @@ func validateValue(key string, line int, node *yaml.Node, spec keySpec) []Issue 
 
 	case kindRuleList:
 		return checkRuleList(key, line, node)
+
+	case kindLintMap:
+		return checkLintMap(key, line, node)
 
 	case kindMap:
 		// No structural validation for maps
@@ -345,6 +351,78 @@ func checkRuleMap(node *yaml.Node) []Issue {
 		issues = append(issues, Issue{Line: node.Line, Message: "rule must have an assert expression"})
 	}
 	return issues
+}
+
+var lintSeverities = []string{"information", "warning", "error"}
+
+func checkLintMap(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind != yaml.MappingNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a mapping of rule -> severity", key)}}
+	}
+	names := lintRuleNames()
+	var issues []Issue
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		ruleNode := node.Content[i]
+		valNode := node.Content[i+1]
+		name := ruleNode.Value
+
+		meta, known := lint.Known(name)
+		if !known {
+			msg := fmt.Sprintf("unknown lint rule %q", name)
+			if sug := suggest(name, names); sug != "" {
+				msg += fmt.Sprintf(" (did you mean %q?)", sug)
+			}
+			issues = append(issues, Issue{Line: ruleNode.Line, Key: name, Message: msg})
+			continue
+		}
+		issues = append(issues, checkLintRuleValue(name, meta, valNode)...)
+	}
+	return issues
+}
+
+func checkLintRuleValue(name string, meta lint.RuleMeta, node *yaml.Node) []Issue {
+	switch node.Kind {
+	case yaml.ScalarNode:
+		if !contains(lintSeverities, node.Value) {
+			return []Issue{{Line: node.Line, Key: name, Message: fmt.Sprintf("invalid severity %q for lint rule %q (allowed: %s)", node.Value, name, strings.Join(lintSeverities, ", "))}}
+		}
+		var issues []Issue
+		for _, rp := range meta.RequiredParams {
+			issues = append(issues, Issue{Line: node.Line, Key: name, Message: fmt.Sprintf("lint rule %q requires parameter %q — use the map form with severity and %s", name, rp, rp)})
+		}
+		return issues
+	case yaml.MappingNode:
+		var issues []Issue
+		present := map[string]bool{}
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			k := node.Content[i].Value
+			v := node.Content[i+1]
+			if k == "severity" {
+				if !contains(lintSeverities, v.Value) {
+					issues = append(issues, Issue{Line: node.Content[i].Line, Key: name, Message: fmt.Sprintf("invalid severity %q for lint rule %q (allowed: %s)", v.Value, name, strings.Join(lintSeverities, ", "))})
+				}
+				continue
+			}
+			present[k] = true
+		}
+		for _, rp := range meta.RequiredParams {
+			if !present[rp] {
+				issues = append(issues, Issue{Line: node.Line, Key: name, Message: fmt.Sprintf("lint rule %q requires parameter %q", name, rp)})
+			}
+		}
+		return issues
+	default:
+		return []Issue{{Line: node.Line, Key: name, Message: fmt.Sprintf("lint rule %q must be a severity string or a map", name)}}
+	}
+}
+
+func lintRuleNames() []string {
+	metas := lint.Rules()
+	out := make([]string, 0, len(metas))
+	for _, m := range metas {
+		out = append(out, m.Name)
+	}
+	return out
 }
 
 func checkOverrideList(key string, line int, node *yaml.Node) []Issue {

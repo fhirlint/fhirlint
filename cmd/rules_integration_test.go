@@ -66,7 +66,7 @@ const patientWithMRN = `{
 }`
 
 // TestIntegration_RuleFailsOnRealResult exercises the full cmd wiring: a real
-// JAR validation produces a Result, then applyRuleEngine re-reads the file and
+// JAR validation produces a Result, then applyCustomChecks re-reads the file and
 // merges a failing rule finding alongside the JAR's own issues.
 func TestIntegration_RuleFailsOnRealResult(t *testing.T) {
 	res := runRealValidation(t, patientNoMRN)
@@ -79,8 +79,8 @@ rules:
     severity: error
 `)
 
-	if err := applyRuleEngine(nil, []*validator.Result{res}); err != nil {
-		t.Fatalf("applyRuleEngine: %v", err)
+	if err := applyCustomChecks(nil, []*validator.Result{res}); err != nil {
+		t.Fatalf("applyCustomChecks: %v", err)
 	}
 	if !hasMessageID(res, "rule:patient-needs-mrn") {
 		t.Fatalf("expected rule finding merged into result, got issues: %+v", res.Issues)
@@ -103,8 +103,8 @@ rules:
     severity: error
 `)
 
-	if err := applyRuleEngine(nil, []*validator.Result{res}); err != nil {
-		t.Fatalf("applyRuleEngine: %v", err)
+	if err := applyCustomChecks(nil, []*validator.Result{res}); err != nil {
+		t.Fatalf("applyCustomChecks: %v", err)
 	}
 	if hasMessageID(res, "rule:patient-needs-mrn") {
 		t.Fatalf("expected no rule finding for a compliant resource, got: %+v", res.Issues)
@@ -126,8 +126,8 @@ rules:
     severity: error
 `)
 
-	if err := applyRuleEngine(nil, []*validator.Result{res}); err != nil {
-		t.Fatalf("applyRuleEngine: %v", err)
+	if err := applyCustomChecks(nil, []*validator.Result{res}); err != nil {
+		t.Fatalf("applyCustomChecks: %v", err)
 	}
 	if hasMessageID(res, "rule:obs-status") {
 		t.Error("Observation-scoped rule must not fire on a Patient")
