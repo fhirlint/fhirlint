@@ -157,6 +157,12 @@ ignore:
 # Works for all Bundle types (transaction, batch, collection, document, searchset).
 # bundle-entries: true
 
+# Check referential integrity across the validated set (dangling references).
+# Unresolved local references (relative, urn:uuid, contained #id) are errors
+# (ref:unresolved); absolute references to external servers are information
+# (ref:external). Runs in-process on JSON; XML is skipped. See docs/references.md.
+# check-references: true
+
 # Suppress per-file output for valid files — only files with issues are printed.
 # The summary line is always shown. Only affects --format terminal.
 # quiet: true

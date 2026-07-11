@@ -20,6 +20,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/refcheck"
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/rules"
@@ -92,6 +93,7 @@ var (
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
+	flagCheckReferences          bool
 )
 
 var validateCmd = &cobra.Command{
@@ -198,6 +200,9 @@ func init() {
 	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
 	validateCmd.Flags().StringVar(&flagRulesFile, "rules-file", "",
 		"Load custom FHIRPath lint rules from a YAML file (overrides rules: in config)")
+	validateCmd.Flags().BoolVar(&flagCheckReferences, "check-references", false,
+		"Check that references resolve within the validated resource set (dangling-reference detection)")
+	_ = viper.BindPFlag("check-references", validateCmd.Flags().Lookup("check-references"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -337,6 +342,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("bundle-entries") && viper.IsSet("bundle-entries") {
 		flagBundleEntries = viper.GetBool("bundle-entries")
+	}
+	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
+		flagCheckReferences = viper.GetBool("check-references")
 	}
 	if !cmd.Flags().Changed("quiet") && viper.IsSet("quiet") {
 		flagQuiet = viper.GetBool("quiet")
@@ -544,6 +552,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// filtering and every reporter.
 	if cerr := applyCustomChecks(cmd, results); cerr != nil {
 		return cerr
+	}
+
+	// Check referential integrity across the whole validated set (dangling refs).
+	if flagCheckReferences {
+		applyReferenceCheck(results)
 	}
 
 	// Apply suppression rules (CLI flags + config file).
@@ -1926,6 +1939,49 @@ func applyCustomChecks(_ *cobra.Command, results []*validator.Result) error {
 		fmt.Fprintf(os.Stderr, "warn: custom rules/lint skipped %d XML resource(s) — they support JSON input only\n", skippedXML)
 	}
 	return nil
+}
+
+// applyReferenceCheck indexes every validated JSON resource and reports literal
+// references that do not resolve within the set. It reads each file once, builds
+// a shared index, then checks each resource. XML resources are skipped.
+func applyReferenceCheck(results []*validator.Result) {
+	type parsed struct {
+		res *validator.Result
+		raw []byte
+	}
+	docs := make([]parsed, 0, len(results))
+	index := refcheck.NewIndex()
+	skippedXML := 0
+	for _, res := range results {
+		if res.Filename == "" {
+			continue
+		}
+		content, err := os.ReadFile(res.Filename) //nolint:gosec // path from resolved input
+		if err != nil {
+			continue // temp file already cleaned up, or unreadable
+		}
+		if isXMLContent(content) {
+			skippedXML++
+			continue
+		}
+		index.Add(content)
+		docs = append(docs, parsed{res: res, raw: content})
+	}
+	for _, d := range docs {
+		found := refcheck.Check(d.raw, index)
+		if len(found) == 0 {
+			continue
+		}
+		d.res.Issues = append(d.res.Issues, found...)
+		for _, iss := range found {
+			if iss.Severity == "error" || iss.Severity == "fatal" {
+				d.res.Valid = false
+			}
+		}
+	}
+	if skippedXML > 0 {
+		fmt.Fprintf(os.Stderr, "warn: reference check skipped %d XML resource(s) — it supports JSON input only\n", skippedXML)
+	}
 }
 
 // buildRuleEngine loads rules from --rules-file (precedence) or the rules:

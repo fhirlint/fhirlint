@@ -29,6 +29,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Suppressing known issues](#suppressing-known-issues)
 - [Custom lint rules](#custom-lint-rules)
 - [Style & naming rules](#style--naming-rules)
+- [Referential integrity](#referential-integrity)
 - [Explaining message IDs](#explaining-message-ids)
 - [Evaluating FHIRPath expressions](#evaluating-fhirpath-expressions)
 - [Baseline mode](#baseline-mode)
@@ -453,6 +454,30 @@ fhirlint validate ./fhir/ --suppress messageId:lint:id-kebab-case
 These rules catch conventions the validator itself accepts. For example the id `ExamplePatient1` is a valid FHIR id (the JAR reports no error), but `id-kebab-case` flags it as not lowercase-hyphenated. Rules run in-process against FHIR **JSON**; XML resources are skipped with a notice.
 
 See the [Style & naming rules guide](docs/lint-rules.md) for the full rule list and options. For **project-specific** assertions beyond these built-ins, see custom FHIRPath rules (`rules:` / `--rules-file`).
+
+---
+
+## Referential integrity
+
+Profile validation checks each resource in isolation — it does not catch a **dangling reference**, where a `reference` points at a resource that is not present in the dataset. Pass `--check-references` to validate the reference graph across the whole input set (a directory, a Bundle, or NDJSON):
+
+```bash
+fhirlint validate ./fhir/ --check-references
+```
+
+fhirlint indexes every resource's identity (`ResourceType/id`, and Bundle entry `fullUrl`s) and then resolves each literal reference against that index:
+
+- **Local references** — a relative `Patient/123`, a `urn:uuid:…` matching a Bundle entry, or a contained `#id` — that do not resolve are reported as an **error** with message ID `ref:unresolved`.
+- **Absolute references** to a server outside the set (`https://other.example/fhir/Patient/1`) cannot be checked and are reported as **information** with message ID `ref:external`.
+- References by `identifier` only (no literal `.reference`) and canonical URLs are not reference-resolved.
+
+The check runs in-process (no JVM round-trip) and findings behave like any other issue — filtered by `--severity`, gated by `--fail-on`, and suppressible or baselineable:
+
+```bash
+fhirlint validate ./fhir/ --check-references --suppress messageId:ref:external
+```
+
+It is opt-in: when you validate a subset of a dataset, references to resources you did not include will (correctly) report as unresolved. XML resources are skipped with a notice.
 
 ---
 
