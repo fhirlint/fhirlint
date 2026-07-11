@@ -37,6 +37,7 @@ const (
 	kindEnumList
 	kindSuppressList
 	kindOverrideList
+	kindRuleList
 	kindMap
 )
 
@@ -86,6 +87,7 @@ var topLevelKeys = map[string]keySpec{
 	"quiet":                       {kind: kindBool},
 	"no-color":                    {kind: kindBool},
 	"overrides":                   {kind: kindOverrideList},
+	"rules":                       {kind: kindRuleList},
 }
 
 // KnownKeys returns the set of recognized top-level fhirlint.yml keys.
@@ -111,6 +113,10 @@ var suppressKeys = map[string]struct{}{
 	"messageId": {}, "messageid": {},
 	"constraint": {}, "expression": {}, "pattern": {},
 	"severity": {}, "reason": {},
+}
+
+var ruleKeys = map[string]struct{}{
+	"id": {}, "resource": {}, "assert": {}, "message": {}, "severity": {},
 }
 
 // Check reads the YAML config file at path and returns all validation issues.
@@ -203,6 +209,9 @@ func validateValue(key string, line int, node *yaml.Node, spec keySpec) []Issue 
 	case kindOverrideList:
 		return checkOverrideList(key, line, node)
 
+	case kindRuleList:
+		return checkRuleList(key, line, node)
+
 	case kindMap:
 		// No structural validation for maps
 	}
@@ -287,6 +296,53 @@ func checkSuppressMap(node *yaml.Node) []Issue {
 	}
 	if !hasType {
 		issues = append(issues, Issue{Line: node.Line, Message: "suppress rule must have one of: messageId, constraint, expression, pattern"})
+	}
+	return issues
+}
+
+func checkRuleList(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind != yaml.SequenceNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a list", key)}}
+	}
+	var issues []Issue
+	for _, item := range node.Content {
+		if item.Kind != yaml.MappingNode {
+			issues = append(issues, Issue{Line: item.Line, Key: key, Message: "rule must be a map with id and assert"})
+			continue
+		}
+		issues = append(issues, checkRuleMap(item)...)
+	}
+	return issues
+}
+
+func checkRuleMap(node *yaml.Node) []Issue {
+	var issues []Issue
+	hasID, hasAssert := false, false
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		k := node.Content[i].Value
+		line := node.Content[i].Line
+		if _, ok := ruleKeys[k]; !ok {
+			issues = append(issues, Issue{Line: line, Key: k, Message: fmt.Sprintf("unknown rule key %q", k)})
+			continue
+		}
+		switch k {
+		case "id":
+			hasID = true
+		case "assert":
+			hasAssert = true
+		case "severity":
+			valNode := node.Content[i+1]
+			allowed := []string{"information", "warning", "error"}
+			if !contains(allowed, valNode.Value) {
+				issues = append(issues, Issue{Line: line, Key: k, Message: fmt.Sprintf("invalid value %q for rule severity (allowed: %s)", valNode.Value, strings.Join(allowed, ", "))})
+			}
+		}
+	}
+	if !hasID {
+		issues = append(issues, Issue{Line: node.Line, Message: "rule must have an id"})
+	}
+	if !hasAssert {
+		issues = append(issues, Issue{Line: node.Line, Message: "rule must have an assert expression"})
 	}
 	return issues
 }

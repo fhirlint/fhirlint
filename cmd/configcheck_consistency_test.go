@@ -13,12 +13,14 @@ import (
 var cliOnlyFlags = map[string]bool{
 	"lock":              true,
 	"generate-baseline": true,
+	"rules-file":        true,
 }
 
 // configOnlyKeys are fhirlint.yml keys that have no CLI flag equivalent.
 var configOnlyKeys = map[string]bool{
 	"profile-map": true,
 	"overrides":   true,
+	"rules":       true,
 }
 
 // TestAllValidateFlagsKnownToConfigCheck ensures every --validate flag (except
