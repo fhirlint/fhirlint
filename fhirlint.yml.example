@@ -126,6 +126,32 @@ ignore:
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
 
+# Custom lint rules — assert project-specific FHIRPath expressions on every
+# resource. A resource that fails the assertion produces a finding (message ID
+# "rule:<id>"). Rules run in-process against JSON (R4/R4B/R5); XML is skipped.
+# Alternatively load them from a file with: --rules-file lint-rules.yml
+# See docs/rules.md for the supported FHIRPath subset.
+# rules:
+#   - id: patient-needs-mrn
+#     resource: Patient                           # optional resourceType filter
+#     assert: "identifier.where(system='http://hospital.example/mrn').exists()"
+#     message: "Patient is missing an MRN identifier"
+#     severity: error                             # error | warning | information (default: error)
+#   - id: has-name
+#     assert: "name.exists()"
+#     severity: warning
+
+# Built-in style/naming lint rules — opt-in convention checks the validator does
+# not enforce. Each finding uses message ID "lint:<rule>" and behaves like any
+# other issue. Rules run on JSON (R4/R4B/R5); XML is skipped.
+# See docs/lint-rules.md for the full list.
+# lint:
+#   id-kebab-case: warning                        # resource id should be lowercase kebab-case
+#   profile-name-pascalcase: warning              # StructureDefinition.name should be PascalCase
+#   canonical-url-pattern:                        # canonical url must start with a base
+#     severity: error
+#     base: "https://example.org/fhir/"
+
 # Validate each entry.resource inside a FHIR Bundle as a standalone resource.
 # The Bundle itself is still validated (structure); entry validation is additive.
 # Works for all Bundle types (transaction, batch, collection, document, searchset).
