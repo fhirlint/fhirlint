@@ -987,6 +987,10 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 
 ## Built-in profile aliases
 
+Aliases are a convenience shortcut for common IG packages. Pass the full `name#version` reference directly to target a different version.
+
+**German profiles** (see the [German profiles guide](docs/german-profiles.md)):
+
 | Alias | Resolves to |
 |-------|-------------|
 | `kbv-basis` | `kbv.basis#1.5.0` |
@@ -994,9 +998,21 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `mii` | `de.medizininformatikinitiative.kerndatensatz#2024.0.0` |
 | `diga` | `de.bfarm.diga#1.2.0` |
 
+**International profiles:**
+
+| Alias | Resolves to | Covers |
+|-------|-------------|--------|
+| `us-core` | `hl7.fhir.us.core#9.0.0` | US Core (HL7 US Realm) |
+| `ips` | `hl7.fhir.uv.ips#2.0.1` | International Patient Summary |
+| `ipa` | `hl7.fhir.uv.ipa#1.1.0` | International Patient Access |
+| `uk-core` | `fhir.r4.ukcore.stu2#2.0.2` | UK Core (NHS England, STU2) |
+
 ```bash
 # List all available aliases
 fhirlint profiles
+
+# Validate against an international profile alias
+fhirlint validate patient.json --profile us-core
 ```
 
 ---
