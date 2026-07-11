@@ -172,6 +172,64 @@ suppress:
 	}
 }
 
+func TestCheck_ValidRules(t *testing.T) {
+	path := writeConfig(t, `
+rules:
+  - id: patient-mrn
+    resource: Patient
+    assert: "identifier.exists()"
+    message: "needs identifier"
+    severity: error
+  - id: has-name
+    assert: "name.exists()"
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) != 0 {
+		t.Errorf("expected no issues for valid rules, got: %v", issues)
+	}
+}
+
+func TestCheck_Rule_UnknownKey(t *testing.T) {
+	path := writeConfig(t, `
+rules:
+  - id: r1
+    assert: "name.exists()"
+    expr: "oops"
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue for unknown rule key")
+	}
+}
+
+func TestCheck_Rule_MissingAssert(t *testing.T) {
+	path := writeConfig(t, `
+rules:
+  - id: r1
+    severity: warning
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue when rule has no assert")
+	}
+	if !strings.Contains(issues[0].Message, "assert") {
+		t.Errorf("expected 'assert' in message, got: %q", issues[0].Message)
+	}
+}
+
+func TestCheck_Rule_InvalidSeverity(t *testing.T) {
+	path := writeConfig(t, `
+rules:
+  - id: r1
+    assert: "name.exists()"
+    severity: critical
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) == 0 {
+		t.Fatal("expected issue for invalid rule severity")
+	}
+}
+
 func TestCheck_ValidOverride(t *testing.T) {
 	path := writeConfig(t, `
 overrides:

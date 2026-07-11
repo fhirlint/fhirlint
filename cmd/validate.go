@@ -21,11 +21,13 @@ import (
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
+	"github.com/fhirlint/fhirlint/internal/rules"
 	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
+	"go.yaml.in/yaml/v3"
 )
 
 const defaultFHIRVersion = "4.0.1"
@@ -88,6 +90,7 @@ var (
 	flagBundleEntries            bool
 	flagQuiet                    bool
 	flagNoColor                  bool
+	flagRulesFile                string
 )
 
 var validateCmd = &cobra.Command{
@@ -192,6 +195,8 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagNoColor, "no-color", false,
 		"Disable ANSI color output")
 	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
+	validateCmd.Flags().StringVar(&flagRulesFile, "rules-file", "",
+		"Load custom FHIRPath lint rules from a YAML file (overrides rules: in config)")
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -531,6 +536,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// Apply custom FHIRPath lint rules before suppression so their findings flow
+	// through suppression, baseline, severity filtering and every reporter.
+	if rerr := applyRuleEngine(cmd, results); rerr != nil {
+		return rerr
 	}
 
 	// Apply suppression rules (CLI flags + config file).
@@ -1871,6 +1882,140 @@ func buildSuppressRules(cmd *cobra.Command) ([]suppress.Rule, error) {
 		return parseSuppressFromConfig(raw)
 	}
 	return nil, nil
+}
+
+// applyRuleEngine loads and compiles custom FHIRPath rules, then evaluates them
+// against each result's resource, merging findings as issues. Rules run on JSON
+// resources only; XML resources are skipped with a notice.
+func applyRuleEngine(_ *cobra.Command, results []*validator.Result) error {
+	engine, err := buildRuleEngine()
+	if err != nil {
+		return err
+	}
+	if engine == nil {
+		return nil
+	}
+	skippedXML := 0
+	for _, res := range results {
+		if res.Filename == "" {
+			continue
+		}
+		content, rerr := os.ReadFile(res.Filename) //nolint:gosec // path from resolved input
+		if rerr != nil {
+			continue // temp file already cleaned up, or unreadable — nothing to lint
+		}
+		if isXMLContent(content) {
+			skippedXML++
+			continue
+		}
+		engine.EvaluateResult(res, content)
+	}
+	if skippedXML > 0 {
+		fmt.Fprintf(os.Stderr, "warn: custom rules skipped %d XML resource(s) — rules support JSON input only\n", skippedXML)
+	}
+	return nil
+}
+
+// buildRuleEngine loads rules from --rules-file (precedence) or the rules:
+// config key and compiles them. Returns nil when no rules are configured.
+func buildRuleEngine() (*rules.Engine, error) {
+	ruleset, err := loadRules()
+	if err != nil {
+		return nil, err
+	}
+	if len(ruleset) == 0 {
+		return nil, nil
+	}
+	return rules.NewEngine(ruleset, rules.NewNativeEvaluator())
+}
+
+// loadRules reads rules from --rules-file if given, otherwise from the rules:
+// config key.
+func loadRules() ([]rules.Rule, error) {
+	if flagRulesFile != "" {
+		return loadRulesFromFile(flagRulesFile)
+	}
+	if viper.IsSet("rules") {
+		return parseRulesFromConfig(viper.Get("rules"))
+	}
+	return nil, nil
+}
+
+// loadRulesFromFile parses a YAML file holding a rules: list (or a bare list of
+// rule maps).
+func loadRulesFromFile(pathArg string) ([]rules.Rule, error) {
+	data, err := os.ReadFile(pathArg) //nolint:gosec // caller-supplied path
+	if err != nil {
+		return nil, fmt.Errorf("reading rules file %s: %w", pathArg, err)
+	}
+	// Accept both a document with a `rules:` key and a bare list of rule maps.
+	var doc struct {
+		Rules []map[string]interface{} `yaml:"rules"`
+	}
+	errDoc := yaml.Unmarshal(data, &doc)
+	if errDoc == nil && len(doc.Rules) > 0 {
+		return buildRuleList(pathArg, doc.Rules)
+	}
+	var list []map[string]interface{}
+	errList := yaml.Unmarshal(data, &list)
+	if errList == nil && len(list) > 0 {
+		return buildRuleList(pathArg, list)
+	}
+	if errDoc != nil && errList != nil {
+		return nil, fmt.Errorf("parsing rules file %s: %w", pathArg, errList)
+	}
+	return nil, fmt.Errorf("rules file %s contains no rules (expected a 'rules:' list or a bare list of rules)", pathArg)
+}
+
+// buildRuleList parses a slice of rule maps into rules, tagging errors with the
+// source path.
+func buildRuleList(pathArg string, maps []map[string]interface{}) ([]rules.Rule, error) {
+	out := make([]rules.Rule, 0, len(maps))
+	for _, m := range maps {
+		r, perr := rules.ParseMap(m)
+		if perr != nil {
+			return nil, fmt.Errorf("%s: %w", pathArg, perr)
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// parseRulesFromConfig parses the rules: list from fhirlint.yml (viper form).
+func parseRulesFromConfig(raw interface{}) ([]rules.Rule, error) {
+	items, ok := raw.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("rules config must be a list")
+	}
+	var out []rules.Rule
+	for _, item := range items {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("each rule must be a map, got %T", item)
+		}
+		r, err := rules.ParseMap(m)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// isXMLContent reports whether content looks like an XML document (first
+// non-whitespace byte is '<').
+func isXMLContent(content []byte) bool {
+	for _, b := range content {
+		switch b {
+		case ' ', '\t', '\r', '\n':
+			continue
+		case '<':
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 // parseSuppressFromConfig parses the suppress list from fhirlint.yml.
