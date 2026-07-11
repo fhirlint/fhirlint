@@ -16,6 +16,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/lint"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/profiles"
@@ -538,10 +539,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Apply custom FHIRPath lint rules before suppression so their findings flow
-	// through suppression, baseline, severity filtering and every reporter.
-	if rerr := applyRuleEngine(cmd, results); rerr != nil {
-		return rerr
+	// Apply custom FHIRPath rules and built-in style/naming lint rules before
+	// suppression so their findings flow through suppression, baseline, severity
+	// filtering and every reporter.
+	if cerr := applyCustomChecks(cmd, results); cerr != nil {
+		return cerr
 	}
 
 	// Apply suppression rules (CLI flags + config file).
@@ -1884,15 +1886,20 @@ func buildSuppressRules(cmd *cobra.Command) ([]suppress.Rule, error) {
 	return nil, nil
 }
 
-// applyRuleEngine loads and compiles custom FHIRPath rules, then evaluates them
-// against each result's resource, merging findings as issues. Rules run on JSON
-// resources only; XML resources are skipped with a notice.
-func applyRuleEngine(_ *cobra.Command, results []*validator.Result) error {
-	engine, err := buildRuleEngine()
+// applyCustomChecks runs the custom FHIRPath rule engine and the built-in
+// style/naming lint engine against each result's resource, merging findings as
+// issues. Each resource is read once and shared by both engines. Both engines
+// operate on JSON only; XML resources are skipped with a notice.
+func applyCustomChecks(_ *cobra.Command, results []*validator.Result) error {
+	ruleEngine, err := buildRuleEngine()
 	if err != nil {
 		return err
 	}
-	if engine == nil {
+	lintEngine, err := buildLintEngine()
+	if err != nil {
+		return err
+	}
+	if ruleEngine == nil && lintEngine == nil {
 		return nil
 	}
 	skippedXML := 0
@@ -1902,16 +1909,21 @@ func applyRuleEngine(_ *cobra.Command, results []*validator.Result) error {
 		}
 		content, rerr := os.ReadFile(res.Filename) //nolint:gosec // path from resolved input
 		if rerr != nil {
-			continue // temp file already cleaned up, or unreadable — nothing to lint
+			continue // temp file already cleaned up, or unreadable — nothing to check
 		}
 		if isXMLContent(content) {
 			skippedXML++
 			continue
 		}
-		engine.EvaluateResult(res, content)
+		if ruleEngine != nil {
+			ruleEngine.EvaluateResult(res, content)
+		}
+		if lintEngine != nil {
+			lintEngine.EvaluateResult(res, content)
+		}
 	}
 	if skippedXML > 0 {
-		fmt.Fprintf(os.Stderr, "warn: custom rules skipped %d XML resource(s) — rules support JSON input only\n", skippedXML)
+		fmt.Fprintf(os.Stderr, "warn: custom rules/lint skipped %d XML resource(s) — they support JSON input only\n", skippedXML)
 	}
 	return nil
 }
@@ -2000,6 +2012,19 @@ func parseRulesFromConfig(raw interface{}) ([]rules.Rule, error) {
 		out = append(out, r)
 	}
 	return out, nil
+}
+
+// buildLintEngine parses the lint: config key into a lint engine. Returns nil
+// when no lint rules are configured.
+func buildLintEngine() (*lint.Engine, error) {
+	if !viper.IsSet("lint") {
+		return nil, nil
+	}
+	cfg, err := lint.ParseConfig(viper.Get("lint"))
+	if err != nil {
+		return nil, fmt.Errorf("lint config: %w", err)
+	}
+	return lint.NewEngine(cfg)
 }
 
 // isXMLContent reports whether content looks like an XML document (first

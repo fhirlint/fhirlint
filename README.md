@@ -28,6 +28,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
 - [Custom lint rules](#custom-lint-rules)
+- [Style & naming rules](#style--naming-rules)
 - [Explaining message IDs](#explaining-message-ids)
 - [Evaluating FHIRPath expressions](#evaluating-fhirpath-expressions)
 - [Baseline mode](#baseline-mode)
@@ -427,6 +428,31 @@ fhirlint validate patient.json --suppress messageId:rule:patient-needs-mrn
 Rules are evaluated in-process against FHIR **JSON** (R4/R4B/R5) — no JVM round-trip — so they add negligible overhead even across large directories. XML resources are skipped with a notice. A malformed or unsupported expression is reported when rules are loaded (and by `fhirlint config check`), not silently ignored.
 
 See the [Custom lint rules guide](docs/rules.md) for the full list of supported FHIRPath functions and operators.
+
+---
+
+## Style & naming rules
+
+Profile validation checks conformance to the FHIR spec, but it does not enforce **authoring conventions** — lowercase-hyphen resource ids, a house canonical-URL base, PascalCase profile names. Built-in lint rules add those checks. They are **opt-in**: nothing runs unless you enable it under the `lint:` key in `fhirlint.yml`, and each rule carries its own severity.
+
+```yaml
+lint:
+  id-kebab-case: warning              # resource id should be lowercase kebab-case
+  profile-name-pascalcase: warning    # StructureDefinition.name should be PascalCase
+  canonical-url-pattern:              # canonical url must start with a base
+    severity: error
+    base: "https://example.org/fhir/"
+```
+
+Findings carry the message ID `lint:<rule>`, so they behave like any other issue — shown in every report, filtered by `--severity`, gated by `--fail-on`, and suppressible or baselineable:
+
+```bash
+fhirlint validate ./fhir/ --suppress messageId:lint:id-kebab-case
+```
+
+These rules catch conventions the validator itself accepts. For example the id `ExamplePatient1` is a valid FHIR id (the JAR reports no error), but `id-kebab-case` flags it as not lowercase-hyphenated. Rules run in-process against FHIR **JSON**; XML resources are skipped with a notice.
+
+See the [Style & naming rules guide](docs/lint-rules.md) for the full rule list and options. For **project-specific** assertions beyond these built-ins, see custom FHIRPath rules (`rules:` / `--rules-file`).
 
 ---
 
