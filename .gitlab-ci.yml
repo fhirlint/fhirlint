@@ -1,0 +1,24 @@
+# GitLab CI/CD — mirror-only.
+#
+# fhirlint's real CI runs on GitHub Actions. This file exists solely for the
+# read-only GitLab mirror (see .github/workflows/gitlab-mirror.yml), which hosts
+# the CI/CD Component defined in templates/fhirlint.yml.
+#
+# GitLab publishes a Catalog version for the component only when a release is
+# created on a tag pipeline. This job creates that release automatically for
+# every vX.Y.Z tag pushed to the mirror, so new versions appear in the CI/CD
+# Catalog without a manual step. On non-tag pushes no pipeline is created.
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-\S+)?$/
+
+create-release:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Publishing $CI_COMMIT_TAG to the GitLab CI/CD Catalog"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: $CI_COMMIT_TAG
+    description: "fhirlint $CI_COMMIT_TAG — release notes at https://github.com/fhirlint/fhirlint/releases/tag/$CI_COMMIT_TAG"
