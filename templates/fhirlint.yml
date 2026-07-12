@@ -9,8 +9,8 @@ spec:
     image-version:
       default: latest
       description: >-
-        fhirlint Docker image tag. Pin to a release (e.g. "1.3.0") for
-        reproducible builds rather than relying on "latest".
+        fhirlint Docker image tag (no "v" prefix). Pin to a release
+        (e.g. "1.4.0") for reproducible builds rather than relying on "latest".
     fail-on:
       default: error
       description: "Exit non-zero at this severity or above: error | warning | information | never."

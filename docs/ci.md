@@ -343,15 +343,16 @@ The quickest way to validate FHIR on GitLab is the published CI/CD Component —
 
 ```yaml
 include:
-  - component: gitlab.com/fhirlint/fhirlint/fhirlint@1.3.0
+  - component: gitlab.com/fhirlint/fhirlint/fhirlint@v1.4.0
     inputs:
       path: ./fhir/
       fail-on: error
+      image-version: "1.4.0"
 ```
 
-Inputs: `stage`, `path`, `image-version` (pin to a release, e.g. `1.3.0`), `fail-on`, `severity`, `profile`, `ig`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
+Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
 
-> Pin `image-version` to a release rather than `latest` for reproducible pipelines, matching the component version you include.
+> **Two version references, two formats.** The component version (`@v1.4.0`) is the Git tag / Catalog version and carries the `v` prefix. The `image-version` input is the Docker image tag and does **not** (`1.4.0`). Pin both to the same release for reproducible pipelines rather than using `latest`. Browse published versions in the [CI/CD Catalog](https://gitlab.com/fhirlint/fhirlint).
 
 If you prefer to wire it up by hand, the raw `.gitlab-ci.yml` below does the same thing.
 
