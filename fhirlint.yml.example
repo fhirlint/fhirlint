@@ -163,6 +163,11 @@ ignore:
 # (ref:external). Runs in-process on JSON; XML is skipped. See docs/references.md.
 # check-references: true
 
+# Validate against a running warm validator server instead of a per-run JVM.
+# Start one with: fhirlint serve --port 8080 --ig <package>
+# The server's FHIR version/IGs/tx are fixed at its startup; see docs/daemon.md.
+# server: http://localhost:8080
+
 # Suppress per-file output for valid files — only files with issues are printed.
 # The summary line is always shown. Only affects --format terminal.
 # quiet: true

@@ -38,6 +38,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Computer System Validation (qualify)](#computer-system-validation-qualify)
 - [Terminology server](#terminology-server)
 - [Watch mode](#watch-mode)
+- [Server mode (warm validator)](#server-mode-warm-validator)
 - [Pipeline integration](#pipeline-integration)
 - [Configuration file](#configuration-file-fhirlintymll)
 - [Validating the configuration file](#validating-the-configuration-file)
@@ -791,6 +792,33 @@ fhirlint validate ./fhir/ --watch --watch-interval 500
 ```
 
 Watch mode streams the validator output directly to the terminal. Press `Ctrl-C` to stop. It is not compatible with `--format json --output` or `--url`.
+
+---
+
+## Server mode (warm validator)
+
+Every ordinary `fhirlint validate` run starts a fresh JVM and reloads the validator's packages and terminology — tens of seconds of startup before the first resource is even looked at. For repeated validations (an editor loop, a large dataset, a CI matrix) that startup cost dominates.
+
+`fhirlint serve` runs the validator **once** and keeps it warm as an HTTP service, so subsequent validations take milliseconds instead of tens of seconds:
+
+```bash
+# Terminal 1 — start the warm validator (loads packages once)
+fhirlint serve --port 8080 --ig hl7.fhir.us.core#9.0.0
+
+# Terminal 2 / CI — validate against it
+fhirlint validate ./fhir/ --server http://localhost:8080
+```
+
+In practice this turns a ~30 s cold run into well under a second once the server is warm.
+
+The server's **FHIR version, IGs and terminology settings are fixed at startup** — load the IGs you need with `--ig` (aliases like `us-core` work). Per request only the resource and its profile vary, so:
+
+- Client flags that change *validation semantics* — `--fhir-version`, `--ig`, `--best-practice`, `--jurisdiction`, … — are **not** applied per request; the server's startup configuration governs them (fhirlint warns if you pass `--fhir-version`/`--ig` alongside `--server`).
+- Client-side, post-validation options still work as usual: `--severity`, `--fail-on`, `--format`, suppression, baseline, custom rules, lint rules, and `--check-references`.
+
+`serve` runs until `Ctrl-C`. It streams package-loading progress while starting and prints the URL once ready. `--server` is not compatible with `--watch`. XML and JSON resources are both supported.
+
+See the [Server mode guide](docs/daemon.md) for details and CI patterns.
 
 ---
 
