@@ -87,6 +87,7 @@ var topLevelKeys = map[string]keySpec{
 	"extract-each":                {kind: kindString},
 	"bundle-entries":              {kind: kindBool},
 	"check-references":            {kind: kindBool},
+	"server":                      {kind: kindString},
 	"quiet":                       {kind: kindBool},
 	"no-color":                    {kind: kindBool},
 	"overrides":                   {kind: kindOverrideList},

@@ -72,6 +72,7 @@ func init() {
 	rootCmd.AddCommand(statsCmd)
 	rootCmd.AddCommand(fhirpathCmd)
 	rootCmd.AddCommand(compareCmd)
+	rootCmd.AddCommand(serveCmd)
 }
 
 func initConfig() {

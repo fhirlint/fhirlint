@@ -94,6 +94,7 @@ var (
 	flagNoColor                  bool
 	flagRulesFile                string
 	flagCheckReferences          bool
+	flagServer                   string
 )
 
 var validateCmd = &cobra.Command{
@@ -203,6 +204,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagCheckReferences, "check-references", false,
 		"Check that references resolve within the validated resource set (dangling-reference detection)")
 	_ = viper.BindPFlag("check-references", validateCmd.Flags().Lookup("check-references"))
+	validateCmd.Flags().StringVar(&flagServer, "server", "",
+		"Validate via a running validator server instead of a per-run JVM (e.g. http://localhost:8080; see 'fhirlint serve')")
+	_ = viper.BindPFlag("server", validateCmd.Flags().Lookup("server"))
 
 	// Bind all flags to viper so fhirlint.yml values are used as defaults.
 	// CLI flags always take precedence over config file values.
@@ -346,6 +350,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
 	}
+	if !cmd.Flags().Changed("server") && viper.IsSet("server") {
+		flagServer = viper.GetString("server")
+	}
 	if !cmd.Flags().Changed("quiet") && viper.IsSet("quiet") {
 		flagQuiet = viper.GetBool("quiet")
 	}
@@ -432,6 +439,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
+	if flagServer != "" {
+		if flagWatch != "" {
+			return fmt.Errorf("--server is not compatible with --watch")
+		}
+		if cmd.Flags().Changed("fhir-version") || cmd.Flags().Changed("ig") {
+			fmt.Fprintln(os.Stderr, "note: --server uses the running server's FHIR version and IGs; --fhir-version/--ig are ignored")
+		}
+	}
+
 	if flagWatch != "" {
 		if len(flagURLs) > 0 {
 			return fmt.Errorf("--watch is not compatible with --url")
@@ -1132,7 +1148,7 @@ func validateURLs(urls []string, opts validator.Options, httpTimeout time.Durati
 		paths[i] = in.Path
 	}
 
-	results, err := validator.RunMultiple(paths, opts)
+	results, err := runValidation(paths, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -1222,7 +1238,7 @@ func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validat
 		paths[i] = t.Path
 	}
 
-	results, err := validator.RunMultiple(paths, opts)
+	results, err := runValidation(paths, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -1242,14 +1258,14 @@ var timeNow = func() time.Time { return time.Now().UTC() }
 // Fresh results are written back to the cache for future runs.
 func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, error) {
 	if !flagCache || len(paths) == 0 {
-		return validator.RunMultiple(paths, opts)
+		return runValidation(paths, opts)
 	}
 
 	cacheDir := flagCacheDir
 	if cacheDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return validator.RunMultiple(paths, opts)
+			return runValidation(paths, opts)
 		}
 		cacheDir = filepath.Join(home, ".fhirlint", "result-cache")
 	}
@@ -1288,7 +1304,7 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 	var fresh []*validator.Result
 	if len(uncachedPaths) > 0 {
 		var err error
-		fresh, err = validator.RunMultiple(uncachedPaths, opts)
+		fresh, err = runValidation(uncachedPaths, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -1939,6 +1955,16 @@ func applyCustomChecks(_ *cobra.Command, results []*validator.Result) error {
 		fmt.Fprintf(os.Stderr, "warn: custom rules/lint skipped %d XML resource(s) — they support JSON input only\n", skippedXML)
 	}
 	return nil
+}
+
+// runValidation validates paths using either a running validator server
+// (--server) or a per-run JVM, returning results in input order. Both backends
+// share the same signature so every call site dispatches transparently.
+func runValidation(paths []string, opts validator.Options) ([]*validator.Result, error) {
+	if flagServer != "" {
+		return validator.RunMultipleViaServer(flagServer, paths, opts)
+	}
+	return validator.RunMultiple(paths, opts)
 }
 
 // applyReferenceCheck indexes every validated JSON resource and reports literal
