@@ -203,6 +203,93 @@ func TestCollectFHIRPaths_ExcludeDir(t *testing.T) {
 	}
 }
 
+func TestCollectPathsFromArgs_MultipleFiles(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a.json")
+	b := filepath.Join(dir, "b.xml")
+	_ = os.WriteFile(a, []byte("{}"), 0600)
+	_ = os.WriteFile(b, []byte("<r/>"), 0600)
+
+	paths, err := collectPathsFromArgs([]string{a, b}, nil)
+	if err != nil {
+		t.Fatalf("collectPathsFromArgs error: %v", err)
+	}
+	if len(paths) != 2 || paths[0] != a || paths[1] != b {
+		t.Errorf("expected [%s %s] in order, got %v", a, b, paths)
+	}
+}
+
+func TestCollectPathsFromArgs_MixedFileAndDir(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	_ = os.MkdirAll(sub, 0750)
+	loose := filepath.Join(dir, "loose.json")
+	nested := filepath.Join(sub, "nested.json")
+	_ = os.WriteFile(loose, []byte("{}"), 0600)
+	_ = os.WriteFile(nested, []byte("{}"), 0600)
+
+	paths, err := collectPathsFromArgs([]string{loose, sub}, nil)
+	if err != nil {
+		t.Fatalf("collectPathsFromArgs error: %v", err)
+	}
+	if len(paths) != 2 {
+		t.Fatalf("expected 2 paths, got %d: %v", len(paths), paths)
+	}
+	if paths[0] != loose || paths[1] != nested {
+		t.Errorf("expected [%s %s], got %v", loose, nested, paths)
+	}
+}
+
+func TestCollectPathsFromArgs_DeduplicatesOverlap(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "a.json")
+	_ = os.WriteFile(f, []byte("{}"), 0600)
+
+	// The file is named explicitly and also covered by the directory.
+	paths, err := collectPathsFromArgs([]string{f, dir, f}, nil)
+	if err != nil {
+		t.Fatalf("collectPathsFromArgs error: %v", err)
+	}
+	if len(paths) != 1 {
+		t.Errorf("expected the overlapping file once, got %d: %v", len(paths), paths)
+	}
+}
+
+func TestCollectPathsFromArgs_HonoursExcludes(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(dir, "vendor"), 0750)
+	_ = os.WriteFile(filepath.Join(dir, "vendor", "v.json"), []byte("{}"), 0600)
+	_ = os.WriteFile(filepath.Join(dir, "keep.json"), []byte("{}"), 0600)
+
+	paths, err := collectPathsFromArgs([]string{dir}, []string{"vendor/"})
+	if err != nil {
+		t.Fatalf("collectPathsFromArgs error: %v", err)
+	}
+	if len(paths) != 1 || strings.Contains(filepath.ToSlash(paths[0]), "/vendor/") {
+		t.Errorf("expected only the non-excluded file, got %v", paths)
+	}
+}
+
+func TestCollectPathsFromArgs_StdinRejected(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "a.json")
+	_ = os.WriteFile(f, []byte("{}"), 0600)
+
+	if _, err := collectPathsFromArgs([]string{"-", f}, nil); err == nil {
+		t.Error("expected an error when stdin is combined with a file")
+	}
+}
+
+func TestCollectPathsFromArgs_MissingFile_ReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "a.json")
+	_ = os.WriteFile(f, []byte("{}"), 0600)
+
+	if _, err := collectPathsFromArgs([]string{f, filepath.Join(dir, "nope.json")}, nil); err == nil {
+		t.Error("expected an error for a missing path")
+	}
+}
+
 func TestCollectFHIRPaths_ExcludeGlob(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(dir, "keep.xml"), []byte("<r/>"), 0600)

@@ -138,6 +138,41 @@ Or use the Docker image directly in a workflow step:
 
 </details>
 
+### Pre-commit hook
+
+fhirlint ships hook definitions for the [pre-commit](https://pre-commit.com/) framework, so resources are validated before they ever reach CI.
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/fhirlint/fhirlint
+    rev: v1.0.0
+    hooks:
+      - id: fhirlint
+        files: ^input/resources/.*\.json$
+```
+
+```bash
+pre-commit install
+```
+
+**Point `files:` at your FHIR resources.** The default pattern matches every `.json`, `.xml` and `.ndjson` file in the repo, and fhirlint reports a non-FHIR file such as `package.json` as a `FATAL  Unable to find resourceType`. Narrowing the pattern to the directory that holds your resources is the intended setup.
+
+Two hook ids are available:
+
+| id | Runs via | Notes |
+|----|----------|-------|
+| `fhirlint` | `language: golang` | Builds fhirlint from source on first install. Downloads the validator JAR (~250 MB) on the first validation run. |
+| `fhirlint-docker` | `language: docker_image` | Uses the prebuilt image with the JAR baked in — no Go toolchain, no first-run JAR download. Requires Docker. The image tag floats, so `rev:` pins the hook definition but not the image contents. |
+
+Both pass the staged files to a single `fhirlint validate` invocation (one JVM start for the whole commit) and default to `args: [--quiet]`, which hides files that have no findings. Setting `args:` yourself replaces that default, so repeat `--quiet` if you want to keep it:
+
+```yaml
+      - id: fhirlint
+        files: ^input/resources/.*\.json$
+        args: [--quiet, --profile, kbv-patient, --fail-on, error]
+```
+
 ### Use as a Claude Code plugin
 
 Validate FHIR resources from inside an agentic [Claude Code](https://claude.com/claude-code) session. The plugin is a thin wrapper around the `fhirlint` binary: Claude runs it, **interprets** the validator's findings, and fixes the offending resource in place.
@@ -207,6 +242,9 @@ Drop the `env` line to ship the skills without the auto-validation hook.
 # Single file
 fhirlint validate patient.json
 
+# Several files and/or directories
+fhirlint validate patient.json observation.json ./fhir/resources/
+
 # Directory — all .json, .xml, and .ndjson files, single JVM invocation
 fhirlint validate ./fhir/resources/
 
@@ -231,7 +269,9 @@ fhirlint validate bundle.json --bundle-entries
 fhirlint validate ./fhir/ --bundle-entries
 ```
 
-When validating multiple resources (directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead.
+When validating multiple resources (several paths, directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead. Overlapping paths are de-duplicated, so naming a file that a listed directory already covers validates it once.
+
+`--extract-each`, `--url` and `--watch` take a single input and cannot be combined with a list of paths.
 
 ---
 

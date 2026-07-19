@@ -1,0 +1,34 @@
+# Hook definitions for the pre-commit framework (https://pre-commit.com).
+#
+#   repos:
+#     - repo: https://github.com/fhirlint/fhirlint
+#       rev: v1.0.0
+#       hooks:
+#         - id: fhirlint
+#           files: ^input/resources/.*\.json$
+#
+# IMPORTANT: set `files:` to the paths that actually hold FHIR resources.
+# The default pattern matches every .json/.xml/.ndjson file in the repo, and
+# fhirlint reports a non-FHIR file (package.json, tsconfig.json, ...) as a FATAL
+# "Unable to find resourceType". The default is deliberately loud rather than
+# silently matching nothing — a validation hook that quietly does nothing is
+# worse than one that asks to be pointed at the right directory.
+
+- id: fhirlint
+  name: fhirlint
+  description: Validate FHIR resources with the HL7 FHIR Validator
+  entry: fhirlint validate
+  language: golang
+  files: \.(json|xml|ndjson)$
+  args: [--quiet]
+
+# Same hook, but runs the prebuilt image instead of building from source — no Go
+# toolchain needed and the validator JAR is baked in. Note the image tag floats:
+# pinning `rev:` pins this hook definition, not the image contents.
+- id: fhirlint-docker
+  name: fhirlint (docker)
+  description: Validate FHIR resources with the HL7 FHIR Validator (prebuilt image)
+  entry: ghcr.io/fhirlint/fhirlint:latest validate
+  language: docker_image
+  files: \.(json|xml|ndjson)$
+  args: [--quiet]
