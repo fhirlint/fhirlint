@@ -98,17 +98,18 @@ var (
 )
 
 var validateCmd = &cobra.Command{
-	Use:   "validate [file-or-dir]",
+	Use:   "validate [file-or-dir...]",
 	Short: "Validate FHIR resource(s)",
 	Long: `Validate one or more FHIR resources against profiles and implementation guides.
 
 Input sources (pick one):
   validate patient.json                              file
+  validate a.json b.json ./fhir/                     several files and/or directories
   validate ./fhir/                                   directory (all .json/.xml files)
   cat patient.json | validate                        stdin
   validate --url https://...                         HTTP endpoint (repeatable)
   validate api.json --extract-each "$.medications"   each element of a JSON array`,
-	Args:         cobra.MaximumNArgs(1),
+	Args:         cobra.ArbitraryArgs,
 	RunE:         runValidate,
 	SilenceUsage: true,
 }
@@ -402,6 +403,19 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		arg = args[0]
 	}
 
+	// Modes that consume exactly one input document cannot be combined with a
+	// list of paths.
+	if len(args) > 1 {
+		switch {
+		case len(flagURLs) > 0:
+			return fmt.Errorf("cannot combine file arguments with --url; pick one input source")
+		case flagExtractEach != "":
+			return fmt.Errorf("--extract-each requires a single input; pass one file at a time")
+		case flagWatch != "":
+			return fmt.Errorf("--watch requires a single file or directory")
+		}
+	}
+
 	// Bundle any --codesystem / --valueset files into a temporary local IG package.
 	localFiles := append(flagCodeSystem, flagValueSet...)
 	if len(localFiles) > 0 {
@@ -497,6 +511,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		} else {
 			results, err = validateURLs(flagURLs, opts, urlTimeout)
 		}
+	} else if len(args) > 1 {
+		// Several files and/or directories: expand them into one path list so
+		// everything is validated in as few JVM invocations as possible.
+		paths, perr := collectPathsFromArgs(args, excludePatterns)
+		if perr != nil {
+			return perr
+		}
+		results, err = validatePaths(paths, opts, profileMap, overrides)
 	} else {
 		in, rerr := input.Resolve(arg, "", 0)
 		if rerr != nil {
@@ -774,6 +796,36 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 		return nil
 	})
 	return paths, err
+}
+
+// collectPathsFromArgs expands multiple positional arguments — any mix of files
+// and directories — into a single de-duplicated list of FHIR file paths, keeping
+// the order in which they were given. Stdin ("-") is rejected: it cannot be
+// combined with other inputs.
+func collectPathsFromArgs(args []string, excludePatterns []string) ([]string, error) {
+	var paths []string
+	seen := make(map[string]bool)
+	for _, a := range args {
+		if a == "-" {
+			return nil, fmt.Errorf("stdin (\"-\") cannot be combined with other inputs; pass it on its own")
+		}
+		in, err := input.Resolve(a, "", 0)
+		if err != nil {
+			return nil, err
+		}
+		found, err := collectFHIRPaths(in, excludePatterns)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range found {
+			if seen[p] {
+				continue
+			}
+			seen[p] = true
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
 }
 
 // matchesExclude reports whether relPath (forward-slash, relative to walk root)
@@ -1593,6 +1645,13 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 	if err != nil {
 		return nil, err
 	}
+	return validatePaths(paths, opts, profileMap, overrides)
+}
+
+// validatePaths validates an already-collected set of FHIR file paths, grouping
+// them into as few JVM invocations as possible. It is shared by directory input
+// and by multiple positional file arguments.
+func validatePaths(paths []string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
 	if len(paths) == 0 {
 		return nil, nil
 	}

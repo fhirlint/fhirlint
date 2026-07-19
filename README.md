@@ -207,6 +207,9 @@ Drop the `env` line to ship the skills without the auto-validation hook.
 # Single file
 fhirlint validate patient.json
 
+# Several files and/or directories
+fhirlint validate patient.json observation.json ./fhir/resources/
+
 # Directory — all .json, .xml, and .ndjson files, single JVM invocation
 fhirlint validate ./fhir/resources/
 
@@ -231,7 +234,9 @@ fhirlint validate bundle.json --bundle-entries
 fhirlint validate ./fhir/ --bundle-entries
 ```
 
-When validating multiple resources (directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead.
+When validating multiple resources (several paths, directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead. Overlapping paths are de-duplicated, so naming a file that a listed directory already covers validates it once.
+
+`--extract-each`, `--url` and `--watch` take a single input and cannot be combined with a list of paths.
 
 ---
 
