@@ -99,6 +99,23 @@ docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.0.0 validate /work/f
 
 The image includes a JRE — no separate Java installation required.
 
+#### Running as non-root
+
+The container runs as uid `65532`, not root. Reading mounted resources works as shown above, but **writing** into a mounted directory — a report via `--output`, or `--baseline` — fails unless the host directory is writable by that uid:
+
+```
+Error: html report: open /work/report.html: permission denied
+```
+
+Run as your own user, with group `0`, when the container needs to write to the mount:
+
+```bash
+docker run --rm --user $(id -u):0 -v $(pwd):/work \
+  ghcr.io/fhirlint/fhirlint validate /work/fhir/ --format html -o /work/report.html
+```
+
+Group `0` matters: the baked-in validator JAR and the cache directory are group-owned by `0`, so the validator still finds them under an arbitrary uid. A fully arbitrary `--user <uid>:<gid>` is not supported.
+
 ### GitHub Actions
 
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:

@@ -57,14 +57,22 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-      # -i CIS-DI-0001 waives "last user should not be root". The image still
-      # runs as root; that is tracked in #216 and this waiver must be dropped
-      # once a non-root USER lands, otherwise the gate silently stops checking it.
       - name: Lint image (dockle)
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             goodwithtech/dockle:v0.4.15 \
             --exit-code 1 --exit-level warn \
-            -i CIS-DI-0001 \
             fhirlint:ci
+
+      # Guards the non-root setup: a wrong HOME or wrong ownership on the baked
+      # JAR would still pass dockle but break every real run of the image.
+      - name: Smoke-test the image as non-root
+        run: |
+          set -euo pipefail
+          test "$(docker run --rm --entrypoint id fhirlint:ci -u)" = "65532"
+          docker run --rm -v "$PWD/testdata:/work:ro" fhirlint:ci \
+            validate /work/patient.json
+          # Arbitrary uid with gid 0 must keep working (OpenShift-style runtimes).
+          docker run --rm --user 1234:0 -v "$PWD/testdata:/work:ro" fhirlint:ci \
+            validate /work/patient.json
