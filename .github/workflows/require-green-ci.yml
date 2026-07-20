@@ -1,0 +1,99 @@
+name: Require green CI
+
+# Called by the tag-triggered publishing workflows to make sure the commit being
+# released actually passed CI. Without it, a tag push publishes regardless of
+# test results — and since releases are signed and carry provenance (#212,
+# #213), a broken build would ship looking perfectly trustworthy.
+#
+# Note none of the required workflows run on a tag push: they trigger on pushes
+# to main, so the runs this looks for are the ones from when the commit landed
+# there. Tagging a commit that never reached main therefore has no runs to find,
+# which is a failure, not a pass.
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Commit SHA that must have a green CI run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  require-green-ci:
+    name: Require green CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required workflows succeeded for ${{ inputs.sha }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.sha }}
+          # The single place this list is defined. Names must match the `name:`
+          # field of each workflow.
+          REQUIRED: |
+            Tests
+            Lint
+            Security
+            Docker Security
+            GitHub Actions Security Analysis
+            Integration Tests
+          # A commit pushed to main and tagged moments later may still have runs
+          # in flight, so wait rather than fail immediately.
+          TIMEOUT_MINUTES: "30"
+          POLL_SECONDS: "30"
+        run: |
+          set -euo pipefail
+
+          deadline=$(( $(date +%s) + TIMEOUT_MINUTES * 60 ))
+          mapfile -t required < <(printf '%s\n' "$REQUIRED" | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+          while :; do
+            runs=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA&per_page=100" \
+                     --jq '[.workflow_runs[] | {name, status, conclusion}]')
+
+            pending=() ; failed=() ; missing=() ; ok=()
+            for name in "${required[@]}"; do
+              # Most recent run for this workflow, if any.
+              status=$(printf '%s' "$runs" | jq -r --arg n "$name" \
+                        '[.[] | select(.name == $n)] | first | .status // "missing"')
+              concl=$(printf '%s' "$runs" | jq -r --arg n "$name" \
+                        '[.[] | select(.name == $n)] | first | .conclusion // ""')
+
+              case "$status" in
+                missing)               missing+=("$name") ;;
+                completed)
+                  if [ "$concl" = "success" ]; then ok+=("$name")
+                  else failed+=("$name ($concl)"); fi ;;
+                *)                     pending+=("$name ($status)") ;;
+              esac
+            done
+
+            if [ ${#failed[@]} -gt 0 ]; then
+              echo "::error::Required workflow(s) did not succeed for $SHA:"
+              printf '  - %s\n' "${failed[@]}"
+              exit 1
+            fi
+
+            if [ ${#pending[@]} -eq 0 ] && [ ${#missing[@]} -eq 0 ]; then
+              echo "All required workflows succeeded for $SHA:"
+              printf '  - %s\n' "${ok[@]}"
+              exit 0
+            fi
+
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              # Timing out must fail. A gate that gives up and passes when it
+              # finds nothing is worse than no gate at all.
+              echo "::error::Timed out after ${TIMEOUT_MINUTES}m waiting for required workflows on $SHA."
+              [ ${#missing[@]} -gt 0 ] && { echo "  never ran:"; printf '    - %s\n' "${missing[@]}"; }
+              [ ${#pending[@]} -gt 0 ] && { echo "  still running:"; printf '    - %s\n' "${pending[@]}"; }
+              echo "  A commit that never reached main has no CI runs to find."
+              exit 1
+            fi
+
+            echo "Waiting for: ${pending[*]:-} ${missing[*]:-}"
+            sleep "$POLL_SECONDS"
+          done
