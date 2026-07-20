@@ -8,6 +8,16 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /fhirlint .
 # Download the validator JAR at image build time so containers start immediately
 # without a ~250 MB network fetch on first use.
 FROM eclipse-temurin:25-jre-alpine AS jar-downloader
+# pipefail so a failing command inside the pipe below (e.g. curl erroring, or
+# grep matching no redirect header) fails the build rather than being masked by
+# the exit status of the last stage. It does not catch the current parsing bug —
+# grep and sed both exit 0 while sed's pattern fails to match, so the version
+# file still ends up holding the raw Location header. That is tracked in #222.
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
+# curl is only used in this throwaway stage and never ships; pinning an exact
+# apk version would break the build on every base image refresh for no benefit
+# to the final image.
+# hadolint ignore=DL3018
 RUN apk add --no-cache curl && \
     mkdir -p /root/.fhirlint && \
     curl -sL --retry 3 \
@@ -21,6 +31,12 @@ RUN apk add --no-cache curl && \
       > /root/.fhirlint/validator_version.txt
 
 FROM eclipse-temurin:25-jre-alpine
+# Pull in base-image package fixes that are published upstream but not yet in a
+# temurin release, so the shipped image does not carry known HIGH/CRITICAL CVEs.
+# The reproducibility cost is accepted deliberately: shipping known-vulnerable
+# packages is the worse trade, and the Trivy gate is what makes this visible.
+# hadolint ignore=DL3017
+RUN apk --no-cache upgrade
 COPY --from=builder /fhirlint /usr/local/bin/fhirlint
 COPY --from=jar-downloader /root/.fhirlint /root/.fhirlint
 ENTRYPOINT ["fhirlint"]
