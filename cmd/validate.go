@@ -1989,6 +1989,37 @@ func validatePaths(paths []string, opts validator.Options, profileMap map[string
 }
 
 // preprocessJSON applies --extract and --ignore to the input file in-place.
+// writePreprocessed stores preprocessed content for in without destroying a
+// user-supplied file.
+//
+// When in already owns a temp file (stdin, --url) it is rewritten in place —
+// nothing of the user's is at stake there. Otherwise a temp copy is created and
+// in is repointed at it, leaving the original file untouched. Writing straight
+// back to in.Path used to silently overwrite the input (#257).
+func writePreprocessed(in *input.Input, data []byte) error {
+	if in.TempFile != "" {
+		// in.Path is a temp file this process created, not user-controlled.
+		return os.WriteFile(in.Path, data, 0600) //nolint:gosec // writing back to our own temp file
+	}
+	f, err := os.CreateTemp("", "fhirlint-preprocessed-*"+filepath.Ext(in.Path))
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	if _, werr := f.Write(data); werr != nil {
+		_ = f.Close()
+		_ = os.Remove(name)
+		return werr
+	}
+	if cerr := f.Close(); cerr != nil {
+		_ = os.Remove(name)
+		return cerr
+	}
+	in.Path = name
+	in.TempFile = name
+	return nil
+}
+
 func preprocessJSON(in *input.Input) error {
 	data, err := os.ReadFile(in.Path)
 	if err != nil {
@@ -2016,7 +2047,7 @@ func preprocessJSON(in *input.Input) error {
 			}
 		}
 		if flagExtract != "" || len(flagIgnore) > 0 {
-			return os.WriteFile(in.Path, result, 0600) //nolint:gosec
+			return writePreprocessed(in, result)
 		}
 		return nil
 	}
@@ -2036,7 +2067,7 @@ func preprocessJSON(in *input.Input) error {
 		raw = deleteJSONPath(raw, gjsonPath(ignore))
 	}
 
-	return os.WriteFile(in.Path, []byte(raw), 0600) //nolint:gosec // intentional: writing back to the user-supplied input path after preprocessing
+	return writePreprocessed(in, []byte(raw))
 }
 
 // gjsonPath converts a simple JSONPath ($.foo.bar[0]) to gjson syntax (foo.bar.0).
