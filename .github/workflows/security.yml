@@ -1,8 +1,10 @@
 name: Security
 
 on:
+  # main only on push — PRs are covered by pull_request, so branch pushes
+  # would otherwise run every check twice.
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
     branches: ["**"]
   schedule:
