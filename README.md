@@ -79,6 +79,15 @@ Release archives carry a build-provenance attestation, so you can check an archi
 gh attestation verify fhirlint_*_linux_amd64.tar.gz --repo fhirlint/fhirlint
 ```
 
+`checksums.txt` is attested too, so the checksum route is trustworthy end to end — verify the file itself, then use it to check anything it lists:
+
+```bash
+gh attestation verify checksums.txt --repo fhirlint/fhirlint
+sha256sum --check --ignore-missing checksums.txt
+```
+
+It covers the archives and their SBOMs, so an attested `checksums.txt` makes those tamper-evident without each needing its own attestation.
+
 Each archive also ships an SPDX SBOM next to it (`<archive>.sbom.json`) listing the Go modules it was built from:
 
 ```bash
