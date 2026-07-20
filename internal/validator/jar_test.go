@@ -194,8 +194,12 @@ func TestVerifyJARChecksum_MatchingHash(t *testing.T) {
 	defer srv.Close()
 
 	// Temporarily override the URL pattern via a wrapper function call
-	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+	verified, err := verifyJARChecksumURL(path, srv.URL)
+	if err != nil {
 		t.Errorf("expected nil for matching checksum, got: %v", err)
+	}
+	if !verified {
+		t.Error("a matching checksum must report verified")
 	}
 }
 
@@ -207,9 +211,12 @@ func TestVerifyJARChecksum_MismatchHash(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	err := verifyJARChecksumURL(path, srv.URL)
+	verified, err := verifyJARChecksumURL(path, srv.URL)
 	if err == nil {
 		t.Error("expected error for mismatched checksum, got nil")
+	}
+	if verified {
+		t.Error("a mismatch must never report verified")
 	}
 }
 
@@ -221,8 +228,12 @@ func TestVerifyJARChecksum_404_SkipsVerification(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+	verified, err := verifyJARChecksumURL(path, srv.URL)
+	if err != nil {
 		t.Errorf("expected nil when checksum file not published, got: %v", err)
+	}
+	if verified {
+		t.Error("a 404 must report unverified, not verified")
 	}
 }
 
@@ -236,15 +247,41 @@ func TestVerifyJARChecksum_GNUFormat(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if err := verifyJARChecksumURL(path, srv.URL); err != nil {
+	verified, err := verifyJARChecksumURL(path, srv.URL)
+	if err != nil {
 		t.Errorf("expected nil for GNU-format checksum, got: %v", err)
+	}
+	if !verified {
+		t.Error("GNU-format checksum must report verified")
 	}
 }
 
 func TestVerifyJARChecksum_EmptyVersion_Skips(t *testing.T) {
 	path := writeJAR(t, []byte("content"))
-	if err := verifyJARChecksum(path, ""); err != nil {
+	verified, err := verifyJARChecksum(path, "")
+	if err != nil {
 		t.Errorf("expected nil for empty version, got: %v", err)
+	}
+	if verified {
+		t.Error("without a version there is no checksum to check, so it cannot be verified")
+	}
+}
+
+func TestVerifyJARChecksum_EmptyChecksumFile_DoesNotPanic(t *testing.T) {
+	// An empty or whitespace-only body used to panic on fields[0].
+	for _, body := range []string{"", "   ", "\n\n"} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			fmt.Fprint(w, body)
+		}))
+		path := writeJAR(t, []byte("content"))
+		verified, err := verifyJARChecksumURL(path, srv.URL)
+		srv.Close()
+		if err != nil {
+			t.Errorf("body %q: unexpected error %v", body, err)
+		}
+		if verified {
+			t.Errorf("body %q: an unusable checksum file must report unverified", body)
+		}
 	}
 }
 

@@ -34,7 +34,8 @@ The security-relevant question is whether untrusted input can make fhirlint do s
 
 ### Properties you can rely on
 
-- **The JAR is checksum-verified before use** against the `.sha256` published with the upstream release. A mismatch deletes the download and fails with an explicit error — it is never used. **Caveat:** when the checksum file cannot be fetched at all (network failure, or upstream not publishing one), verification is currently skipped without a warning. Tracked in #260.
+- **The JAR is checksum-verified before use** against the `.sha256` published with the upstream release. A mismatch deletes the download and fails with an explicit error — it is never used.
+- **An unverified JAR is never silent.** Upstream does not always publish a checksum, and the request can fail, so verification being skipped is not fatal. But it prints a warning at download time, and `fhirlint version` marks the JAR `(checksum NOT verified)` for as long as it stays cached. You can always tell which you have.
 - **`fhirlint update` and `fhirlint audit`** report advisories that affect the version you actually have, not the whole history of the project.
 - **Exit codes follow findings.** `--fail-on` controls the threshold; a run that finds errors at or above it exits non-zero.
 - **Your input files are not modified.** Preprocessing (`--extract`, `--ignore`, `--bundle-entries`) works on temp copies.
@@ -60,6 +61,14 @@ fhirlint downloads and runs the official **[HL7 FHIR Validator](https://github.c
 ```bash
 fhirlint audit
 ```
+
+`fhirlint version` additionally reports whether the cached JAR passed checksum verification:
+
+```
+validator: 6.9.12 (checksum verified)  (https://github.com/hapifhir/org.hl7.fhir.core/releases)
+```
+
+`(checksum NOT verified)` means the JAR is in use but its checksum could not be obtained — re-run `fhirlint update` on a working connection. No marker at all means the JAR predates this being recorded.
 
 This checks whether your local JAR is outdated and queries the GitHub Security Advisory database, reporting only the advisories that **affect your installed version**. Add `--format json` for machine-readable output (used by automation and dashboards).
 
