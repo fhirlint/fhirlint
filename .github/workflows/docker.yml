@@ -99,6 +99,12 @@ jobs:
           image: ghcr.io/fhirlint/fhirlint@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: sbom.spdx.json
+          # Defaults to true, which makes the action attach the SBOM to the
+          # GitHub Release on a tag push — that needs contents: write, which
+          # this job deliberately does not have (#266). The image SBOM exists to
+          # be attested below; the archive SBOMs are attached to the release by
+          # GoReleaser already.
+          upload-release-assets: false
 
       - name: Attest image SBOM
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
