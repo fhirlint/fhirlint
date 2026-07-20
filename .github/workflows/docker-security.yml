@@ -77,9 +77,12 @@ jobs:
           docker run --rm --user 1234:0 -v "$PWD/testdata:/work:ro" fhirlint:ci \
             validate /work/patient.json
           # The baked validator version must be a version, not the raw redirect
-          # header the build used to write (#222).
-          docker run --rm fhirlint:ci version \
-            | grep -qE '^validator: +[0-9]+\.[0-9]+'
+          # header the build used to write (#222). Capture the output first:
+          # piping a live container into `grep -q` lets grep exit on match and
+          # SIGPIPE the still-writing process, which under pipefail fails the
+          # step at random (#234).
+          version_out=$(docker run --rm fhirlint:ci version)
+          printf '%s\n' "$version_out" | grep -qE '^validator: +[0-9]+\.[0-9]+'
 
       # This job builds without --build-arg, so VERSION is the "dev" default and
       # only the static labels are asserted. The release workflow supplies the
