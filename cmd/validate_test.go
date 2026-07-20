@@ -839,3 +839,81 @@ func TestApplySuppressToResult_HonoursExpiry(t *testing.T) {
 		t.Errorf("rule without expiry must behave as before: suppressed=%d", len(r.Suppressed))
 	}
 }
+
+// TestPreprocessJSON_LeavesSourceFileIntact is the regression guard for #257:
+// --extract and --ignore used to write straight back over the user's input.
+func TestPreprocessJSON_LeavesSourceFileIntact(t *testing.T) {
+	const original = `{"meta":{"note":"wrapper"},"data":{"resourceType":"Patient","id":"x"}}`
+
+	cases := []struct {
+		name    string
+		extract string
+		ignore  []string
+	}{
+		{"extract", "$.data", nil},
+		{"ignore", "", []string{"$.meta"}},
+		{"both", "$.data", []string{"$.id"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "wrapped.json")
+			if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			oldExtract, oldIgnore := flagExtract, flagIgnore
+			flagExtract, flagIgnore = tc.extract, tc.ignore
+			defer func() { flagExtract, flagIgnore = oldExtract, oldIgnore }()
+
+			in := &input.Input{Source: input.SourceFile, Path: path, Label: path}
+			if err := preprocessJSON(in); err != nil {
+				t.Fatalf("preprocessJSON: %v", err)
+			}
+			defer in.Cleanup()
+
+			after, err := os.ReadFile(path) //nolint:gosec // path is this test's t.TempDir()
+			if err != nil {
+				t.Fatalf("reading source: %v", err)
+			}
+			if string(after) != original {
+				t.Errorf("source file was modified:\n got: %s\nwant: %s", after, original)
+			}
+			if in.Path == path {
+				t.Error("input should point at a temp copy, not the source file")
+			}
+			if in.TempFile == "" {
+				t.Error("temp file must be recorded so Cleanup removes it")
+			}
+			// The preprocessing must still have happened somewhere.
+			got, err := os.ReadFile(in.Path)
+			if err != nil {
+				t.Fatalf("reading preprocessed copy: %v", err)
+			}
+			if string(got) == original {
+				t.Error("preprocessed copy is unchanged — extraction did not take effect")
+			}
+		})
+	}
+}
+
+func TestPreprocessJSON_RewritesExistingTempInPlace(t *testing.T) {
+	// stdin/--url inputs already own a temp file; nothing of the user's is at
+	// stake, so it is rewritten rather than copied again.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "stdin.json")
+	if err := os.WriteFile(path, []byte(`{"meta":{"a":1},"resourceType":"Patient"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	oldIgnore := flagIgnore
+	flagIgnore = []string{"$.meta"}
+	defer func() { flagIgnore = oldIgnore }()
+
+	in := &input.Input{Source: input.SourceFile, Path: path, TempFile: path, Label: "stdin"}
+	if err := preprocessJSON(in); err != nil {
+		t.Fatalf("preprocessJSON: %v", err)
+	}
+	if in.Path != path {
+		t.Errorf("an input that already owns a temp file should be rewritten in place, got %s", in.Path)
+	}
+}
