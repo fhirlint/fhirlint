@@ -7,12 +7,14 @@
 #         - id: fhirlint
 #           files: ^input/resources/.*\.json$
 #
-# IMPORTANT: set `files:` to the paths that actually hold FHIR resources.
-# The default pattern matches every .json/.xml/.ndjson file in the repo, and
-# fhirlint reports a non-FHIR file (package.json, tsconfig.json, ...) as a FATAL
-# "Unable to find resourceType". The default is deliberately loud rather than
-# silently matching nothing — a validation hook that quietly does nothing is
-# worse than one that asks to be pointed at the right directory.
+# Both hooks pass --skip-non-fhir, so unrelated files (package.json,
+# tsconfig.json, ...) are skipped rather than reported as FATAL. Narrowing
+# `files:` to the directory holding your resources is still worthwhile — it
+# keeps the hook from opening every JSON file in the repo on each commit — but
+# it is no longer required to get a usable result.
+#
+# A malformed resource is still validated and still fails, so the hook cannot
+# silently pass a broken file.
 
 - id: fhirlint
   name: fhirlint
@@ -20,7 +22,7 @@
   entry: fhirlint validate
   language: golang
   files: \.(json|xml|ndjson)$
-  args: [--quiet]
+  args: [--quiet, --skip-non-fhir]
 
 # Same hook, but runs the prebuilt image instead of building from source — no Go
 # toolchain needed and the validator JAR is baked in. Note the image tag floats:
@@ -31,4 +33,4 @@
   entry: ghcr.io/fhirlint/fhirlint:latest validate
   language: docker_image
   files: \.(json|xml|ndjson)$
-  args: [--quiet]
+  args: [--quiet, --skip-non-fhir]

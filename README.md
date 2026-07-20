@@ -173,7 +173,7 @@ repos:
 pre-commit install
 ```
 
-**Point `files:` at your FHIR resources.** The default pattern matches every `.json`, `.xml` and `.ndjson` file in the repo, and fhirlint reports a non-FHIR file such as `package.json` as a `FATAL  Unable to find resourceType`. Narrowing the pattern to the directory that holds your resources is the intended setup.
+Both hooks pass `--skip-non-fhir`, so unrelated files such as `package.json` are skipped instead of failing the commit. Narrowing `files:` to the directory holding your resources is still worthwhile — it keeps the hook from opening every JSON file in the repo on each commit — but it is no longer required to get a usable result. A malformed resource is still validated and still fails, so the hook cannot silently pass a broken file.
 
 Two hook ids are available:
 
@@ -182,12 +182,12 @@ Two hook ids are available:
 | `fhirlint` | `language: golang` | Builds fhirlint from source on first install. Downloads the validator JAR (~250 MB) on the first validation run. |
 | `fhirlint-docker` | `language: docker_image` | Uses the prebuilt image with the JAR baked in — no Go toolchain, no first-run JAR download. Requires Docker. The image tag floats, so `rev:` pins the hook definition but not the image contents. |
 
-Both pass the staged files to a single `fhirlint validate` invocation (one JVM start for the whole commit) and default to `args: [--quiet]`, which hides files that have no findings. Setting `args:` yourself replaces that default, so repeat `--quiet` if you want to keep it:
+Both pass the staged files to a single `fhirlint validate` invocation (one JVM start for the whole commit) and default to `args: [--quiet, --skip-non-fhir]`. Setting `args:` yourself replaces that default entirely, so repeat the flags you want to keep:
 
 ```yaml
       - id: fhirlint
         files: ^input/resources/.*\.json$
-        args: [--quiet, --profile, kbv-patient, --fail-on, error]
+        args: [--quiet, --skip-non-fhir, --profile, kbv-patient, --fail-on, error]
 ```
 
 ### Use as a Claude Code plugin
@@ -287,6 +287,26 @@ fhirlint validate ./fhir/ --bundle-entries
 ```
 
 When validating multiple resources (several paths, directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead. Overlapping paths are de-duplicated, so naming a file that a listed directory already covers validates it once.
+
+### Skipping non-FHIR files
+
+Pointed at a whole repo, fhirlint reports every unrelated `.json` as a hard failure:
+
+```
+▶ package.json
+  ✗ FATAL  Unable to find resourceType property
+```
+
+`--skip-non-fhir` drops those instead:
+
+```bash
+fhirlint validate ./ --skip-non-fhir
+# Skipped 3 non-FHIR file(s) (--skip-non-fhir)
+```
+
+A file is only dropped when it parses cleanly **and** demonstrably lacks the FHIR marker — a `resourceType` for JSON, the `http://hl7.org/fhir` namespace for XML. Anything malformed, truncated or unreadable is still validated and still fails, so a broken resource can never disappear from the report by mistake. The number of skipped files is always printed to stderr. NDJSON is never skipped.
+
+The flag is opt-in: without it, non-FHIR input is reported as before.
 
 `--extract-each`, `--url` and `--watch` take a single input and cannot be combined with a list of paths.
 

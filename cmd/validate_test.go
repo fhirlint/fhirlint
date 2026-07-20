@@ -203,6 +203,97 @@ func TestCollectFHIRPaths_ExcludeDir(t *testing.T) {
 	}
 }
 
+func TestLooksLikeFHIR(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(content), 0600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+		return p
+	}
+
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{"json with resourceType", write("patient.json", `{"resourceType":"Patient","id":"x"}`), true},
+		{"json without resourceType", write("package.json", `{"name":"app","version":"1.0.0"}`), false},
+		{"empty json object", write("empty.json", `{}`), false},
+		{"json array", write("arr.json", `[1,2,3]`), false},
+		// Malformed input must be kept so the validator reports it rather than
+		// having it silently vanish from the run.
+		{"malformed json", write("broken.json", `{"resourceType":"Patient",`), true},
+		{"xml in FHIR namespace", write("res.xml", `<Patient xmlns="http://hl7.org/fhir"><id value="x"/></Patient>`), true},
+		{"xml in another namespace", write("pom.xml", `<project xmlns="http://maven.apache.org/POM/4.0.0"/>`), false},
+		{"xml without namespace", write("plain.xml", `<project><name>x</name></project>`), false},
+		{"malformed xml", write("broken.xml", `<Patient xmlns="http://hl7.org/fhir"`), true},
+		// NDJSON is a bulk export — always in scope.
+		{"ndjson", write("export.ndjson", `{"name":"not-fhir"}`), true},
+		{"unknown extension", write("notes.txt", `hello`), true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := looksLikeFHIR(tt.path); got != tt.want {
+				t.Errorf("looksLikeFHIR(%s) = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLooksLikeFHIR_UnreadableFileIsKept(t *testing.T) {
+	if got := looksLikeFHIR(filepath.Join(t.TempDir(), "does-not-exist.json")); !got {
+		t.Error("an unreadable file must be kept so the validator reports it")
+	}
+}
+
+func TestLooksLikeFHIR_ResourceTypeBeyondPeekWindowIsKept(t *testing.T) {
+	dir := t.TempDir()
+	// A valid FHIR resource whose resourceType sits past the peek window: the
+	// decode fails, so it must be kept rather than wrongly dropped.
+	big := `{"text":"` + strings.Repeat("x", fhirPeekBytes) + `","resourceType":"Patient"}`
+	p := filepath.Join(dir, "big.json")
+	if err := os.WriteFile(p, []byte(big), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if !looksLikeFHIR(p) {
+		t.Error("a resource larger than the peek window must be kept, not dropped")
+	}
+}
+
+func TestFilterFHIRPaths_DisabledByDefault(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "package.json")
+	_ = os.WriteFile(p, []byte(`{"name":"app"}`), 0600)
+
+	orig := flagSkipNonFHIR
+	flagSkipNonFHIR = false
+	defer func() { flagSkipNonFHIR = orig }()
+
+	if got := filterFHIRPaths([]string{p}); len(got) != 1 {
+		t.Errorf("without the flag nothing may be filtered, got %v", got)
+	}
+}
+
+func TestFilterFHIRPaths_DropsNonFHIRWhenEnabled(t *testing.T) {
+	dir := t.TempDir()
+	fhir := filepath.Join(dir, "patient.json")
+	other := filepath.Join(dir, "package.json")
+	_ = os.WriteFile(fhir, []byte(`{"resourceType":"Patient"}`), 0600)
+	_ = os.WriteFile(other, []byte(`{"name":"app"}`), 0600)
+
+	orig := flagSkipNonFHIR
+	flagSkipNonFHIR = true
+	defer func() { flagSkipNonFHIR = orig }()
+
+	got := filterFHIRPaths([]string{fhir, other})
+	if len(got) != 1 || got[0] != fhir {
+		t.Errorf("expected only %s, got %v", fhir, got)
+	}
+}
+
 func TestCollectPathsFromArgs_MultipleFiles(t *testing.T) {
 	dir := t.TempDir()
 	a := filepath.Join(dir, "a.json")
