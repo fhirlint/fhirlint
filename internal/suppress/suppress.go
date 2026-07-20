@@ -226,3 +226,17 @@ func ApplyAt(results []*validator.Result, rules []Rule, now time.Time) []Outcome
 	}
 	return outcomes
 }
+
+// WithoutReason returns the rules that carry no reason. It backs the
+// require-suppress-reason policy, which exists so a suppression cannot silence
+// a finding without recording why — the thing anyone auditing the config later
+// actually needs.
+func WithoutReason(rules []Rule) []Rule {
+	var out []Rule
+	for _, r := range rules {
+		if strings.TrimSpace(r.Reason) == "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}

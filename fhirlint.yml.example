@@ -140,6 +140,11 @@ ignore:
 # warning appears for the 14 days beforehand. Config only; --suppress on the
 # command line has no expiry.
 
+# Require every suppression to carry a reason. Opt-in: without it, `reason` stays
+# optional. Applies to --suppress, the global suppress block, and suppress rules
+# nested under overrides, so the policy cannot be sidestepped.
+# require-suppress-reason: true
+
 # Custom lint rules — assert project-specific FHIRPath expressions on every
 # resource. A resource that fails the assertion produces a finding (message ID
 # "rule:<id>"). Rules run in-process against JSON (R4/R4B/R5); XML is skipped.

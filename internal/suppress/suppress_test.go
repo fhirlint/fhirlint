@@ -417,3 +417,25 @@ func TestApplyAt_ExpiredRuleDoesNotShadowLaterRule(t *testing.T) {
 		t.Errorf("reason should come from the live rule, got %q", res[0].Suppressed[0].SuppressReason)
 	}
 }
+
+func TestWithoutReason(t *testing.T) {
+	rules := []Rule{
+		{Type: "messageId", Value: "a", Raw: "messageId:a"},
+		{Type: "messageId", Value: "b", Reason: "documented", Raw: "messageId:b"},
+		{Type: "messageId", Value: "c", Reason: "   ", Raw: "messageId:c"}, // whitespace is not a reason
+	}
+	missing := WithoutReason(rules)
+	if len(missing) != 2 {
+		t.Fatalf("expected 2 rules without a reason, got %d: %+v", len(missing), missing)
+	}
+	if missing[0].Value != "a" || missing[1].Value != "c" {
+		t.Errorf("unexpected rules flagged: %+v", missing)
+	}
+}
+
+func TestWithoutReason_AllDocumented(t *testing.T) {
+	rules := []Rule{{Type: "messageId", Value: "a", Reason: "why"}}
+	if got := WithoutReason(rules); len(got) != 0 {
+		t.Errorf("expected none flagged, got %+v", got)
+	}
+}
