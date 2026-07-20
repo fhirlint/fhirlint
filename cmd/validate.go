@@ -625,10 +625,22 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return serr
 	}
 	if len(suppressRules) > 0 {
-		counts := suppress.Apply(results, suppressRules)
-		for i, count := range counts {
-			if count == 0 {
-				fmt.Fprintf(os.Stderr, "warn: suppress rule %q matched 0 issues\n", suppressRules[i].Raw)
+		outcomes := suppress.Apply(results, suppressRules)
+		for i, o := range outcomes {
+			rule := suppressRules[i]
+			switch {
+			case o.Expired:
+				// Say this loudly: findings this rule used to hide are back, and
+				// without the reason the build failing again looks arbitrary.
+				fmt.Fprintf(os.Stderr,
+					"warn: suppress rule %q expired on %s and no longer suppresses anything\n",
+					rule.Raw, rule.Expires.Format("2006-01-02"))
+			case o.Matches == 0:
+				fmt.Fprintf(os.Stderr, "warn: suppress rule %q matched 0 issues\n", rule.Raw)
+			}
+			if o.ExpiresSoon {
+				fmt.Fprintf(os.Stderr, "warn: suppress rule %q expires on %s\n",
+					rule.Raw, rule.Expires.Format("2006-01-02"))
 			}
 		}
 	}

@@ -218,6 +218,7 @@
               "additionalProperties": false,
               "properties": {
                 "constraint": {},
+                "expires": {},
                 "expression": {},
                 "messageId": {},
                 "messageid": {},
@@ -300,6 +301,7 @@
         "additionalProperties": false,
         "properties": {
           "constraint": {},
+          "expires": {},
           "expression": {},
           "messageId": {},
           "messageid": {},

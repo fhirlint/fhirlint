@@ -130,6 +130,15 @@ ignore:
 #   - pattern: ".*example\\.org.*"               # suppress by regex match on message text
 #   - pattern: "Unknown extension.*"
 #     severity: warning                           # optional: only at this severity
+#   - constraint: dom-6
+#     reason: "narrative added in the next sprint"
+#     expires: 2026-12-31                         # optional: YYYY-MM-DD, inclusive
+#
+# `expires` makes a suppression temporary. It keeps working through the given
+# day; from the next day the rule stops suppressing, the findings come back —
+# which can fail the build — and fhirlint says which rule lapsed and when. A
+# warning appears for the 14 days beforehand. Config only; --suppress on the
+# command line has no expiry.
 
 # Custom lint rules — assert project-specific FHIRPath expressions on every
 # resource. A resource that fails the assertion produces a finding (message ID
