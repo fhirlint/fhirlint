@@ -146,7 +146,7 @@ Group `0` matters: the baked-in validator JAR and the cache directory are group-
 
 #### Verifying the image
 
-Released images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry build-provenance and SBOM attestations.
+From the first release that includes it, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry build-provenance and SBOM attestations.
 
 Check the signature:
 
@@ -1414,6 +1414,10 @@ Detailed guides for common workflows:
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, the PR checklist, and how to add new flags.
+
+## Security
+
+What fhirlint treats as trusted and untrusted, what counts as a vulnerability, and how to report one: [SECURITY.md](SECURITY.md).
 
 ## License
 
