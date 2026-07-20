@@ -4,6 +4,46 @@
 
 Please open a [GitHub Security Advisory](https://github.com/fhirlint/fhirlint/security/advisories/new) rather than a public issue. We aim to respond within 5 business days.
 
+## Supported versions
+
+Fixes go into the latest release. There are no maintained release branches, so upgrading is the mitigation for anything reported here.
+
+## Trust boundary
+
+fhirlint is usually pointed at data it has no reason to trust — resources from an API, a partner, or a contributor's pull request — and it runs in CI where that data reaches it automatically.
+
+**Trusted:** the fhirlint binary and its configuration (`fhirlint.yml`, CLI flags, suppression rules), and the validator JAR *after* its checksum has been verified.
+
+**Untrusted:** the FHIR resources being validated, responses from a terminology server, anything fetched via `--url`, and the JAR download until it is verified.
+
+The security-relevant question is whether untrusted input can make fhirlint do something other than report findings about it.
+
+### In scope
+
+- A crafted resource that makes fhirlint itself misbehave — crash in a way that hides findings, consume unbounded memory, read or write outside the paths it was given.
+- A flaw in how the validator JAR is downloaded, verified or cached.
+- A suppression, baseline or override rule that hides a finding it should not, or an exit code that reports success when findings should have failed the build. Silently under-reporting is the failure mode that matters most for a validator.
+- Leaking resource contents somewhere they were not meant to go — a report file, a log, a terminology request.
+
+### Not a vulnerability
+
+- **Findings the HL7 validator misses.** fhirlint reports what the JAR produces; gaps in FHIR validation itself belong upstream.
+- **`--validator-arg` passing unchecked arguments to the JAR.** It is a documented escape hatch and is explicitly not validated. Arguments fhirlint's own output parsing depends on are rejected, but anything else is the caller's responsibility.
+- **Configuration doing what it says.** A suppression rule that hides a finding you did not intend to hide is a configuration mistake. `require-suppress-reason` and suppression `expires` dates exist to make those visible.
+- **The container running as uid 65532** rather than an arbitrary uid you would prefer, or needing `--user $(id -u):0` to write into a mounted directory.
+
+### Properties you can rely on
+
+- **The JAR is checksum-verified before use** against the `.sha256` published with the upstream release. A mismatch deletes the download and fails with an explicit error — it is never used. **Caveat:** when the checksum file cannot be fetched at all (network failure, or upstream not publishing one), verification is currently skipped without a warning. Tracked in #260.
+- **`fhirlint update` and `fhirlint audit`** report advisories that affect the version you actually have, not the whole history of the project.
+- **Exit codes follow findings.** `--fail-on` controls the threshold; a run that finds errors at or above it exits non-zero.
+- **Your input files are not modified.** Preprocessing (`--extract`, `--ignore`, `--bundle-entries`) works on temp copies.
+- **The published container image runs as a non-root user** and carries no known HIGH or CRITICAL vulnerabilities at build time — CI fails the build otherwise.
+
+### Repository controls
+
+Secret scanning and Dependabot security updates are enabled on this repository. Every pull request runs unit tests, `golangci-lint`, `govulncheck`, `zizmor` (GitHub Actions auditing), and Docker gates (hadolint, Trivy, dockle). Releases and image publishes are gated on those runs being green.
+
 ## Third-party dependency: HL7 FHIR Validator JAR
 
 fhirlint downloads and runs the official **[HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core)** JAR from GitHub Releases. This JAR is a substantial Java application that bundles its own dependencies and is **not** covered by Go's module system or `govulncheck`.
@@ -44,7 +84,9 @@ fhirlint checks for new JAR versions automatically (once per 24 hours) and notif
 
 ## Release integrity
 
-Every published release is signed and carries provenance, so you can establish that an artifact came from this repository's release workflow rather than from someone else. The commands are in the README, under [pre-built binary](README.md#pre-built-binary-recommended) and [verifying the image](README.md#verifying-the-image).
+Signing and provenance attestation are part of the release workflow **from the first release after 2026-07-20**. Releases published before that — including v1.4.0 and earlier — are unsigned and carry no attestation; there is no way to verify them retroactively.
+
+For releases that have it, the verification commands are in the README, under [pre-built binary](README.md#pre-built-binary-recommended) and [verifying the image](README.md#verifying-the-image).
 
 What is covered:
 
