@@ -164,6 +164,15 @@ ignore:
 # resourceType (JSON) or FHIR namespace (XML) are dropped.
 # skip-non-fhir: true
 
+# Extra arguments passed straight through to the validator JAR (repeatable).
+# An escape hatch for validator options fhirlint does not model yet — they are
+# forwarded unchecked, so a malformed argument breaks the run. Arguments that
+# collide with what fhirlint manages itself (-output, -output-style, -jar) are
+# rejected, because the result pipeline depends on them.
+# validator-arg:
+#   - -some-new-validator-flag
+#   - value-for-that-flag
+
 # Check referential integrity across the validated set (dangling references).
 # Unresolved local references (relative, urn:uuid, contained #id) are errors
 # (ref:unresolved); absolute references to external servers are information

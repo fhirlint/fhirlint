@@ -345,6 +345,27 @@ A file is only dropped when it parses cleanly **and** demonstrably lacks the FHI
 
 The flag is opt-in: without it, non-FHIR input is reported as before.
 
+### Passing raw validator arguments
+
+Every validator option fhirlint supports is mapped explicitly, so a newly added upstream flag normally needs a fhirlint release before you can reach it. `--validator-arg` forwards arguments to the JAR verbatim, as an escape hatch:
+
+```bash
+fhirlint validate patient.json --validator-arg=-some-new-flag --validator-arg=value
+```
+
+Repeat the flag once per argument — a flag and its value are two separate arguments. They are appended after the arguments fhirlint builds, so for options the validator resolves last-wins, yours take effect.
+
+This is deliberately unchecked: fhirlint does not know what these arguments mean, and a malformed one breaks the run with whatever error the JAR produces. Prefer a dedicated flag where one exists.
+
+Arguments that collide with what fhirlint manages itself are rejected up front, because the report parsing depends on them:
+
+```
+$ fhirlint validate patient.json --validator-arg=-output-style --validator-arg=text
+Error: --validator-arg "-output-style" is not allowed: fhirlint needs -output-style json to read the results
+```
+
+`-output`, `-output-style` and `-jar` are reserved this way. Use `--jar` or `FHIRLINT_JAR` to point at a different validator JAR.
+
 `--extract-each`, `--url` and `--watch` take a single input and cannot be combined with a list of paths.
 
 ---

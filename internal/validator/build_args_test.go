@@ -443,3 +443,62 @@ func TestWarnInsecureTerminologyServer_Empty_Silent(t *testing.T) {
 		t.Errorf("expected no output for empty URL, got: %q", buf.String())
 	}
 }
+
+func TestBuildArgs_ExtraArgsAppendedLast(t *testing.T) {
+	opts := Options{
+		FHIRVersion: "4.0.1",
+		ExtraArgs:   []string{"-some-new-flag", "value"},
+	}
+	args := buildArgs("/jar.jar", []string{"a.json"}, "/tmp/out.json", opts)
+
+	if len(args) < 2 {
+		t.Fatalf("unexpected args: %v", args)
+	}
+	if got := args[len(args)-2:]; got[0] != "-some-new-flag" || got[1] != "value" {
+		t.Errorf("extra args must come last, got tail %v in %v", got, args)
+	}
+	// The managed output flags must survive untouched.
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "-output-style json") || !strings.Contains(joined, "-output /tmp/out.json") {
+		t.Errorf("managed output flags missing: %v", args)
+	}
+}
+
+func TestBuildArgs_NoExtraArgs_UnchangedTail(t *testing.T) {
+	opts := Options{FHIRVersion: "4.0.1"}
+	args := buildArgs("/jar.jar", []string{"a.json"}, "/tmp/out.json", opts)
+	for _, a := range args {
+		if a == "-some-new-flag" {
+			t.Fatalf("unexpected extra arg in %v", args)
+		}
+	}
+}
+
+func TestValidateExtraArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"empty", nil, false},
+		{"harmless flag", []string{"-some-new-flag", "value"}, false},
+		{"reserved output", []string{"-output", "/tmp/x"}, true},
+		{"reserved output-style", []string{"-output-style", "text"}, true},
+		{"reserved jar", []string{"-jar", "/other.jar"}, true},
+		{"reserved with equals", []string{"-output=/tmp/x"}, true},
+		{"reserved double dash", []string{"--output-style"}, true},
+		{"reserved mixed case", []string{"-OUTPUT"}, true},
+		{"reserved among others", []string{"-fine", "-output"}, true},
+		// A value that merely looks like a reserved flag is still an argument
+		// position, so it is checked too — conservative on purpose.
+		{"non-reserved lookalike", []string{"-outputs"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateExtraArgs(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateExtraArgs(%v) error = %v, wantErr %v", tt.args, err, tt.wantErr)
+			}
+		})
+	}
+}

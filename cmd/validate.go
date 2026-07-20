@@ -92,6 +92,7 @@ var (
 	flagBaseline                 string
 	flagBundleEntries            bool
 	flagSkipNonFHIR              bool
+	flagValidatorArg             []string
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -199,6 +200,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagSkipNonFHIR, "skip-non-fhir", false,
 		"Skip files that are not FHIR resources instead of reporting them as errors")
 	_ = viper.BindPFlag("skip-non-fhir", validateCmd.Flags().Lookup("skip-non-fhir"))
+	validateCmd.Flags().StringArrayVar(&flagValidatorArg, "validator-arg", nil,
+		"Extra argument passed straight to the validator JAR (repeatable, unvalidated)")
+	_ = viper.BindPFlag("validator-arg", validateCmd.Flags().Lookup("validator-arg"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -356,6 +360,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("skip-non-fhir") && viper.IsSet("skip-non-fhir") {
 		flagSkipNonFHIR = viper.GetBool("skip-non-fhir")
 	}
+	if !cmd.Flags().Changed("validator-arg") && viper.IsSet("validator-arg") {
+		flagValidatorArg = viper.GetStringSlice("validator-arg")
+	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
 	}
@@ -457,6 +464,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		DisplayIssuesAreWarnings: flagDisplayIssuesAreWarnings,
 		POFiles:                  flagPO,
 		JARPath:                  viper.GetString("jar"),
+		ExtraArgs:                flagValidatorArg,
 		Timeout:                  validatorTimeout,
 	}
 

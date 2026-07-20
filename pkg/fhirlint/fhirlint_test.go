@@ -167,3 +167,12 @@ func TestValidate_DetectsJSON(t *testing.T) {
 		JARPath:     "/nonexistent/validator.jar",
 	})
 }
+
+func TestOptions_ExtraArgsReachInternalOpts(t *testing.T) {
+	opts := Options{ExtraArgs: []string{"-some-new-flag", "value"}}
+	internal := toInternalOpts(opts)
+	if len(internal.ExtraArgs) != 2 ||
+		internal.ExtraArgs[0] != "-some-new-flag" || internal.ExtraArgs[1] != "value" {
+		t.Errorf("ExtraArgs = %v, want [-some-new-flag value]", internal.ExtraArgs)
+	}
+}

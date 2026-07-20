@@ -79,6 +79,13 @@ type Options struct {
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
 
+	// ExtraArgs are raw arguments appended verbatim to the validator JAR
+	// invocation, an escape hatch for validator options fhirlint does not
+	// model yet. They are not validated; arguments that collide with the
+	// flags fhirlint manages itself (-output, -output-style, -jar) are
+	// rejected, since the result pipeline depends on them.
+	ExtraArgs []string
+
 	// Timeout limits how long the Java validator process may run.
 	// Zero means no timeout.
 	Timeout time.Duration
@@ -237,6 +244,7 @@ func toInternalOpts(opts Options) validator.Options {
 		DisplayIssuesAreWarnings: opts.DisplayIssuesAreWarnings,
 		POFiles:                  opts.POFiles,
 		JARPath:                  opts.JARPath,
+		ExtraArgs:                opts.ExtraArgs,
 		Timeout:                  opts.Timeout,
 	}
 }
