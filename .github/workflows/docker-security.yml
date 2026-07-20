@@ -76,3 +76,17 @@ jobs:
           # Arbitrary uid with gid 0 must keep working (OpenShift-style runtimes).
           docker run --rm --user 1234:0 -v "$PWD/testdata:/work:ro" fhirlint:ci \
             validate /work/patient.json
+
+      # This job builds without --build-arg, so VERSION is the "dev" default and
+      # only the static labels are asserted. The release workflow supplies the
+      # real values.
+      - name: Check OCI image labels
+        run: |
+          set -euo pipefail
+          labels=$(docker inspect fhirlint:ci --format '{{json .Config.Labels}}')
+          echo "$labels"
+          for key in title description source url documentation licenses vendor created version revision; do
+            echo "$labels" | jq -e --arg k "org.opencontainers.image.$key" \
+              '.[$k] // empty | select(length > 0)' >/dev/null \
+              || { echo "missing or empty label: org.opencontainers.image.$key"; exit 1; }
+          done
