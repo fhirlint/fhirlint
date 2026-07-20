@@ -3,7 +3,13 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /fhirlint .
+# Same linker variable GoReleaser sets for release binaries, so `fhirlint
+# version` reports the real version inside the image instead of falling back
+# to "dev". Defaults keep a plain `docker build` (no --build-arg) working.
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w -X github.com/fhirlint/fhirlint/cmd.version=${VERSION}" \
+      -o /fhirlint .
 
 # Download the validator JAR at image build time so containers start immediately
 # without a ~250 MB network fetch on first use.
@@ -53,4 +59,22 @@ COPY --from=jar-downloader --chown=65532:65532 /out "$HOME/.fhirlint"
 RUN chgrp -R 0 "$HOME" && chmod -R g=u "$HOME"
 
 USER 65532:65532
+
+# ARGs do not cross stage boundaries, so they are re-declared here for the
+# labels. VERSION is also consumed by the builder stage above.
+ARG VERSION=dev
+ARG COMMIT=none
+ARG DATE=unknown
+ARG SOURCE=https://github.com/fhirlint/fhirlint
+LABEL org.opencontainers.image.title="fhirlint" \
+      org.opencontainers.image.description="Lightweight CLI for validating FHIR resources, wrapping the HL7 FHIR Validator" \
+      org.opencontainers.image.url="${SOURCE}" \
+      org.opencontainers.image.source="${SOURCE}" \
+      org.opencontainers.image.documentation="${SOURCE}/blob/main/README.md" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="fhirlint" \
+      org.opencontainers.image.created="${DATE}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}"
+
 ENTRYPOINT ["fhirlint"]
