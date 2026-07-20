@@ -25,8 +25,33 @@ Exits non-zero when any issues are found.`,
 	SilenceUsage: true,
 }
 
+var configSchemaCmd = &cobra.Command{
+	Use:   "schema",
+	Short: "Print the JSON Schema for fhirlint.yml",
+	Long: `Print the JSON Schema describing fhirlint.yml.
+
+The schema is generated from the same key definitions ` + "`config check`" + ` validates
+against, so the two cannot disagree. Point your editor at the published copy
+with a modeline at the top of fhirlint.yml:
+
+  # yaml-language-server: $schema=` + configcheck.SchemaID + `
+`,
+	RunE:         runConfigSchema,
+	SilenceUsage: true,
+}
+
+func runConfigSchema(cmd *cobra.Command, _ []string) error {
+	data, err := configcheck.Schema()
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+	return err
+}
+
 func init() {
 	configCmd.AddCommand(configCheckCmd)
+	configCmd.AddCommand(configSchemaCmd)
 	rootCmd.AddCommand(configCmd)
 }
 

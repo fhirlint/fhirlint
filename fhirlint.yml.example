@@ -1,6 +1,11 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fhirlint/fhirlint/main/fhirlint.schema.json
 # fhirlint.yml — project-level configuration for fhirlint
 # Place this file in your project root as fhirlint.yml or .fhirlint.yml
 # CLI flags always take precedence over values in this file.
+#
+# The modeline above gives editors with the YAML language server (VS Code,
+# IntelliJ, Neovim) key completion and inline validation. Keep or drop it as
+# you like — fhirlint ignores it. `fhirlint config schema` prints the schema.
 
 # Minimum severity to display: information | warning | error
 severity: warning

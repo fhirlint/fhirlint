@@ -1,0 +1,383 @@
+{
+  "$id": "https://raw.githubusercontent.com/fhirlint/fhirlint/main/fhirlint.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Project-level configuration for fhirlint (fhirlint.yml). CLI flags always take precedence over values in this file.",
+  "properties": {
+    "allow-example-urls": {
+      "type": "boolean"
+    },
+    "allow-insecure-tx": {
+      "type": "boolean"
+    },
+    "baseline": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "best-practice": {
+      "enum": [
+        "error",
+        "hint",
+        "ignore",
+        "warning"
+      ],
+      "type": "string"
+    },
+    "bundle-entries": {
+      "type": "boolean"
+    },
+    "cache": {
+      "type": "boolean"
+    },
+    "cache-dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "check-references": {
+      "type": "boolean"
+    },
+    "codesystem": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "display-issues-are-warnings": {
+      "type": "boolean"
+    },
+    "exclude": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "extract": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "extract-each": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fail-on": {
+      "enum": [
+        "error",
+        "information",
+        "never",
+        "warning"
+      ],
+      "type": "string"
+    },
+    "fhir-version": {
+      "enum": [
+        "4.0.1",
+        "4.3.0",
+        "5.0.0"
+      ],
+      "type": "string"
+    },
+    "format": {
+      "items": {
+        "enum": [
+          "codeclimate",
+          "html",
+          "json",
+          "junit",
+          "markdown",
+          "md",
+          "sarif",
+          "terminal"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "ig": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "ignore": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "jurisdiction": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lint": {
+      "type": "object"
+    },
+    "locale": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max-warnings": {
+      "type": "integer"
+    },
+    "no-color": {
+      "type": "boolean"
+    },
+    "no-terminology-server": {
+      "type": "boolean"
+    },
+    "output": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "overrides": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "best-practice": {
+            "enum": [
+              "error",
+              "hint",
+              "ignore",
+              "warning"
+            ],
+            "type": "string"
+          },
+          "fail-on": {
+            "enum": [
+              "error",
+              "information",
+              "never",
+              "warning"
+            ],
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "ig": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "profile": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "fatal",
+              "information",
+              "warning"
+            ],
+            "type": "string"
+          },
+          "suppress": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "constraint": {},
+                "expression": {},
+                "messageId": {},
+                "messageid": {},
+                "pattern": {},
+                "reason": {},
+                "severity": {}
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "po": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "profile": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "profile-map": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "quiet": {
+      "type": "boolean"
+    },
+    "rules": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "assert": {},
+          "id": {},
+          "message": {},
+          "resource": {},
+          "severity": {}
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "server": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "information",
+        "warning"
+      ],
+      "type": "string"
+    },
+    "show-suppressed": {
+      "type": "boolean"
+    },
+    "skip-non-fhir": {
+      "type": "boolean"
+    },
+    "suppress": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "constraint": {},
+          "expression": {},
+          "messageId": {},
+          "messageid": {},
+          "pattern": {},
+          "reason": {},
+          "severity": {}
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "terminology-server": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timeout": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tx-cache": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tx-log": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "url": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "url-timeout": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "validator-arg": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "valueset": {
+      "items": {
+        "type": "string"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "watch": {
+      "enum": [
+        "all",
+        "single"
+      ],
+      "type": "string"
+    },
+    "watch-interval": {
+      "type": "integer"
+    }
+  },
+  "title": "fhirlint configuration",
+  "type": "object"
+}

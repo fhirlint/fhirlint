@@ -1076,6 +1076,22 @@ It reports:
 
 Exit code `0` means the configuration is valid; exit code `1` means issues were found.
 
+### Editor support (JSON Schema)
+
+A JSON Schema for `fhirlint.yml` is published at [`fhirlint.schema.json`](fhirlint.schema.json). Add a modeline to the top of your config and editors with the YAML language server (VS Code, IntelliJ, Neovim) give you key completion, enum values, and inline errors as you type:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fhirlint/fhirlint/main/fhirlint.schema.json
+```
+
+`fhirlint.yml.example` already carries this line. To get the schema locally, or to pin a copy in your own repo:
+
+```bash
+fhirlint config schema > fhirlint.schema.json
+```
+
+The schema is **generated from the same key definitions `config check` validates against**, so the two cannot disagree about which keys exist or which enum values are valid. A test fails the build if the committed schema drifts from those definitions.
+
 ---
 
 ## Configuration reference

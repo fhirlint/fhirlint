@@ -58,7 +58,7 @@ var topLevelKeys = map[string]keySpec{
 	"ig":                          {kind: kindStringList},
 	"codesystem":                  {kind: kindStringList},
 	"valueset":                    {kind: kindStringList},
-	"format":                      {kind: kindEnumList, values: []string{"terminal", "json", "html", "junit", "sarif"}},
+	"format":                      {kind: kindEnumList, values: []string{"terminal", "json", "html", "junit", "sarif", "markdown", "md", "codeclimate"}},
 	"output":                      {kind: kindString},
 	"ignore":                      {kind: kindStringList},
 	"exclude":                     {kind: kindStringList},
