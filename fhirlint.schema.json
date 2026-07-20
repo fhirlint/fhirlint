@@ -262,6 +262,9 @@
     "quiet": {
       "type": "boolean"
     },
+    "require-suppress-reason": {
+      "type": "boolean"
+    },
     "rules": {
       "items": {
         "additionalProperties": false,

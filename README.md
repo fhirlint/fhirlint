@@ -581,6 +581,24 @@ Error: invalid suppress expires "31.12.2026": use YYYY-MM-DD
 
 Expiry is config-only. `--suppress` on the command line is for one-off runs, where a deadline has little meaning.
 
+### Requiring a reason
+
+`reason` is optional, so a rule can silence a finding with nothing recorded about why. For projects where an unexplained suppression is hard to defend later, make it mandatory:
+
+```yaml
+require-suppress-reason: true
+```
+
+A rule without a reason then fails the run, naming the offenders:
+
+```
+Error: require-suppress-reason is set, but 1 suppress rule(s) have no reason: "constraint:dom-6"
+```
+
+It is opt-in, since turning it on by default would break every config with a bare suppression. There is a `--require-suppress-reason` flag for enabling it from the command line, e.g. to enforce the policy in CI without changing the committed config.
+
+The check covers **every** place a suppression can be written — `--suppress` on the command line, the global `suppress:` block, and `suppress:` nested under `overrides:`. A policy that only covered one of them could be sidestepped by moving the rule somewhere else. Whitespace does not count as a reason.
+
 Suppressed issues are:
 - Excluded from the exit-code calculation (won't trigger `--fail-on error`)
 - Hidden from terminal output by default; shown with `↷ SUPP` when `--show-suppressed` is set
@@ -1190,6 +1208,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--ignore` | — | JSONPath field to remove before validating (repeatable) |
 | `--suppress` | — | Silence a known issue: `messageId:X`, `constraint:X`, or `expression:X` (repeatable) |
 | `--show-suppressed` | `false` | Show suppressed issues with a muted `↷ SUPP` label |
+| `--require-suppress-reason` | `false` | Fail when a suppression rule has no `reason` |
 | `--baseline` | — | Baseline file — only new issues (regressions) fail the build |
 | `--generate-baseline` | — | Generate a baseline file from current issues |
 | `--no-terminology-server` | `false` | Disable terminology server — no data sent to `tx.fhir.org` |

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,6 +94,7 @@ var (
 	flagBundleEntries            bool
 	flagSkipNonFHIR              bool
 	flagValidatorArg             []string
+	flagRequireSuppressReason    bool
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -203,6 +205,9 @@ func init() {
 	validateCmd.Flags().StringArrayVar(&flagValidatorArg, "validator-arg", nil,
 		"Extra argument passed straight to the validator JAR (repeatable, unvalidated)")
 	_ = viper.BindPFlag("validator-arg", validateCmd.Flags().Lookup("validator-arg"))
+	validateCmd.Flags().BoolVar(&flagRequireSuppressReason, "require-suppress-reason", false,
+		"Fail when a suppression rule has no reason")
+	_ = viper.BindPFlag("require-suppress-reason", validateCmd.Flags().Lookup("require-suppress-reason"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -363,6 +368,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("validator-arg") && viper.IsSet("validator-arg") {
 		flagValidatorArg = viper.GetStringSlice("validator-arg")
 	}
+	if !cmd.Flags().Changed("require-suppress-reason") && viper.IsSet("require-suppress-reason") {
+		flagRequireSuppressReason = viper.GetBool("require-suppress-reason")
+	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
 	}
@@ -390,6 +398,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	profileMap := loadProfileMap()
 	overrides := loadOverrides()
+	// Overrides carry their own suppress rules, so the policy has to reach them
+	// too — otherwise it is sidestepped by nesting the rule under `overrides:`.
+	for _, ov := range overrides {
+		if err := checkSuppressReasons(ov.Suppress, "overrides suppress"); err != nil {
+			return err
+		}
+	}
 
 	var validatorTimeout time.Duration
 	if flagTimeout != "0" {
@@ -2087,13 +2102,37 @@ func buildSuppressRules(cmd *cobra.Command) ([]suppress.Rule, error) {
 			}
 			rules = append(rules, r)
 		}
-		return rules, nil
+		return rules, checkSuppressReasons(rules, "--suppress")
 	}
 	if viper.IsSet("suppress") {
-		raw := viper.Get("suppress")
-		return parseSuppressFromConfig(raw)
+		parsed, err := parseSuppressFromConfig(viper.Get("suppress"))
+		if err != nil {
+			return nil, err
+		}
+		return parsed, checkSuppressReasons(parsed, "suppress")
 	}
 	return nil, nil
+}
+
+// checkSuppressReasons enforces require-suppress-reason. It is called for every
+// source of suppression rules — CLI flags, the global config, and per-file
+// overrides — because a policy that only covers one of them is trivially
+// sidestepped by moving the rule somewhere else.
+func checkSuppressReasons(rules []suppress.Rule, source string) error {
+	if !flagRequireSuppressReason {
+		return nil
+	}
+	missing := suppress.WithoutReason(rules)
+	if len(missing) == 0 {
+		return nil
+	}
+	raws := make([]string, len(missing))
+	for i, r := range missing {
+		raws[i] = strconv.Quote(r.Raw)
+	}
+	return fmt.Errorf(
+		"require-suppress-reason is set, but %d %s rule(s) have no reason: %s",
+		len(missing), source, strings.Join(raws, ", "))
 }
 
 // applyCustomChecks runs the custom FHIRPath rule engine and the built-in
