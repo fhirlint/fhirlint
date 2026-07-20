@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write     # keyless signing of the provenance via Sigstore
+  attestations: write # write attestations to the GitHub attestations API
 
 jobs:
   release:
@@ -23,6 +25,11 @@ jobs:
           go-version-file: go.mod
           cache: false
 
+      # GoReleaser's `sboms` block shells out to syft, so it has to be on PATH
+      # before the release runs.
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           version: '~> v2'
@@ -32,3 +39,10 @@ jobs:
           # Write access to the fhirlint/homebrew-tap repo so GoReleaser can
           # publish the updated Homebrew cask on each release.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip

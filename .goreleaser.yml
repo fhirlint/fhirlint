@@ -50,6 +50,12 @@ homebrew_casks:
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/fhirlint"]
           end
 
+# One SBOM per released archive, generated with syft. The workflow installs syft
+# before running GoReleaser; without it on PATH the release fails here rather
+# than shipping archives with no SBOM.
+sboms:
+  - artifacts: archive
+
 checksum:
   name_template: "checksums.txt"
 

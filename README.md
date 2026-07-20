@@ -73,6 +73,20 @@ tar xzf fhirlint_*_darwin_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 Windows: download the `.zip` from the [releases page](https://github.com/fhirlint/fhirlint/releases) and add `fhirlint.exe` to your `PATH`.
 
+Release archives carry a build-provenance attestation, so you can check an archive really came from this repo's release workflow before unpacking it:
+
+```bash
+gh attestation verify fhirlint_*_linux_amd64.tar.gz --repo fhirlint/fhirlint
+```
+
+Each archive also ships an SPDX SBOM next to it (`<archive>.sbom.json`) listing the Go modules it was built from:
+
+```bash
+gh release download --repo fhirlint/fhirlint --pattern "*linux_amd64.tar.gz.sbom.json"
+```
+
+Releases published before this was set up have no attestation or SBOM.
+
 ### Homebrew (macOS)
 
 ```bash
