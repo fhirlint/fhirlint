@@ -27,3 +27,20 @@ jobs:
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.12.2
+
+  config-schema:
+    name: fhirlint.yml JSON Schema
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # The Go tests check that the schema covers the right keys; this checks
+      # the schema is valid JSON Schema and that the shipped example actually
+      # validates against it, which needs a real validator.
+      - run: pip install check-jsonschema
+      - name: Validate the example config against the schema
+        run: check-jsonschema --force-filetype yaml --schemafile fhirlint.schema.json fhirlint.yml.example
