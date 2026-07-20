@@ -62,3 +62,4 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/checksums.txt
+            dist/*.sbom.json

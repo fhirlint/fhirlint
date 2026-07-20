@@ -88,11 +88,16 @@ sha256sum --check --ignore-missing checksums.txt
 
 It covers the archives and their SBOMs, so an attested `checksums.txt` makes those tamper-evident without each needing its own attestation.
 
-Each archive also ships an SPDX SBOM next to it (`<archive>.sbom.json`) listing the Go modules it was built from:
+Each archive also ships an SPDX SBOM next to it (`<archive>.sbom.json`) listing the Go modules it was built from. The SBOM files carry a provenance attestation of their own, so you can confirm one came from the release build before trusting its contents:
 
 ```bash
 gh release download --repo fhirlint/fhirlint --pattern "*linux_amd64.tar.gz.sbom.json"
+gh attestation verify fhirlint_*_linux_amd64.tar.gz.sbom.json --repo fhirlint/fhirlint
 ```
+
+Note what that does and does not say. It establishes that the release build produced this SBOM file — not, cryptographically, that this SBOM describes that particular archive. The link between the two is the filename convention plus `checksums.txt`, which is itself attested and lists both.
+
+A true SBOM attestation binds one SBOM to one subject artifact, so covering five archives means five separate attestations at release time. Given that the archives, their SBOMs and the checksums file are all provenance-attested and mutually covered by the attested checksums, that extra release-pipeline machinery buys little here. The [container image](#verifying-the-image) does carry a real SBOM attestation, because there it is a single subject and costs nothing.
 
 Releases published before this was set up have no attestation or SBOM.
 
