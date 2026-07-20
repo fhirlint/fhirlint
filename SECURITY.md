@@ -41,3 +41,26 @@ fhirlint always downloads the **latest** release of the JAR. There is no pinned 
 ### Monitoring
 
 fhirlint checks for new JAR versions automatically (once per 24 hours) and notifies you after `fhirlint validate` or `fhirlint version`. The maintainers run a weekly automated check (`fhirlint audit`) against the **latest** JAR release and open a GitHub issue only when a published advisory actually affects that release — not merely because historical advisories exist. The issue is closed automatically once a fixed release lands.
+
+## Release integrity
+
+Every published release is signed and carries provenance, so you can establish that an artifact came from this repository's release workflow rather than from someone else. The commands are in the README, under [pre-built binary](README.md#pre-built-binary-recommended) and [verifying the image](README.md#verifying-the-image).
+
+What is covered:
+
+| Artifact | Provenance attestation | SBOM | SBOM attestation |
+|---|---|---|---|
+| Release archives (`.tar.gz`, `.zip`) | yes | yes, alongside each archive | no — see below |
+| `checksums.txt` | yes | n/a | n/a |
+| Archive SBOMs (`*.sbom.json`) | yes | n/a | n/a |
+| Container image | yes, plus a cosign signature | yes | yes |
+
+### Why the archive SBOMs are not SBOM-attested
+
+An SBOM attestation binds one SBOM to one subject artifact. With five release archives, each with its own SBOM, that is five separate attestations produced at release time, which needs the artifacts carried into a matrix job purely to make the claim.
+
+Instead the archives, their SBOMs and `checksums.txt` all carry provenance attestations, and the attested `checksums.txt` lists the archives and their SBOMs. An SBOM can therefore be tied back to its archive through an attested file, without per-archive SBOM attestations.
+
+The container image does carry a real SBOM attestation: it is a single subject, so there is no equivalent cost.
+
+This is a deliberate trade-off, not an oversight. If the archive set grows or the verification story needs to be provable without `checksums.txt`, it is worth revisiting.
