@@ -143,7 +143,7 @@ func TestTerminal_QuietSuppressesValidFiles(t *testing.T) {
 	os.Stdout = w
 
 	result := &validator.Result{Valid: true, Label: "ok.json", Issues: nil}
-	Terminal(result, "information", false, true)
+	Terminal(result, "information", false, true, false)
 
 	_ = w.Close()
 	os.Stdout = old
@@ -165,7 +165,7 @@ func TestTerminal_QuietShowsFilesWithIssues(t *testing.T) {
 		Label:  "bad.json",
 		Issues: []validator.Issue{{Severity: "error", Message: "something wrong"}},
 	}
-	Terminal(result, "information", false, true)
+	Terminal(result, "information", false, true, false)
 
 	_ = w.Close()
 	os.Stdout = old
@@ -188,7 +188,7 @@ func TestTerminal_QuietSuppressesValidWithSuppressedIssues(t *testing.T) {
 		Issues:     nil,
 		Suppressed: []validator.Issue{{Severity: "warning", Message: "suppressed"}},
 	}
-	Terminal(result, "information", true, true)
+	Terminal(result, "information", true, true, false)
 
 	_ = w.Close()
 	os.Stdout = old
@@ -214,7 +214,7 @@ func TestTerminal_ExplainHint(t *testing.T) {
 			{Severity: "error", Message: "mystery", MessageID: "NOT_KNOWN"},
 		},
 	}
-	Terminal(result, "information", false, false)
+	Terminal(result, "information", false, false, false)
 
 	_ = w.Close()
 	os.Stdout = old
