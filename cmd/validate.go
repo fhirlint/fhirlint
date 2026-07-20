@@ -1079,11 +1079,19 @@ func applyOverridePostProcessing(results []*validator.Result, overrides []config
 
 // applySuppressToResult applies rules to a single result, appending to r.Suppressed
 // (instead of replacing) to preserve suppression from earlier passes.
+//
+// Expiry is checked here as well as in suppress.ApplyAt: override rules do not
+// go through that function, and an expired rule must not keep suppressing just
+// because it was written under `overrides:` (#252).
 func applySuppressToResult(r *validator.Result, rules []suppress.Rule) {
+	now := time.Now()
 	var active []validator.Issue
 	for _, issue := range r.Issues {
 		matched := false
 		for _, rule := range rules {
+			if rule.ExpiredAt(now) {
+				continue
+			}
 			if rule.Matches(issue) {
 				issue.SuppressReason = rule.Reason
 				r.Suppressed = append(r.Suppressed, issue)

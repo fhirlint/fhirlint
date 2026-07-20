@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
+	"time"
 )
 
 // --- checkExitCode ---
@@ -793,5 +795,47 @@ func TestPreprocessJSON_ExtractThenImplicitNoIgnore(t *testing.T) {
 	}
 	if result["resourceType"] != "Observation" {
 		t.Errorf("expected resourceType=Observation, got %v", result["resourceType"])
+	}
+}
+
+func TestApplySuppressToResult_HonoursExpiry(t *testing.T) {
+	// Regression guard for #252: override suppress rules bypass
+	// suppress.ApplyAt, so expiry has to be enforced on this path too.
+	newResult := func() *validator.Result {
+		return &validator.Result{
+			Filename: "a.json",
+			Issues:   []validator.Issue{{Severity: "warning", MessageID: "dom-6", Message: "m"}},
+		}
+	}
+	expired := suppress.Rule{
+		Type:    "messageId",
+		Value:   "dom-6",
+		Expires: time.Now().AddDate(0, 0, -2),
+	}
+	live := suppress.Rule{
+		Type:    "messageId",
+		Value:   "dom-6",
+		Expires: time.Now().AddDate(0, 0, 30),
+	}
+	noExpiry := suppress.Rule{Type: "messageId", Value: "dom-6"}
+
+	r := newResult()
+	applySuppressToResult(r, []suppress.Rule{expired})
+	if len(r.Suppressed) != 0 || len(r.Issues) != 1 {
+		t.Errorf("expired override rule must not suppress: suppressed=%d active=%d",
+			len(r.Suppressed), len(r.Issues))
+	}
+
+	r = newResult()
+	applySuppressToResult(r, []suppress.Rule{live})
+	if len(r.Suppressed) != 1 || len(r.Issues) != 0 {
+		t.Errorf("live override rule must suppress: suppressed=%d active=%d",
+			len(r.Suppressed), len(r.Issues))
+	}
+
+	r = newResult()
+	applySuppressToResult(r, []suppress.Rule{noExpiry})
+	if len(r.Suppressed) != 1 {
+		t.Errorf("rule without expiry must behave as before: suppressed=%d", len(r.Suppressed))
 	}
 }
