@@ -24,7 +24,7 @@ var (
 	fileStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-func Terminal(result *validator.Result, minSeverity string, showSuppressed bool, quiet bool) {
+func Terminal(result *validator.Result, minSeverity string, showSuppressed, quiet, showSource bool) {
 	filtered := filterIssues(result.Issues, minSeverity)
 
 	// Under --quiet, skip files with no active issues (including those with only
@@ -66,6 +66,14 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed bool,
 		fmt.Println(style.Render(prefix) + issue.Message)
 		if issue.Location != "" {
 			fmt.Println(dimStyle.Render("           @ " + issue.Location))
+		}
+		if showSource {
+			// Resolved against SourcePath, not Filename: for preprocessed input
+			// the coordinates belong to the temp copy that was validated.
+			_, line, col := parseLocationString(issue.Location)
+			for _, l := range sourceSnippet(result.SourcePath, line, col) {
+				fmt.Println(dimStyle.Render("         " + l))
+			}
 		}
 		// Surface a hint once per message ID when we can explain it.
 		if issue.MessageID != "" && !hinted[issue.MessageID] && explain.Known(issue.MessageID) {

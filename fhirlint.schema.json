@@ -293,6 +293,9 @@
       ],
       "type": "string"
     },
+    "show-source": {
+      "type": "boolean"
+    },
     "show-suppressed": {
       "type": "boolean"
     },

@@ -95,6 +95,7 @@ var (
 	flagSkipNonFHIR              bool
 	flagValidatorArg             []string
 	flagRequireSuppressReason    bool
+	flagShowSource               bool
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -208,6 +209,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagRequireSuppressReason, "require-suppress-reason", false,
 		"Fail when a suppression rule has no reason")
 	_ = viper.BindPFlag("require-suppress-reason", validateCmd.Flags().Lookup("require-suppress-reason"))
+	validateCmd.Flags().BoolVar(&flagShowSource, "show-source", false,
+		"Show the offending source line under each finding (terminal output only)")
+	_ = viper.BindPFlag("show-source", validateCmd.Flags().Lookup("show-source"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -370,6 +374,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("require-suppress-reason") && viper.IsSet("require-suppress-reason") {
 		flagRequireSuppressReason = viper.GetBool("require-suppress-reason")
+	}
+	if !cmd.Flags().Changed("show-source") && viper.IsSet("show-source") {
+		flagShowSource = viper.GetBool("show-source")
 	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
@@ -694,7 +701,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		switch strings.ToLower(format) {
 		case "terminal":
 			for _, r := range results {
-				reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet)
+				reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet, flagShowSource)
 			}
 			reporter.TerminalSummary(results, flagSeverity)
 		case "json":

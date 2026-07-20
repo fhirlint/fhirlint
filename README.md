@@ -472,6 +472,27 @@ fhirlint validate ./fhir/ --quiet
 fhirlint validate patient.json --no-color
 ```
 
+### Showing the offending line
+
+`--show-source` prints the source line under each finding, with a caret at the reported column:
+
+```
+  ✗ ERROR  Not a valid date format: 'not-a-date'
+           @ Patient.birthDate (line 5, col 28)
+           5 │   "birthDate": "not-a-date"
+             │                            ^
+```
+
+It is opt-in. fhirlint output tends to end up in CI logs, and adding two lines per finding for everyone by default is a cost you did not ask for — turn it on locally, or set `show-source: true` in `fhirlint.yml` for a project that wants it everywhere.
+
+Two things worth knowing about the caret:
+
+- The column comes from the HL7 validator, which reports the **end** of the element rather than the start of the value. fhirlint shows exactly what the validator reported instead of guessing a nicer position.
+- With `--extract`, `--ignore` or `--bundle-entries`, the line numbers refer to the **preprocessed** resource that was actually validated, not to your original file. That was already true of the `(line N, col N)` text; the snippet just makes it visible. Your source file is never modified.
+
+Long lines — minified resources are often one enormous line — are truncated around the column, marked with `…`. Where the line cannot be shown faithfully (input read from a stream, a line past the end of the file), no snippet is printed rather than a wrong one.
+
+
 ---
 
 ## Dataset statistics
