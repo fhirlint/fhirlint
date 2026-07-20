@@ -99,7 +99,7 @@ Note what that does and does not say. It establishes that the release build prod
 
 A true SBOM attestation binds one SBOM to one subject artifact, so covering five archives means five separate attestations at release time. Given that the archives, their SBOMs and the checksums file are all provenance-attested and mutually covered by the attested checksums, that extra release-pipeline machinery buys little here. The [container image](#verifying-the-image) does carry a real SBOM attestation, because there it is a single subject and costs nothing.
 
-Releases published before this was set up have no attestation or SBOM.
+Attestations and SBOMs apply from **v1.5.0** onward; v1.4.0 and earlier have neither.
 
 ### Homebrew (macOS)
 
@@ -146,7 +146,7 @@ Group `0` matters: the baked-in validator JAR and the cache directory are group-
 
 #### Verifying the image
 
-From the first release that includes it, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry build-provenance and SBOM attestations.
+From **v1.5.0** onward, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry a build-provenance attestation. The SBOM attestation applies from the release after v1.5.0 — the v1.5.0 image is signed and provenance-attested but has no SBOM attestation ([#266](https://github.com/fhirlint/fhirlint/issues/266)).
 
 Check the signature:
 
@@ -165,7 +165,7 @@ cosign download attestation ghcr.io/fhirlint/fhirlint:<version>
 
 Signature and attestations are bound to the image **digest**, so verifying a tag checks whatever that tag currently points at. Pin the digest (`ghcr.io/fhirlint/fhirlint@sha256:...`) when you need the stronger guarantee.
 
-Images published before this was set up are unsigned; verification applies from the first release that includes it.
+Images published before v1.5.0 are unsigned.
 
 ### GitHub Actions
 
