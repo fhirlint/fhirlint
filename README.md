@@ -116,6 +116,29 @@ docker run --rm --user $(id -u):0 -v $(pwd):/work \
 
 Group `0` matters: the baked-in validator JAR and the cache directory are group-owned by `0`, so the validator still finds them under an arbitrary uid. A fully arbitrary `--user <uid>:<gid>` is not supported.
 
+#### Verifying the image
+
+Released images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry build-provenance and SBOM attestations.
+
+Check the signature:
+
+```bash
+cosign verify ghcr.io/fhirlint/fhirlint:<version> \
+  --certificate-identity-regexp '^https://github\.com/fhirlint/fhirlint/\.github/workflows/docker\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Check that the image was built by this repo's release workflow, and inspect its SBOM:
+
+```bash
+gh attestation verify oci://ghcr.io/fhirlint/fhirlint:<version> --repo fhirlint/fhirlint
+cosign download attestation ghcr.io/fhirlint/fhirlint:<version>
+```
+
+Signature and attestations are bound to the image **digest**, so verifying a tag checks whatever that tag currently points at. Pin the digest (`ghcr.io/fhirlint/fhirlint@sha256:...`) when you need the stronger guarantee.
+
+Images published before this was set up are unsigned; verification applies from the first release that includes it.
+
 ### GitHub Actions
 
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
