@@ -19,16 +19,16 @@ SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # to the final image.
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl && \
-    mkdir -p /root/.fhirlint && \
+    mkdir -p /out && \
     curl -sL --retry 3 \
       "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar" \
-      -o /root/.fhirlint/validator_cli.jar && \
+      -o /out/validator_cli.jar && \
     # Write version from the redirect URL so `fhirlint version` shows it immediately.
     curl -sIL --retry 3 \
       "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar" \
       | grep -i '^location:' | tail -1 | tr -d '\r' \
       | sed 's|.*/releases/download/\([^/]*\)/.*|\1|' \
-      > /root/.fhirlint/validator_version.txt
+      > /out/validator_version.txt
 
 FROM eclipse-temurin:25-jre-alpine
 # Pull in base-image package fixes that are published upstream but not yet in a
@@ -37,6 +37,20 @@ FROM eclipse-temurin:25-jre-alpine
 # packages is the worse trade, and the Trivy gate is what makes this visible.
 # hadolint ignore=DL3017
 RUN apk --no-cache upgrade
+
+# Run as a non-root user (CIS-DI-0001). fhirlint resolves its cache directory
+# via os.UserHomeDir(), which reads $HOME, so HOME must be set explicitly — it
+# is not inherited for a USER that the base image does not know about.
+ENV HOME=/home/nonroot
+RUN addgroup -g 65532 nonroot && \
+    adduser -u 65532 -G nonroot -h "$HOME" -D nonroot
+
 COPY --from=builder /fhirlint /usr/local/bin/fhirlint
-COPY --from=jar-downloader /root/.fhirlint /root/.fhirlint
+COPY --from=jar-downloader --chown=65532:65532 /out "$HOME/.fhirlint"
+
+# Group 0 with g=u keeps the cache dir writable when the image is run under an
+# arbitrary uid (docker run --user, OpenShift), where 65532 no longer applies.
+RUN chgrp -R 0 "$HOME" && chmod -R g=u "$HOME"
+
+USER 65532:65532
 ENTRYPOINT ["fhirlint"]
