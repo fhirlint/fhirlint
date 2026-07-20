@@ -90,6 +90,7 @@ var topLevelKeys = map[string]keySpec{
 	"skip-non-fhir":               {kind: kindBool},
 	"validator-arg":               {kind: kindStringList},
 	"require-suppress-reason":     {kind: kindBool},
+	"show-source":                 {kind: kindBool},
 	"check-references":            {kind: kindBool},
 	"server":                      {kind: kindString},
 	"quiet":                       {kind: kindBool},

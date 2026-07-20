@@ -31,6 +31,14 @@ type Result struct {
 	Issues     []Issue `json:"issues"`
 	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
 	Cached     bool    `json:"cached,omitempty"`     // true when result came from the result cache
+
+	// SourcePath is the file the validator actually read, which is what the
+	// line/col in Issue.Location refer to. It is usually the same as Filename,
+	// but differs when the input was preprocessed (--extract, --ignore,
+	// --bundle-entries, NDJSON): those validate a temp copy, while Filename is
+	// remapped back to the user's file for display. Anything resolving those
+	// coordinates against a file must use this, not Filename.
+	SourcePath string `json:"-"`
 }
 
 // operationOutcome mirrors the FHIR OperationOutcome resource the validator emits.
@@ -424,8 +432,9 @@ func toResult(oo operationOutcome, filename string) *Result {
 	}
 
 	return &Result{
-		Filename: filename,
-		Valid:    valid,
-		Issues:   issues,
+		Filename:   filename,
+		SourcePath: filename,
+		Valid:      valid,
+		Issues:     issues,
 	}
 }
