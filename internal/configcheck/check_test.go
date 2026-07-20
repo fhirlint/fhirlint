@@ -358,3 +358,42 @@ func TestCheck_InvalidYAML(t *testing.T) {
 		t.Errorf("expected 'YAML' in parse error message, got: %q", issues[0].Message)
 	}
 }
+
+func TestCheck_SuppressExpiresIsValidated(t *testing.T) {
+	// config check must agree with what validate accepts (#254): before this,
+	// a malformed date passed here and only failed at validation time.
+	tests := []struct {
+		name      string
+		yaml      string
+		wantIssue bool
+	}{
+		{"valid global", "suppress:\n  - constraint: dom-6\n    expires: 2026-12-31\n", false},
+		{"malformed global", "suppress:\n  - constraint: dom-6\n    expires: 31.12.2026\n", true},
+		{"malformed month", "suppress:\n  - constraint: dom-6\n    expires: 2026-13-01\n", true},
+		{"not a date", "suppress:\n  - constraint: dom-6\n    expires: soon\n", true},
+		{"no expires at all", "suppress:\n  - constraint: dom-6\n", false},
+		{
+			"malformed under overrides",
+			"overrides:\n  - files: \"*.json\"\n    suppress:\n      - constraint: dom-6\n        expires: 31.12.2026\n",
+			true,
+		},
+		{
+			"valid under overrides",
+			"overrides:\n  - files: \"*.json\"\n    suppress:\n      - constraint: dom-6\n        expires: 2026-12-31\n",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeConfig(t, tt.yaml)
+			issues, err := configcheck.Check(path)
+			if err != nil {
+				t.Fatalf("Check: %v", err)
+			}
+			got := len(issues) > 0
+			if got != tt.wantIssue {
+				t.Errorf("issues = %v (%v), want issue: %v", got, issues, tt.wantIssue)
+			}
+		})
+	}
+}

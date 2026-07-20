@@ -107,7 +107,7 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 		r.Reason = strings.TrimSpace(fmt.Sprintf("%v", reason))
 	}
 	if exp, ok := m["expires"]; ok {
-		parsed, err := parseExpiry(exp)
+		parsed, err := ParseExpiry(exp)
 		if err != nil {
 			return Rule{}, err
 		}
@@ -116,10 +116,13 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 	return r, nil
 }
 
-// parseExpiry accepts YYYY-MM-DD, either as a string or as the time.Time a YAML
+// ParseExpiry accepts YYYY-MM-DD, either as a string or as the time.Time a YAML
 // parser produces for an unquoted date. Anything else is an error rather than a
 // silent "no expiry", which would turn a typo into a permanent suppression.
-func parseExpiry(v interface{}) (time.Time, error) {
+//
+// Exported so `fhirlint config check` validates expiry dates by exactly the
+// rule that parsing applies, instead of keeping a second copy that can drift.
+func ParseExpiry(v interface{}) (time.Time, error) {
 	switch t := v.(type) {
 	case time.Time:
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil

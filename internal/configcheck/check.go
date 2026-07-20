@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/lint"
+	"github.com/fhirlint/fhirlint/internal/suppress"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -302,6 +303,14 @@ func checkSuppressMap(node *yaml.Node) []Issue {
 			allowed := []string{"information", "warning", "error", "fatal"}
 			if !contains(allowed, valNode.Value) {
 				issues = append(issues, Issue{Line: line, Key: k, Message: fmt.Sprintf("invalid value %q for suppress severity (allowed: %s)", valNode.Value, strings.Join(allowed, ", "))})
+			}
+		}
+		// Validated with the same function that parsing uses, so `config check`
+		// cannot disagree with `validate` about what a valid date looks like.
+		if k == "expires" {
+			valNode := node.Content[i+1]
+			if _, err := suppress.ParseExpiry(valNode.Value); err != nil {
+				issues = append(issues, Issue{Line: line, Key: k, Message: fmt.Sprintf("invalid suppress expires %q: use YYYY-MM-DD", valNode.Value)})
 			}
 		}
 	}

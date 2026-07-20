@@ -350,7 +350,10 @@ overrides:
 		t.Fatalf("ReadInConfig: %v", err)
 	}
 
-	ovs := loadOverrides()
+	ovs, err := loadOverrides()
+	if err != nil {
+		t.Fatalf("loadOverrides: %v", err)
+	}
 	if len(ovs) != 1 {
 		t.Fatalf("expected 1 override, got %d", len(ovs))
 	}
@@ -383,7 +386,10 @@ overrides:
 		t.Fatalf("ReadInConfig: %v", err)
 	}
 
-	ovs := loadOverrides()
+	ovs, err := loadOverrides()
+	if err != nil {
+		t.Fatalf("loadOverrides: %v", err)
+	}
 	if len(ovs) != 1 {
 		t.Fatalf("expected 1 override, got %d", len(ovs))
 	}
@@ -404,7 +410,7 @@ overrides:
 
 func TestLoadOverrides_EmptyWhenNotSet(t *testing.T) {
 	resetViper(t)
-	if ovs := loadOverrides(); len(ovs) != 0 {
+	if ovs, err := loadOverrides(); err != nil || len(ovs) != 0 {
 		t.Errorf("expected empty overrides, got %v", ovs)
 	}
 }
@@ -415,7 +421,7 @@ func TestLoadOverrides_SkipsEntryWithoutFiles(t *testing.T) {
 	writeConfigFile(t, dir, "overrides:\n  - ig: [kbv.basis#1.5.0]\n")
 	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
 	_ = viper.ReadInConfig()
-	if ovs := loadOverrides(); len(ovs) != 0 {
+	if ovs, err := loadOverrides(); err != nil || len(ovs) != 0 {
 		t.Errorf("expected override without files to be skipped, got %v", ovs)
 	}
 }
@@ -562,5 +568,51 @@ func TestConfigFile_ValidatorArgFromConfig(t *testing.T) {
 	got := viper.GetStringSlice("validator-arg")
 	if len(got) != 2 || got[0] != "-some-new-flag" || got[1] != "value" {
 		t.Errorf("validator-arg = %v, want [-some-new-flag value]", got)
+	}
+}
+
+func TestLoadOverrides_InvalidSuppressRuleIsAnError(t *testing.T) {
+	// Regression guard for #254: these used to be discarded in silence, so a
+	// typo simply made the override stop working with no indication why.
+	cases := []struct {
+		name string
+		yaml string
+	}{
+		{"malformed expires", "overrides:\n  - files: \"*.json\"\n    suppress:\n      - constraint: dom-6\n        expires: 31.12.2026\n"},
+		{"rule with no type", "overrides:\n  - files: \"*.json\"\n    suppress:\n      - reason: \"no type\"\n"},
+		{"invalid pattern", "overrides:\n  - files: \"*.json\"\n    suppress:\n      - pattern: \"[unclosed\"\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetViper(t)
+			dir := t.TempDir()
+			writeConfigFile(t, dir, tc.yaml)
+			viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+			_ = viper.ReadInConfig()
+
+			if _, err := loadOverrides(); err == nil {
+				t.Error("expected an error, got nil — the rule was silently discarded")
+			}
+		})
+	}
+}
+
+func TestLoadOverrides_ValidSuppressRuleIsKept(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir,
+		"overrides:\n  - files: \"*.json\"\n    suppress:\n      - constraint: dom-6\n        expires: 2099-12-31\n")
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	ovs, err := loadOverrides()
+	if err != nil {
+		t.Fatalf("loadOverrides: %v", err)
+	}
+	if len(ovs) != 1 || len(ovs[0].Suppress) != 1 {
+		t.Fatalf("expected one override with one rule, got %+v", ovs)
+	}
+	if ovs[0].Suppress[0].Expires.IsZero() {
+		t.Error("expiry date was not parsed")
 	}
 }

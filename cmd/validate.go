@@ -397,7 +397,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	profileMap := loadProfileMap()
-	overrides := loadOverrides()
+	overrides, oerr := loadOverrides()
+	if oerr != nil {
+		return oerr
+	}
 	// Overrides carry their own suppress rules, so the policy has to reach them
 	// too — otherwise it is sidestepped by nesting the rule under `overrides:`.
 	for _, ov := range overrides {
@@ -941,14 +944,18 @@ func loadProfileMap() map[string][]string {
 }
 
 // loadOverrides parses the overrides: config key into a slice of configOverride.
-func loadOverrides() []configOverride {
+//
+// Parse failures are returned rather than skipped: a malformed rule used to be
+// dropped in silence, so a typo simply made the override stop working with no
+// indication why (#254).
+func loadOverrides() ([]configOverride, error) {
 	raw := viper.Get("overrides")
 	if raw == nil {
-		return nil
+		return nil, nil
 	}
 	items, ok := raw.([]interface{})
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	var overrides []configOverride
 	for _, item := range items {
@@ -971,15 +978,17 @@ func loadOverrides() []configOverride {
 			ov.FailOn = v
 		}
 		if v, ok := m["suppress"]; ok {
-			if rules, err := parseSuppressFromConfig(v); err == nil {
-				ov.Suppress = rules
+			rules, err := parseSuppressFromConfig(v)
+			if err != nil {
+				return nil, fmt.Errorf("overrides: %w", err)
 			}
+			ov.Suppress = rules
 		}
 		if len(ov.Files) > 0 {
 			overrides = append(overrides, ov)
 		}
 	}
-	return overrides
+	return overrides, nil
 }
 
 // toStringSlice converts a config value to []string.
