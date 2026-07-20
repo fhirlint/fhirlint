@@ -2,6 +2,7 @@ package suppress
 
 import (
 	"testing"
+	"time"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -40,9 +41,9 @@ func TestParseCLI_Valid(t *testing.T) {
 
 func TestParseCLI_Invalid(t *testing.T) {
 	cases := []string{
-		"dom-6",          // missing type prefix
-		"messageId:",     // empty value
-		"unknown:dom-6",  // unknown type
+		"dom-6",         // missing type prefix
+		"messageId:",    // empty value
+		"unknown:dom-6", // unknown type
 	}
 	for _, s := range cases {
 		if _, err := ParseCLI(s); err == nil {
@@ -164,8 +165,8 @@ func TestApply_SplitsIssues(t *testing.T) {
 	if len(results[0].Suppressed) != 1 {
 		t.Errorf("suppressed issues = %d, want 1", len(results[0].Suppressed))
 	}
-	if counts[0] != 1 {
-		t.Errorf("match count = %d, want 1", counts[0])
+	if counts[0].Matches != 1 {
+		t.Errorf("match count = %d, want 1", counts[0].Matches)
 	}
 }
 
@@ -192,8 +193,8 @@ func TestApply_UnmatchedRuleHasZeroCount(t *testing.T) {
 	}
 	rules := []Rule{{Type: "messageId", Value: "dom-6"}}
 	counts := Apply(results, rules)
-	if counts[0] != 0 {
-		t.Errorf("unmatched rule count = %d, want 0", counts[0])
+	if counts[0].Matches != 0 {
+		t.Errorf("unmatched rule count = %d, want 0", counts[0].Matches)
 	}
 }
 
@@ -259,5 +260,160 @@ func TestMatches_PatternWithSeverityFilter(t *testing.T) {
 	}
 	if !r.Matches(validator.Issue{Severity: "warning", Message: "code from example.org"}) {
 		t.Error("should match when severity filter matches")
+	}
+}
+
+// --- expiry ---
+
+func mustRule(t *testing.T, m map[string]interface{}) Rule {
+	t.Helper()
+	r, err := ParseMap(m)
+	if err != nil {
+		t.Fatalf("ParseMap(%v): %v", m, err)
+	}
+	return r
+}
+
+func TestParseMap_Expires(t *testing.T) {
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": "2026-12-31"})
+	want := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
+	if !r.Expires.Equal(want) {
+		t.Errorf("Expires = %v, want %v", r.Expires, want)
+	}
+}
+
+func TestParseMap_ExpiresAsYAMLDate(t *testing.T) {
+	// An unquoted YAML date arrives as a time.Time, not a string.
+	in := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": in})
+	if !r.Expires.Equal(in) {
+		t.Errorf("Expires = %v, want %v", r.Expires, in)
+	}
+}
+
+func TestParseMap_ExpiresMalformed_IsAnError(t *testing.T) {
+	for _, bad := range []interface{}{"31.12.2026", "2026-13-01", "soon", "", 20261231} {
+		if _, err := ParseMap(map[string]interface{}{"messageId": "dom-6", "expires": bad}); err == nil {
+			t.Errorf("expires %v (%T) should be rejected, not treated as no-expiry", bad, bad)
+		}
+	}
+}
+
+func TestParseMap_NoExpires_IsZero(t *testing.T) {
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6"})
+	if !r.Expires.IsZero() {
+		t.Errorf("Expires = %v, want zero", r.Expires)
+	}
+}
+
+func TestExpiredAt_BoundaryIsInclusive(t *testing.T) {
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": "2026-12-31"})
+	cases := []struct {
+		name string
+		now  time.Time
+		want bool
+	}{
+		{"day before", time.Date(2026, 12, 30, 23, 59, 59, 0, time.UTC), false},
+		{"start of expiry day", time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC), false},
+		{"end of expiry day", time.Date(2026, 12, 31, 23, 59, 59, 0, time.UTC), false},
+		{"next day", time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), true},
+		{"long after", time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC), true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := r.ExpiredAt(tc.now); got != tc.want {
+				t.Errorf("ExpiredAt(%s) = %v, want %v", tc.now.Format(time.RFC3339), got, tc.want)
+			}
+		})
+	}
+}
+
+func TestExpiredAt_NoExpiryNeverExpires(t *testing.T) {
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6"})
+	if r.ExpiredAt(time.Date(2999, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Error("a rule without an expiry date must never expire")
+	}
+}
+
+func TestExpiresSoonAt(t *testing.T) {
+	r := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": "2026-12-31"})
+	cases := []struct {
+		name string
+		now  time.Time
+		want bool
+	}{
+		{"well before", time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC), false},
+		{"inside window", time.Date(2026, 12, 25, 0, 0, 0, 0, time.UTC), true},
+		{"on expiry day", time.Date(2026, 12, 31, 12, 0, 0, 0, time.UTC), true},
+		{"already expired", time.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := r.ExpiresSoonAt(tc.now); got != tc.want {
+				t.Errorf("ExpiresSoonAt(%s) = %v, want %v", tc.now.Format(time.RFC3339), got, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyAt_ExpiredRuleStopsSuppressing(t *testing.T) {
+	rule := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": "2026-12-31"})
+	newResults := func() []*validator.Result {
+		return []*validator.Result{{
+			Filename: "a.json",
+			Issues:   []validator.Issue{{Severity: "error", MessageID: "dom-6", Message: "m"}},
+		}}
+	}
+
+	// Before expiry: suppressed, and the file stays valid.
+	res := newResults()
+	out := ApplyAt(res, []Rule{rule}, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC))
+	if len(res[0].Issues) != 0 || len(res[0].Suppressed) != 1 {
+		t.Fatalf("before expiry: want issue suppressed, got active=%d suppressed=%d",
+			len(res[0].Issues), len(res[0].Suppressed))
+	}
+	if out[0].Expired || out[0].Matches != 1 {
+		t.Errorf("before expiry: outcome = %+v", out[0])
+	}
+	if !res[0].Valid {
+		t.Error("before expiry: result should be valid")
+	}
+
+	// After expiry: the finding comes back and the file is no longer valid.
+	res = newResults()
+	out = ApplyAt(res, []Rule{rule}, time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC))
+	if len(res[0].Issues) != 1 || len(res[0].Suppressed) != 0 {
+		t.Fatalf("after expiry: want issue active, got active=%d suppressed=%d",
+			len(res[0].Issues), len(res[0].Suppressed))
+	}
+	if !out[0].Expired {
+		t.Error("after expiry: outcome should report Expired")
+	}
+	if out[0].Matches != 0 {
+		t.Errorf("after expiry: expired rule must not count matches, got %d", out[0].Matches)
+	}
+	if res[0].Valid {
+		t.Error("after expiry: the returning error must make the result invalid")
+	}
+}
+
+func TestApplyAt_ExpiredRuleDoesNotShadowLaterRule(t *testing.T) {
+	// An expired rule must not consume the issue and prevent a live rule from
+	// suppressing it.
+	expired := mustRule(t, map[string]interface{}{"messageId": "dom-6", "expires": "2020-01-01"})
+	live := mustRule(t, map[string]interface{}{"messageId": "dom-6", "reason": "still needed"})
+	res := []*validator.Result{{
+		Filename: "a.json",
+		Issues:   []validator.Issue{{Severity: "warning", MessageID: "dom-6", Message: "m"}},
+	}}
+	out := ApplyAt(res, []Rule{expired, live}, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	if len(res[0].Suppressed) != 1 {
+		t.Fatalf("live rule should still suppress, got suppressed=%d", len(res[0].Suppressed))
+	}
+	if out[0].Matches != 0 || out[1].Matches != 1 {
+		t.Errorf("expected the live rule to match, got %+v / %+v", out[0], out[1])
+	}
+	if res[0].Suppressed[0].SuppressReason != "still needed" {
+		t.Errorf("reason should come from the live rule, got %q", res[0].Suppressed[0].SuppressReason)
 	}
 }

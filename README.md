@@ -548,6 +548,39 @@ fhirlint validate prescription.json --suppress expression:MedicationRequest.inte
 fhirlint validate patient.json --suppress messageId:dom-6 --show-suppressed
 ```
 
+### Expiring suppressions
+
+A suppression added to work around a temporary problem tends to outlive it, quietly hiding findings nobody revisits. Give it a deadline in `fhirlint.yml`:
+
+```yaml
+suppress:
+  - constraint: dom-6
+    reason: "narrative added in the next sprint"
+    expires: 2026-12-31
+```
+
+The date is **inclusive**: the rule suppresses throughout 2026-12-31 and lapses on 2027-01-01.
+
+Once it lapses the rule stops suppressing — the findings come back, and if they are errors the build fails again. That is the point of the feature, so fhirlint says exactly what happened rather than leaving a mysterious failure:
+
+```
+warn: suppress rule "constraint:dom-6" expired on 2026-12-31 and no longer suppresses anything
+```
+
+For the 14 days before, it warns while still suppressing, so the lapse is not a surprise on the day:
+
+```
+warn: suppress rule "constraint:dom-6" expires on 2026-12-31
+```
+
+An unparseable date is an error rather than a silently ignored field — a typo must not turn a temporary suppression into a permanent one:
+
+```
+Error: invalid suppress expires "31.12.2026": use YYYY-MM-DD
+```
+
+Expiry is config-only. `--suppress` on the command line is for one-off runs, where a deadline has little meaning.
+
 Suppressed issues are:
 - Excluded from the exit-code calculation (won't trigger `--fail-on error`)
 - Hidden from terminal output by default; shown with `↷ SUPP` when `--show-suppressed` is set

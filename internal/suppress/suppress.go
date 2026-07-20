@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
+	"time"
 )
 
 // Rule is a single suppression selector.
@@ -15,7 +16,35 @@ type Rule struct {
 	Regexp   *regexp.Regexp // compiled pattern; non-nil only when Type == "pattern"
 	Severity string         // optional; empty matches any severity
 	Reason   string         // optional; shown in --show-suppressed output for audit trail
+	Expires  time.Time      // optional; zero means the rule never expires (config only)
 	Raw      string         // original string for diagnostics
+}
+
+// expiryWarnWindow is how far ahead a pending expiry is announced, so a rule
+// lapsing does not arrive as a surprise on the day it happens.
+const expiryWarnWindow = 14 * 24 * time.Hour
+
+// expiryLayout is the only accepted form for `expires`. Deliberately strict: a
+// half-understood date would silently change when a suppression stops working.
+const expiryLayout = "2006-01-02"
+
+// ExpiredAt reports whether the rule's expiry date has passed at now.
+// The date is inclusive — a rule with expires: 2026-12-31 still suppresses
+// throughout that day and lapses at the start of the next.
+func (r Rule) ExpiredAt(now time.Time) bool {
+	if r.Expires.IsZero() {
+		return false
+	}
+	return !now.Before(r.Expires.AddDate(0, 0, 1))
+}
+
+// ExpiresSoonAt reports whether the rule expires within expiryWarnWindow and
+// has not lapsed yet.
+func (r Rule) ExpiresSoonAt(now time.Time) bool {
+	if r.Expires.IsZero() || r.ExpiredAt(now) {
+		return false
+	}
+	return r.Expires.AddDate(0, 0, 1).Sub(now) <= expiryWarnWindow
 }
 
 // ParseCLI parses the CLI flag format "type:value" or "type:value|reason".
@@ -77,7 +106,32 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 	if reason, ok := m["reason"]; ok {
 		r.Reason = strings.TrimSpace(fmt.Sprintf("%v", reason))
 	}
+	if exp, ok := m["expires"]; ok {
+		parsed, err := parseExpiry(exp)
+		if err != nil {
+			return Rule{}, err
+		}
+		r.Expires = parsed
+	}
 	return r, nil
+}
+
+// parseExpiry accepts YYYY-MM-DD, either as a string or as the time.Time a YAML
+// parser produces for an unquoted date. Anything else is an error rather than a
+// silent "no expiry", which would turn a typo into a permanent suppression.
+func parseExpiry(v interface{}) (time.Time, error) {
+	switch t := v.(type) {
+	case time.Time:
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+	case string:
+		parsed, err := time.Parse(expiryLayout, strings.TrimSpace(t))
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid suppress expires %q: use YYYY-MM-DD", t)
+		}
+		return parsed, nil
+	default:
+		return time.Time{}, fmt.Errorf("invalid suppress expires %v: use YYYY-MM-DD", v)
+	}
 }
 
 func validateType(typ string) error {
@@ -113,20 +167,45 @@ func (r Rule) Matches(issue validator.Issue) bool {
 	return false
 }
 
-// Apply partitions each result's Issues into active (Issues) and Suppressed slices.
-// It recomputes Result.Valid based on active issues only.
-// The returned slice contains the match count per rule — zero means the rule was unused.
-func Apply(results []*validator.Result, rules []Rule) []int {
-	matchCount := make([]int, len(rules))
+// Outcome reports what happened to one rule during Apply, so the caller can
+// tell an unused rule apart from one that has lapsed.
+type Outcome struct {
+	Matches     int  // issues this rule suppressed; zero means unused
+	Expired     bool // expiry date has passed — the rule suppressed nothing
+	ExpiresSoon bool // lapses within the warning window
+}
+
+// Apply partitions each result's Issues into active (Issues) and Suppressed
+// slices, using the current time to decide which rules have expired.
+func Apply(results []*validator.Result, rules []Rule) []Outcome {
+	return ApplyAt(results, rules, time.Now())
+}
+
+// ApplyAt is Apply with an explicit clock, so expiry behaviour is testable.
+//
+// An expired rule stops suppressing: its findings come back and can fail the
+// build. That is the point — a suppression that keeps working past its own
+// deadline is the problem expiry dates exist to prevent. The caller is expected
+// to report Expired rules so the returning findings are explained rather than
+// mysterious.
+func ApplyAt(results []*validator.Result, rules []Rule, now time.Time) []Outcome {
+	outcomes := make([]Outcome, len(rules))
+	for i, rule := range rules {
+		outcomes[i].Expired = rule.ExpiredAt(now)
+		outcomes[i].ExpiresSoon = rule.ExpiresSoonAt(now)
+	}
 	for _, r := range results {
 		var active, suppressed []validator.Issue
 		for _, issue := range r.Issues {
 			matched := false
 			for i, rule := range rules {
+				if outcomes[i].Expired {
+					continue
+				}
 				if rule.Matches(issue) {
 					issue.SuppressReason = rule.Reason
 					suppressed = append(suppressed, issue)
-					matchCount[i]++
+					outcomes[i].Matches++
 					matched = true
 					break
 				}
@@ -145,5 +224,5 @@ func Apply(results []*validator.Result, rules []Rule) []int {
 			}
 		}
 	}
-	return matchCount
+	return outcomes
 }

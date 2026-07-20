@@ -119,7 +119,7 @@ var overrideKeys = map[string]keySpec{
 var suppressKeys = map[string]struct{}{
 	"messageId": {}, "messageid": {},
 	"constraint": {}, "expression": {}, "pattern": {},
-	"severity": {}, "reason": {},
+	"severity": {}, "reason": {}, "expires": {},
 }
 
 var ruleKeys = map[string]struct{}{
