@@ -15,8 +15,9 @@ var versionCmd = &cobra.Command{
 	Short: "Show fhirlint and validator JAR versions",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("fhirlint:  %s\n", fhirlintVersion())
-		fmt.Printf("validator: %s  (%s)\n",
+		fmt.Printf("validator: %s%s  (%s)\n",
 			validator.ValidatorVersion(),
+			checksumSuffix(),
 			validator.JARReleasesURL(),
 		)
 		if viper.IsSet("fhir-version") {
@@ -28,6 +29,21 @@ var versionCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
 		}
 	},
+}
+
+// checksumSuffix annotates the validator version with how its checksum
+// verification went. Silence would leave users unable to tell a verified JAR
+// from one installed when the checksum could not be fetched (#260).
+func checksumSuffix() string {
+	verified, known := validator.JARChecksumVerified()
+	switch {
+	case !known:
+		return "" // nothing recorded (older cache, or no JAR yet)
+	case verified:
+		return " (checksum verified)"
+	default:
+		return " (checksum NOT verified)"
+	}
 }
 
 func fhirVersionName(v string) string {
