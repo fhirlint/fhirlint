@@ -6,16 +6,30 @@ on:
       - 'v*'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write     # keyless signing via Sigstore (cosign, attestations)
-  attestations: write # write attestations to the GitHub attestations API
+# Granted per job below: the gate only needs to read workflow runs, and must not
+# inherit the publishing job's registry and signing scopes.
+permissions: {}
 
 jobs:
+  # Applies to workflow_dispatch too: a manual run republishes and re-signs
+  # `latest`, so it gets the same gate rather than being an unchecked bypass.
+  require-green-ci:
+    uses: ./.github/workflows/require-green-ci.yml
+    with:
+      sha: ${{ github.sha }}
+    permissions:
+      contents: read
+      actions: read
+
   build-and-push:
     name: Build and push Docker image
+    needs: require-green-ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write     # keyless signing via Sigstore (cosign, attestations)
+      attestations: write # write attestations to the GitHub attestations API
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
