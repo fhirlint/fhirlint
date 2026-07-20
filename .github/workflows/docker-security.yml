@@ -80,3 +80,17 @@ jobs:
           # header the build used to write (#222).
           docker run --rm fhirlint:ci version \
             | grep -qE '^validator: +[0-9]+\.[0-9]+'
+
+      # This job builds without --build-arg, so VERSION is the "dev" default and
+      # only the static labels are asserted. The release workflow supplies the
+      # real values.
+      - name: Check OCI image labels
+        run: |
+          set -euo pipefail
+          labels=$(docker inspect fhirlint:ci --format '{{json .Config.Labels}}')
+          echo "$labels"
+          for key in title description source url documentation licenses vendor created version revision; do
+            echo "$labels" | jq -e --arg k "org.opencontainers.image.$key" \
+              '.[$k] // empty | select(length > 0)' >/dev/null \
+              || { echo "missing or empty label: org.opencontainers.image.$key"; exit 1; }
+          done

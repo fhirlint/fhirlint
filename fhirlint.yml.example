@@ -157,6 +157,13 @@ ignore:
 # Works for all Bundle types (transaction, batch, collection, document, searchset).
 # bundle-entries: true
 
+# Skip files that are not FHIR resources instead of reporting them as errors.
+# Useful when fhirlint is pointed at a whole repo, or driven by tooling that
+# passes every changed file (pre-commit). A file that fails to parse is still
+# validated and still fails — only files that parse cleanly and carry no
+# resourceType (JSON) or FHIR namespace (XML) are dropped.
+# skip-non-fhir: true
+
 # Check referential integrity across the validated set (dangling references).
 # Unresolved local references (relative, urn:uuid, contained #id) are errors
 # (ref:unresolved); absolute references to external servers are information

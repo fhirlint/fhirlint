@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -90,6 +91,7 @@ var (
 	flagGenerateBaseline         string
 	flagBaseline                 string
 	flagBundleEntries            bool
+	flagSkipNonFHIR              bool
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -194,6 +196,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagBundleEntries, "bundle-entries", false,
 		"Also validate each entry.resource inside a FHIR Bundle as a standalone resource")
 	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
+	validateCmd.Flags().BoolVar(&flagSkipNonFHIR, "skip-non-fhir", false,
+		"Skip files that are not FHIR resources instead of reporting them as errors")
+	_ = viper.BindPFlag("skip-non-fhir", validateCmd.Flags().Lookup("skip-non-fhir"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -347,6 +352,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("bundle-entries") && viper.IsSet("bundle-entries") {
 		flagBundleEntries = viper.GetBool("bundle-entries")
+	}
+	if !cmd.Flags().Changed("skip-non-fhir") && viper.IsSet("skip-non-fhir") {
+		flagSkipNonFHIR = viper.GetBool("skip-non-fhir")
 	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
@@ -544,6 +552,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--extract-each is not supported for NDJSON input")
 			}
 			results, err = validateNDJSON(in.Path, opts, profileMap, overrides)
+		} else if len(filterFHIRPaths([]string{in.Path})) == 0 {
+			// --skip-non-fhir and this file is not a FHIR resource. Applies to an
+			// explicitly named file too: tooling that shells out to fhirlint
+			// (pre-commit) passes concrete paths, so filtering only directories
+			// would miss the case the flag exists for.
+			results, err = nil, nil
 		} else {
 			// Apply --extract and --ignore on JSON input
 			if flagExtract != "" || len(flagIgnore) > 0 {
@@ -1109,6 +1123,79 @@ func peekResourceType(filePath string) string {
 	return v.ResourceType
 }
 
+// fhirPeekBytes is how much of a file looksLikeFHIR inspects. FHIR resources
+// carry their marker in the first object/element, so a small prefix is enough.
+const fhirPeekBytes = 4096
+
+// fhirXMLNamespace is the namespace every FHIR XML resource is served in.
+const fhirXMLNamespace = "http://hl7.org/fhir"
+
+// looksLikeFHIR reports whether path is plausibly a FHIR resource. It backs
+// --skip-non-fhir, which drops unrelated files (package.json, tsconfig.json,
+// ...) before validation.
+//
+// It deliberately errs towards true: only a file that parses cleanly and
+// demonstrably lacks the FHIR marker is rejected. Anything malformed,
+// truncated or unreadable is kept, so a genuinely broken resource still
+// reaches the validator and fails loudly instead of vanishing from the report.
+func looksLikeFHIR(filePath string) bool {
+	f, err := os.Open(filePath) //nolint:gosec // path already resolved by the caller
+	if err != nil {
+		return true // unreadable — let the validator report it
+	}
+	defer func() { _ = f.Close() }()
+
+	switch strings.ToLower(filepath.Ext(filePath)) {
+	case ".json":
+		var v any
+		if err := json.NewDecoder(io.LimitReader(f, fhirPeekBytes)).Decode(&v); err != nil {
+			// Malformed, or valid but larger than the peek window: not our call.
+			return true
+		}
+		obj, ok := v.(map[string]any)
+		if !ok {
+			// Valid JSON that is not an object (array, scalar, null). A FHIR
+			// resource is always an object, so this is definitively not one.
+			return false
+		}
+		rt, _ := obj["resourceType"].(string)
+		return rt != ""
+	case ".xml":
+		dec := xml.NewDecoder(io.LimitReader(f, fhirPeekBytes))
+		for {
+			tok, err := dec.Token()
+			if err != nil {
+				return true
+			}
+			if se, ok := tok.(xml.StartElement); ok {
+				return se.Name.Space == fhirXMLNamespace
+			}
+		}
+	default:
+		// NDJSON (a bulk export is FHIR by definition) and anything else.
+		return true
+	}
+}
+
+// filterFHIRPaths drops non-FHIR files when --skip-non-fhir is set and reports
+// on stderr how many were dropped — skipping inputs silently would be the very
+// blind spot this flag is meant to avoid.
+func filterFHIRPaths(paths []string) []string {
+	if !flagSkipNonFHIR {
+		return paths
+	}
+	kept := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if looksLikeFHIR(p) {
+			kept = append(kept, p)
+		}
+	}
+	if n := len(paths) - len(kept); n > 0 {
+		fmt.Fprintf(os.Stderr, "Skipped %d non-FHIR file(s) (--skip-non-fhir)\n", n)
+	}
+	return kept
+}
+
 // resolveProfilesForPath returns the extra profiles that should be applied to
 // filePath based on the profile-map. Keys are matched as FHIR resource type
 // names first, then as filename globs.
@@ -1652,6 +1739,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 // them into as few JVM invocations as possible. It is shared by directory input
 // and by multiple positional file arguments.
 func validatePaths(paths []string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+	paths = filterFHIRPaths(paths)
 	if len(paths) == 0 {
 		return nil, nil
 	}
