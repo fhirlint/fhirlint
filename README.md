@@ -167,6 +167,27 @@ Use the action to validate FHIR resources in one step — it installs fhirlint a
 
 Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
 
+#### Inline PR annotations
+
+`--format github` emits [workflow commands](https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions), which the runner turns into annotations shown directly on the offending lines in the PR's "Files changed" view:
+
+```yaml
+- uses: fhirlint/fhirlint@v1.3.0
+  with:
+    path: ./fhir/
+    format: github
+```
+
+No extra permissions and no upload step — unlike SARIF, which needs `security-events: write` and `upload-sarif` to reach the Security tab. Severities map to `error` (also for `fatal`), `warning` and `notice`; each annotation is titled with the HL7 message id and the FHIRPath expression.
+
+Combine it with a human-readable format in the same run:
+
+```bash
+fhirlint validate ./fhir/ --format terminal --format github
+```
+
+Annotations must be written to the job's stdout for the runner to see them, so `--output` does not apply to this format.
+
 <details>
 <summary>Manual install (any runner / OS)</summary>
 
@@ -419,6 +440,9 @@ fhirlint validate ./fhir/ --format markdown --output report.md
 
 # CodeClimate report (for GitLab Code Quality merge-request widget)
 fhirlint validate ./fhir/ --format codeclimate --output gl-code-quality.json
+
+# GitHub Actions annotations, shown inline in the PR's "Files changed" diff
+fhirlint validate ./fhir/ --format github
 
 # Multiple formats in one run
 fhirlint validate patient.json --format terminal --format json --output results.json

@@ -133,7 +133,7 @@ func init() {
 	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", defaultFHIRVersion,
 		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
-		"Output format: terminal, json, html, junit, sarif, markdown, codeclimate (repeatable)")
+		"Output format: terminal, json, html, junit, sarif, markdown, codeclimate, github (repeatable)")
 	validateCmd.Flags().StringVarP(&flagOutput, "output", "o", "",
 		"Output file for json/html (stdout if omitted)")
 	validateCmd.Flags().StringVarP(&flagSeverity, "severity", "s", "information",
@@ -692,13 +692,19 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			if err := reporter.Markdown(results, flagSeverity, outFile); err != nil {
 				return fmt.Errorf("markdown report: %w", err)
 			}
+		case "github":
+			// Annotations must land on the job's stdout for the runner to parse
+			// them, so --output does not apply here.
+			if err := reporter.GitHub(results, flagSeverity); err != nil {
+				return err
+			}
 		case "codeclimate":
 			outFile := outputFile("json")
 			if err := reporter.CodeClimate(results, flagSeverity, outFile); err != nil {
 				return fmt.Errorf("codeclimate report: %w", err)
 			}
 		default:
-			return fmt.Errorf("unknown format %q — use: terminal, json, html, junit, sarif, markdown, codeclimate", format)
+			return fmt.Errorf("unknown format %q — use: terminal, json, html, junit, sarif, markdown, codeclimate, github", format)
 		}
 	}
 

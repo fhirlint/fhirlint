@@ -94,6 +94,7 @@
       "items": {
         "enum": [
           "codeclimate",
+          "github",
           "html",
           "json",
           "junit",
