@@ -75,7 +75,34 @@ type Options struct {
 	DisplayIssuesAreWarnings bool          // downgrade coded-display mismatches to warnings (-display-issues-are-warnings)
 	POFiles                  []string      // .po translation override files loaded at runtime (-po, repeatable)
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
 	Timeout                  time.Duration // 0 means no timeout
+}
+
+// reservedValidatorArgs are flags fhirlint sets itself and whose values the
+// result pipeline depends on. A passthrough argument that sets them again would
+// break output parsing, surfacing as a confusing downstream error instead of a
+// clear message here.
+var reservedValidatorArgs = map[string]string{
+	"output":       "fhirlint writes the validator report to a temp file and parses it",
+	"output-style": "fhirlint needs -output-style json to read the results",
+	"jar":          "use --jar or FHIRLINT_JAR to point at a different validator JAR",
+}
+
+// validateExtraArgs rejects passthrough arguments that collide with the flags
+// fhirlint manages itself. Everything else is passed through unchecked.
+func validateExtraArgs(extra []string) error {
+	for _, a := range extra {
+		name := a
+		if i := strings.IndexByte(name, '='); i >= 0 {
+			name = name[:i]
+		}
+		name = strings.ToLower(strings.TrimLeft(name, "-"))
+		if why, ok := reservedValidatorArgs[name]; ok {
+			return fmt.Errorf("--validator-arg %q is not allowed: %s", a, why)
+		}
+	}
+	return nil
 }
 
 // buildArgs constructs the java -jar argument list for the given inputs and options.
@@ -128,6 +155,10 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	for _, po := range opts.POFiles {
 		args = append(args, "-po", po)
 	}
+	// Passthrough arguments go last so that, for flags the JAR resolves
+	// last-wins, the user's explicit choice takes effect. Reserved flags are
+	// rejected up front by validateExtraArgs.
+	args = append(args, opts.ExtraArgs...)
 	return args
 }
 
@@ -175,6 +206,9 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 // mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
 func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) error {
+	if err := validateExtraArgs(opts.ExtraArgs); err != nil {
+		return err
+	}
 	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
 		return err
 	}
@@ -219,6 +253,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, nil
 	}
 
+	if err := validateExtraArgs(opts.ExtraArgs); err != nil {
+		return nil, err
+	}
 	if err := validateFHIRVersion(opts.FHIRVersion); err != nil {
 		return nil, err
 	}

@@ -550,3 +550,17 @@ func mustParseSuppressRules(t *testing.T, raw []interface{}) []suppress.Rule {
 	}
 	return rules
 }
+
+func TestConfigFile_ValidatorArgFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "validator-arg:\n  - -some-new-flag\n  - value\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	got := viper.GetStringSlice("validator-arg")
+	if len(got) != 2 || got[0] != "-some-new-flag" || got[1] != "value" {
+		t.Errorf("validator-arg = %v, want [-some-new-flag value]", got)
+	}
+}
