@@ -93,7 +93,9 @@ fhirlint checks for new JAR versions automatically (once per 24 hours) and notif
 
 ## Release integrity
 
-Signing and provenance attestation are part of the release workflow **from the first release after 2026-07-20**. Releases published before that — including v1.4.0 and earlier — are unsigned and carry no attestation; there is no way to verify them retroactively.
+Signing and provenance attestation apply **from v1.5.0 onward**. v1.4.0 and earlier are unsigned and carry no attestation; there is no way to verify them retroactively.
+
+**v1.5.0 is missing the image SBOM attestation.** The release workflow failed on that step (#266) after the image had been pushed, signed and provenance-attested, so v1.5.0 has everything in the table below except the image SBOM attestation. Re-cutting a published tag to add it would have been worse than the gap; it applies from the next release.
 
 For releases that have it, the verification commands are in the README, under [pre-built binary](README.md#pre-built-binary-recommended) and [verifying the image](README.md#verifying-the-image).
 
@@ -104,7 +106,7 @@ What is covered:
 | Release archives (`.tar.gz`, `.zip`) | yes | yes, alongside each archive | no — see below |
 | `checksums.txt` | yes | n/a | n/a |
 | Archive SBOMs (`*.sbom.json`) | yes | n/a | n/a |
-| Container image | yes, plus a cosign signature | yes | yes |
+| Container image | yes, plus a cosign signature | yes | yes (from the release after v1.5.0) |
 
 ### Why the archive SBOMs are not SBOM-attested
 
