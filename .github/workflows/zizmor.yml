@@ -22,5 +22,31 @@ jobs:
           persist-credentials: false
 
       - uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
+        id: zizmor
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The action uploads its results to the security tab but cannot fail the
+      # job: with advanced-security it runs `zizmor --format=sarif`, which exits
+      # 0 even with findings (the same audit exits 13 in human format). Every
+      # analysis on main was uploading 2 findings while this job stayed green
+      # (#263), so the findings are re-read here and failed on. No second zizmor
+      # run — this is the SARIF the action already produced.
+      - name: Fail on zizmor findings
+        env:
+          SARIF: ${{ steps.zizmor.outputs.output-file }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SARIF}" ] || [ ! -f "${SARIF}" ]; then
+            echo "::error::zizmor produced no SARIF file — cannot tell whether the audit ran"
+            exit 1
+          fi
+          count=$(jq '[.runs[].results[]] | length' "${SARIF}")
+          if [ "${count}" -gt 0 ]; then
+            jq -r '.runs[].results[]
+              | "::error file=\(.locations[0].physicalLocation.artifactLocation.uri),line=\(.locations[0].physicalLocation.region.startLine)::\(.ruleId): \(.message.text)"' \
+              "${SARIF}"
+            echo "zizmor reported ${count} finding(s)"
+            exit 1
+          fi
+          echo "zizmor reported no findings"
