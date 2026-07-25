@@ -9,6 +9,18 @@ import (
 	"github.com/fhirlint/fhirlint/internal/iglock"
 )
 
+// setFakeHome points os.UserHomeDir() at dir for the duration of the test.
+// It has to set USERPROFILE as well: on Windows os.UserHomeDir() reads that
+// variable and ignores HOME entirely, so setting HOME alone leaves the code
+// under test looking at the developer's real ~/.fhir/packages. That failed
+// loudly in two tests here and — worse — passed vacuously in three others,
+// where an empty real cache happens to produce the expected skip.
+func setFakeHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
+}
+
 func TestParseIGID(t *testing.T) {
 	cases := []struct {
 		ig      string
@@ -103,7 +115,7 @@ func TestVerify_MatchingHash(t *testing.T) {
 	if err := os.WriteFile(manifestPath, []byte(manifest), 0600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", dir)
+	setFakeHome(t, dir)
 
 	hash, err := iglock.HashPackageFromPath(manifestPath)
 	if err != nil {
@@ -132,7 +144,7 @@ func TestVerify_MismatchedHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Setenv("HOME", dir)
+	setFakeHome(t, dir)
 
 	lf := &iglock.LockFile{
 		Packages: map[string]iglock.Entry{
@@ -147,7 +159,7 @@ func TestVerify_MismatchedHash(t *testing.T) {
 }
 
 func TestVerify_MissingPackageInCache_Skips(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t, t.TempDir())
 
 	lf := &iglock.LockFile{
 		Packages: map[string]iglock.Entry{
@@ -199,7 +211,7 @@ func TestUpdate_AddsEntries(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(pkgDir, "package.json"), []byte(manifest), 0600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HOME", dir)
+	setFakeHome(t, dir)
 
 	lf := &iglock.LockFile{Packages: make(map[string]iglock.Entry)}
 	n, err := iglock.Update(lf, []string{"kbv.basis#1.5.0", "/local/path", "kbv.basis"})
@@ -222,7 +234,7 @@ func TestUpdate_AddsEntries(t *testing.T) {
 }
 
 func TestUpdate_ErrorForMissingPackage(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t, t.TempDir())
 	lf := &iglock.LockFile{Packages: make(map[string]iglock.Entry)}
 	_, err := iglock.Update(lf, []string{"missing.package#1.0.0"})
 	if err == nil {
