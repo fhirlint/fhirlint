@@ -176,3 +176,17 @@ func TestOptions_ExtraArgsReachInternalOpts(t *testing.T) {
 		t.Errorf("ExtraArgs = %v, want [-some-new-flag value]", internal.ExtraArgs)
 	}
 }
+
+func TestToInternalOpts_PassesRunBounds(t *testing.T) {
+	got := toInternalOpts(Options{
+		FHIRVersion:       "4.0.1",
+		ValidationTimeout: 2 * time.Minute,
+		MaxMessages:       500,
+	})
+	if got.ValidationTimeout != 2*time.Minute {
+		t.Errorf("ValidationTimeout = %v, want %v", got.ValidationTimeout, 2*time.Minute)
+	}
+	if got.MaxMessages != 500 {
+		t.Errorf("MaxMessages = %d, want 500", got.MaxMessages)
+	}
+}

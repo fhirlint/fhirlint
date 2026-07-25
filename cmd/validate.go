@@ -88,6 +88,8 @@ var (
 	flagCache                    bool
 	flagCacheDir                 string
 	flagTimeout                  string
+	flagValidationTimeout        string
+	flagMaxMessages              int
 	flagURLTimeout               string
 	flagLock                     bool
 	flagGenerateBaseline         string
@@ -189,6 +191,14 @@ func init() {
 		"Show suppressed issues with a muted label instead of hiding them")
 	validateCmd.Flags().StringVar(&flagTimeout, "timeout", "5m",
 		"Timeout for the Java validator process (e.g. 30s, 5m, 1h). Set to 0 to disable.")
+	// Distinct from --timeout: that one kills the JVM and yields nothing, this
+	// one asks the validator to stop and hand back what it has.
+	validateCmd.Flags().StringVar(&flagValidationTimeout, "validation-timeout", "",
+		"Stop validating after this long and report partial results (e.g. 90s, 2m). Unset = unbounded.")
+	validateCmd.Flags().IntVar(&flagMaxMessages, "max-messages", 0,
+		"Stop after this many validation messages and report partial results. 0 = unbounded.")
+	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
+	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
 	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
 	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
@@ -361,6 +371,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("url-timeout") && viper.IsSet("url-timeout") {
 		flagURLTimeout = viper.GetString("url-timeout")
 	}
+	if !cmd.Flags().Changed("validation-timeout") && viper.IsSet("validation-timeout") {
+		flagValidationTimeout = viper.GetString("validation-timeout")
+	}
+	if !cmd.Flags().Changed("max-messages") && viper.IsSet("max-messages") {
+		flagMaxMessages = viper.GetInt("max-messages")
+	}
 	if !cmd.Flags().Changed("baseline") && viper.IsSet("baseline") {
 		flagBaseline = viper.GetString("baseline")
 	}
@@ -424,6 +440,21 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		if parseErr != nil {
 			return fmt.Errorf("invalid --timeout value %q (examples: 5m, 30s, 1h): %w", flagTimeout, parseErr)
 		}
+	}
+
+	var validationTimeout time.Duration
+	if flagValidationTimeout != "" && flagValidationTimeout != "0" {
+		var parseErr error
+		validationTimeout, parseErr = time.ParseDuration(flagValidationTimeout)
+		if parseErr != nil {
+			return fmt.Errorf("invalid --validation-timeout value %q (examples: 90s, 2m): %w", flagValidationTimeout, parseErr)
+		}
+		if validationTimeout <= 0 {
+			return fmt.Errorf("--validation-timeout must be positive, got %q", flagValidationTimeout)
+		}
+	}
+	if flagMaxMessages < 0 {
+		return fmt.Errorf("--max-messages must be zero or positive, got %d", flagMaxMessages)
 	}
 
 	var urlTimeout time.Duration
@@ -492,6 +523,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		JARPath:                  viper.GetString("jar"),
 		ValidatorVersion:         viper.GetString("validator-version"),
 		ExtraArgs:                flagValidatorArg,
+		ValidationTimeout:        validationTimeout,
+		MaxMessages:              flagMaxMessages,
 		Timeout:                  validatorTimeout,
 	}
 
@@ -769,10 +802,51 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	if err := checkRunBounds(results); err != nil {
+		return err
+	}
 	if err := checkMaxWarnings(results, neverFailPaths); err != nil {
 		return err
 	}
 	return checkExitCode(results, neverFailPaths)
+}
+
+// boundMarkers are the CLI option names the validator quotes when it stops early
+// because --validation-timeout or --max-messages was reached. Matching on the
+// option name rather than the surrounding sentence keeps this working under
+// --locale, where the prose around it is translated but the flag name is not.
+var boundMarkers = map[string]string{
+	"-validation-timeout":      "--validation-timeout",
+	"-max-validation-messages": "--max-messages",
+}
+
+// checkRunBounds fails the run when a bound cut validation short.
+//
+// This matters more than it sounds: when the validator stops early it returns
+// only the messages gathered so far, so files with real errors come back with
+// none and are counted as valid. A capped run over broken input otherwise
+// reports "Valid: 2, Errors: 0" and exits 0 — a green pipeline over data that
+// does not validate. Partial results must not be indistinguishable from clean
+// ones, so hitting a bound is reported as inconclusive rather than passing.
+//
+// --fail-on never still wins: it is the explicit "do not fail this run" switch.
+func checkRunBounds(results []*validator.Result) error {
+	if flagFailOn == "never" {
+		return nil
+	}
+	for _, r := range results {
+		for _, issue := range r.Issues {
+			for marker, flag := range boundMarkers {
+				if strings.Contains(issue.Message, marker) {
+					return fmt.Errorf(
+						"validation stopped early because %s was reached, so the results are partial "+
+							"and files with errors may be reported as valid — raise the bound, or set "+
+							"--fail-on never to accept partial results", flag)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // collectAllIGs gathers IGs from the base options and any validator-level overrides.

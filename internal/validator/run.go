@@ -85,6 +85,8 @@ type Options struct {
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 	ValidatorVersion         string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
 	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
+	ValidationTimeout        time.Duration // stop validating after this long, returning partial results (-validation-timeout); 0 = unbounded
+	MaxMessages              int           // stop after this many validation messages, returning partial results (-max-validation-messages); 0 = unbounded
 	Timeout                  time.Duration // 0 means no timeout
 }
 
@@ -163,6 +165,15 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	for _, po := range opts.POFiles {
 		args = append(args, "-po", po)
+	}
+	// Both bounds make the validator return what it found so far rather than
+	// erroring out, which is what you want in a pipeline: partial findings beat
+	// a job that hangs or a report nobody can read.
+	if opts.ValidationTimeout > 0 {
+		args = append(args, "-validation-timeout", strconv.FormatInt(opts.ValidationTimeout.Milliseconds(), 10))
+	}
+	if opts.MaxMessages > 0 {
+		args = append(args, "-max-validation-messages", strconv.Itoa(opts.MaxMessages))
 	}
 	// Passthrough arguments go last so that, for flags the JAR resolves
 	// last-wins, the user's explicit choice takes effect. Reserved flags are

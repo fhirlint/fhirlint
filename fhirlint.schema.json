@@ -140,6 +140,9 @@
         "null"
       ]
     },
+    "max-messages": {
+      "type": "integer"
+    },
     "max-warnings": {
       "type": "integer"
     },
@@ -353,6 +356,12 @@
       ]
     },
     "url-timeout": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "validation-timeout": {
       "type": [
         "string",
         "null"

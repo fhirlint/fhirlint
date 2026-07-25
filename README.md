@@ -1124,6 +1124,32 @@ Error: lock file expects validator 6.9.12, running 6.9.13 — pin it with
 
 Lock files written before this existed carry no validator version; those runs warn instead of failing, so nothing breaks on upgrade. `--jar` takes precedence over a pin — you are pointing at a specific file — and warns if that file is a different version than the pin.
 
+### Bounding a run
+
+A pathological or very large input can stall a pipeline or produce a report nobody reads. Two bounds cap it:
+
+```bash
+fhirlint validate ./fhir/ --validation-timeout 2m --max-messages 500
+```
+
+Both ask the validator to stop and hand back the issues it found so far, so the run still reports something useful. That makes them different from `--timeout`, which kills the Java process outright and yields nothing:
+
+| | Stops | Result |
+|---|---|---|
+| `--timeout` | the JVM | nothing — the run fails |
+| `--validation-timeout` | validation | partial findings, run reported as inconclusive |
+| `--max-messages` | validation | partial findings, run reported as inconclusive |
+
+**Hitting a bound fails the run.** This is not caution for its own sake: when the validator stops early it returns only the messages gathered so far, so files with real errors come back with none and are counted as valid. The same input that reports `Files: 2  Valid: 0  Errors: 5` unbounded reports `Files: 2  Valid: 2  Errors: 0` under `--max-messages 1`. Exiting 0 there would turn a bound into a way to make a red pipeline green.
+
+```
+Error: validation stopped early because --max-messages was reached, so the results
+are partial and files with errors may be reported as valid — raise the bound, or
+set --fail-on never to accept partial results
+```
+
+Set `--fail-on never` if you genuinely want partial results accepted.
+
 ### Result caching
 
 `--cache` caches validation results per file content hash (keyed by content hash + FHIR version + profiles + IGs). Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.
@@ -1274,6 +1300,8 @@ The schema is **generated from the same key definitions `config check` validates
 | `--po` | — | Load message translations from a `.po` file at runtime (repeatable) |
 | `--best-practice` | — | Best-practice constraint handling: `ignore`, `hint`, `warning`, `error` |
 | `--timeout` | `5m` | Timeout for the Java validator process |
+| `--validation-timeout` | — | Stop validating after this long and report partial results (e.g. `90s`, `2m`) |
+| `--max-messages` | `0` | Stop after this many validation messages and report partial results (`0` = unbounded) |
 | `--cache` | `false` | Cache validation results per file hash |
 | `--cache-dir` | — | Directory for result cache (default: `~/.fhirlint/result-cache/`) |
 | `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |

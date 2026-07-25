@@ -616,3 +616,33 @@ func TestLoadOverrides_ValidSuppressRuleIsKept(t *testing.T) {
 		t.Error("expiry date was not parsed")
 	}
 }
+
+func TestConfigFile_ValidationTimeoutFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "validation-timeout: 2m\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if got := viper.GetString("validation-timeout"); got != "2m" {
+		t.Errorf("validation-timeout = %q, want %q", got, "2m")
+	}
+}
+
+func TestConfigFile_MaxMessagesFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "max-messages: 500\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if got := viper.GetInt("max-messages"); got != 500 {
+		t.Errorf("max-messages = %d, want %d", got, 500)
+	}
+}
