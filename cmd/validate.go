@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/baseline"
+	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/lint"
@@ -1482,11 +1483,11 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 
 	cacheDir := flagCacheDir
 	if cacheDir == "" {
-		home, err := os.UserHomeDir()
+		dir, err := cache.ResultCacheDir()
 		if err != nil {
 			return runValidation(paths, opts)
 		}
-		cacheDir = filepath.Join(home, ".fhirlint", "result-cache")
+		cacheDir = dir
 	}
 
 	keyOpts := resultcache.KeyOpts{

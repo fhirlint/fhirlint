@@ -1,12 +1,14 @@
 package validator
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -57,55 +59,74 @@ func TestVersionFromURL_NoMatchForOtherURLs(t *testing.T) {
 	}
 }
 
+// writeJARWithManifest builds a minimal JAR carrying the class-path entry that
+// versionFromJARManifest reads, so the fallback can be tested without depending
+// on a real 185 MB download being present.
+func writeJARWithManifest(t *testing.T, dir, version string) string {
+	t.Helper()
+	path := filepath.Join(dir, "validator_cli.jar")
+	f, err := os.Create(path) //nolint:gosec // test temp dir
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("META-INF/MANIFEST.MF")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := "Manifest-Version: 1.0\r\nClass-Path: org.hl7.fhir.validation/" +
+		version + "/org.hl7.fhir.validation-" + version + ".jar\r\n"
+	if _, err := w.Write([]byte(manifest)); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// With no version file present, the version must come from the JAR's own
+// manifest — the case that keeps `fhirlint version` working for the Docker
+// image, which bakes in a JAR without a separate version file.
 func TestValidatorVersion_FallsBackToJARManifest(t *testing.T) {
-	// Temporarily rename the version file so it is absent.
+	dir := t.TempDir()
+	t.Setenv(cache.DirEnvVar, dir)
+	writeJARWithManifest(t, dir, "6.9.7")
+
+	if got := ValidatorVersion(); got != "6.9.7" {
+		t.Errorf("expected 6.9.7 from the JAR manifest, got %q", got)
+	}
+
+	// The fallback caches what it found, so the version file now exists.
 	vp, err := cache.ValidatorVersionPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmp := vp + ".bak"
-	renamed := false
-	if _, err := os.Stat(vp); err == nil {
-		if err := os.Rename(vp, tmp); err == nil {
-			renamed = true
-			defer func() {
-				_ = os.Remove(vp) // clean up the re-created file
-				_ = os.Rename(tmp, vp)
-			}()
-		}
-	}
-	if !renamed {
-		t.Skip("version file not present, skipping rename test")
-	}
-
-	// If the local JAR is present the fallback must return a non-empty, non-"unknown" version.
-	jp, err := cache.JARPath()
+	data, err := os.ReadFile(vp) //nolint:gosec // test cache path
 	if err != nil {
-		t.Skip("cannot determine JAR path")
+		t.Fatalf("fallback should have cached the version: %v", err)
 	}
-	if _, err := os.Stat(jp); os.IsNotExist(err) {
-		t.Skip("local JAR not present, skipping manifest-fallback test")
+	if strings.TrimSpace(string(data)) != "6.9.7" {
+		t.Errorf("cached version file says %q", strings.TrimSpace(string(data)))
 	}
+}
 
-	got := ValidatorVersion()
-	if got == "unknown" || got == "" {
-		t.Errorf("expected a version from JAR manifest, got %q", got)
+func TestValidatorVersion_UnknownWhenCacheEmpty(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
+	if got := ValidatorVersion(); got != "unknown" {
+		t.Errorf("expected \"unknown\" for an empty cache, got %q", got)
 	}
 }
 
 func TestValidatorVersion_ReturnsCachedVersion(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
 	vp, err := cache.ValidatorVersionPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Save original if exists
-	original, readErr := os.ReadFile(vp) //nolint:gosec // test cache path
-	if readErr == nil {
-		defer func() { _ = os.WriteFile(vp, original, 0600) }() //nolint:gosec // restoring test fixture
-	} else {
-		defer func() { _ = os.Remove(vp) }()
-	}
-
 	if err := os.WriteFile(vp, []byte("9.9.9\n"), 0600); err != nil {
 		t.Fatal(err)
 	}

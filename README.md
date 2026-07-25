@@ -1386,6 +1386,18 @@ export FHIRLINT_JAR=/path/to/validator_cli.jar
 fhirlint validate patient.json
 ```
 
+### Moving the cache
+
+`FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version and checksum files, and the `--cache` result cache:
+
+```bash
+export FHIRLINT_CACHE_DIR=/mnt/build-cache/fhirlint
+```
+
+Useful for containers whose home directory is read-only, CI runners that cache a mounted volume between jobs, and working on two projects pinned to different validator versions without re-downloading on every switch.
+
+`--cache-dir` still overrides the result-cache location on its own, and takes precedence over `FHIRLINT_CACHE_DIR` for that one directory.
+
 ---
 
 ## Examples
