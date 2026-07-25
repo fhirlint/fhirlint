@@ -192,6 +192,16 @@ ignore:
 #   - -some-new-validator-flag
 #   - value-for-that-flag
 
+# Bound a run so a pathological input cannot stall the pipeline or flood the
+# report. Both make the validator stop and return what it found so far, unlike
+# `timeout` above, which kills the Java process and yields nothing.
+# Hitting either bound fails the run: the validator returns only what it
+# gathered so far, so files with real errors come back with none and count as
+# valid. Exiting 0 there would let a bound turn a red pipeline green.
+# Use `fail-on: never` if you want partial results accepted.
+# validation-timeout: 2m
+# max-messages: 500
+
 # Pin the auto-downloaded validator JAR to a specific upstream release.
 # Without this fhirlint tracks the latest release, so a fresh CI runner can pick
 # up a new validator and report different findings from unchanged sources.

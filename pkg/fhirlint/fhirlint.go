@@ -79,6 +79,16 @@ type Options struct {
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
 
+	// ValidationTimeout stops validation after the given duration and returns
+	// the issues found so far, rather than erroring out. Zero is unbounded.
+	// Distinct from Timeout, which kills the validator process and yields
+	// nothing.
+	ValidationTimeout time.Duration
+
+	// MaxMessages stops validation after this many messages and returns the
+	// issues found so far. Zero is unbounded.
+	MaxMessages int
+
 	// ValidatorVersion pins the auto-downloaded JAR to a specific upstream
 	// release (e.g. "6.9.12"). Empty tracks the latest release, which means
 	// results can change when HL7 publishes a new validator. Ignored when
@@ -252,6 +262,8 @@ func toInternalOpts(opts Options) validator.Options {
 		JARPath:                  opts.JARPath,
 		ValidatorVersion:         opts.ValidatorVersion,
 		ExtraArgs:                opts.ExtraArgs,
+		ValidationTimeout:        opts.ValidationTimeout,
+		MaxMessages:              opts.MaxMessages,
 		Timeout:                  opts.Timeout,
 	}
 }

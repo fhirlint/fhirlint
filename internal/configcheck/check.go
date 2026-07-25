@@ -89,6 +89,8 @@ var topLevelKeys = map[string]keySpec{
 	"bundle-entries":              {kind: kindBool},
 	"skip-non-fhir":               {kind: kindBool},
 	"validator-arg":               {kind: kindStringList},
+	"validation-timeout":          {kind: kindString},
+	"max-messages":                {kind: kindInt},
 	"validator-version":           {kind: kindString},
 	"require-suppress-reason":     {kind: kindBool},
 	"show-source":                 {kind: kindBool},

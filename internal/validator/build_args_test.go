@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBuildArgs_RequiredFlags(t *testing.T) {
@@ -501,4 +502,50 @@ func TestValidateExtraArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildArgs_ValidationTimeoutInMilliseconds(t *testing.T) {
+	args := buildArgs("jar", []string{"in.json"}, "out.json", Options{
+		FHIRVersion:       "4.0.1",
+		ValidationTimeout: 90 * time.Second,
+	})
+	// The JAR takes milliseconds, so a Go duration has to be converted rather
+	// than printed.
+	mustContainPair(t, args, "-validation-timeout", "90000")
+}
+
+func TestBuildArgs_ValidationTimeoutOmittedWhenZero(t *testing.T) {
+	args := buildArgs("jar", []string{"in.json"}, "out.json", Options{FHIRVersion: "4.0.1"})
+	for _, a := range args {
+		if a == "-validation-timeout" {
+			t.Error("an unset validation timeout must not be passed to the JAR")
+		}
+	}
+}
+
+func TestBuildArgs_MaxMessages(t *testing.T) {
+	args := buildArgs("jar", []string{"in.json"}, "out.json", Options{
+		FHIRVersion: "4.0.1",
+		MaxMessages: 500,
+	})
+	mustContainPair(t, args, "-max-validation-messages", "500")
+}
+
+func TestBuildArgs_MaxMessagesOmittedWhenZero(t *testing.T) {
+	args := buildArgs("jar", []string{"in.json"}, "out.json", Options{FHIRVersion: "4.0.1"})
+	for _, a := range args {
+		if a == "-max-validation-messages" {
+			t.Error("an unset message cap must not be passed to the JAR")
+		}
+	}
+}
+
+// Sub-second durations must not silently truncate to 0, which the JAR would
+// read as "no bound" — the opposite of what was asked for.
+func TestBuildArgs_SubSecondValidationTimeout(t *testing.T) {
+	args := buildArgs("jar", []string{"in.json"}, "out.json", Options{
+		FHIRVersion:       "4.0.1",
+		ValidationTimeout: 250 * time.Millisecond,
+	})
+	mustContainPair(t, args, "-validation-timeout", "250")
 }

@@ -917,3 +917,57 @@ func TestPreprocessJSON_RewritesExistingTempInPlace(t *testing.T) {
 		t.Errorf("an input that already owns a temp file should be rewritten in place, got %s", in.Path)
 	}
 }
+
+func boundedResult(msg string) []*validator.Result {
+	return []*validator.Result{{
+		Filename: "a.json",
+		Issues:   []validator.Issue{{Severity: "warning", Message: msg}},
+	}}
+}
+
+// The real messages the validator emits when a bound cuts a run short.
+const (
+	maxMessagesMsg = "Validation process produced more than maximum of 1 messages, set by CLI option " +
+		"-max-validation-messages. Returned validation messages may be incomplete or inaccurate."
+	timeoutMsg = "Validation process exceeded maximum allowed time of 1ms, set by CLI option " +
+		"-validation-timeout. Returned validation messages may be incomplete or inaccurate."
+)
+
+func TestCheckRunBounds_FailsOnMaxMessages(t *testing.T) {
+	flagFailOn = "error"
+	err := checkRunBounds(boundedResult(maxMessagesMsg))
+	if err == nil {
+		t.Fatal("a truncated run must not be reported as passing")
+	}
+	if !strings.Contains(err.Error(), "--max-messages") {
+		t.Errorf("error should name the bound that was hit, got: %v", err)
+	}
+}
+
+func TestCheckRunBounds_FailsOnValidationTimeout(t *testing.T) {
+	flagFailOn = "error"
+	err := checkRunBounds(boundedResult(timeoutMsg))
+	if err == nil {
+		t.Fatal("a timed-out run must not be reported as passing")
+	}
+	if !strings.Contains(err.Error(), "--validation-timeout") {
+		t.Errorf("error should name the bound that was hit, got: %v", err)
+	}
+}
+
+// --fail-on never is the explicit "do not fail this run" switch and wins here too.
+func TestCheckRunBounds_FailOnNeverOptsOut(t *testing.T) {
+	flagFailOn = "never"
+	defer func() { flagFailOn = "error" }()
+	if err := checkRunBounds(boundedResult(maxMessagesMsg)); err != nil {
+		t.Errorf("--fail-on never must accept partial results, got: %v", err)
+	}
+}
+
+func TestCheckRunBounds_IgnoresOrdinaryIssues(t *testing.T) {
+	flagFailOn = "error"
+	msg := "Constraint failed: dom-6: 'A resource should have narrative for robust management'"
+	if err := checkRunBounds(boundedResult(msg)); err != nil {
+		t.Errorf("an ordinary issue must not be mistaken for truncation, got: %v", err)
+	}
+}
