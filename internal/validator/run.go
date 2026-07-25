@@ -334,10 +334,82 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		if err := oomError(stderrBuf.String()); err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf("validator produced no output — JAR may have crashed\nfiles: %v\nstderr: %s", inputPaths, stderrBuf.String())
+		if err := txUnreachableError(stderrBuf.String(), opts); err != nil {
+			return nil, err
+		}
+		// Nothing recognised. Say the validator produced no output — which is
+		// what we know — rather than asserting a crash, and trim the Java frames
+		// so the exception message is not buried under them.
+		return nil, fmt.Errorf("validator produced no output\nfiles: %v\nstderr: %s",
+			inputPaths, trimJavaFrames(stderrBuf.String()))
 	}
 
 	return parseOutput(jsonBytes, inputPaths, stderrBuf.String())
+}
+
+// txCapabilityFailure is the sentence the validator emits when it cannot read a
+// terminology server's capability statement — the first thing it asks for, so
+// this is what an unreachable server looks like whatever the underlying cause.
+// It covers a refused connection, an unresolvable host and a proxy that is not
+// answering; only the detail after the colon differs.
+const txCapabilityFailure = "Error fetching the server's capability statement"
+
+// txUnreachableError turns an unreachable terminology server into an
+// explanation instead of "the JAR may have crashed". The JAR did not crash: it
+// could not reach the server it needs for code and value-set checks, and the
+// three ways out are not obvious from a Java stack trace.
+func txUnreachableError(stderr string, opts Options) error {
+	idx := strings.Index(stderr, txCapabilityFailure)
+	if idx < 0 {
+		return nil
+	}
+
+	server := opts.TerminologyServer
+	if server == "" {
+		server = "https://tx.fhir.org (the default)"
+	}
+	detail := strings.TrimSpace(stderr[idx+len(txCapabilityFailure):])
+	detail = strings.TrimSpace(strings.TrimPrefix(detail, ":"))
+	if i := strings.IndexAny(detail, "\r\n"); i >= 0 {
+		detail = detail[:i]
+	}
+
+	fmt.Fprintf(os.Stderr, "Cannot reach the terminology server %s.\n", server)
+	// For an unresolvable host the detail is just the hostname, which the line
+	// above already named — printing it again reads like a mistake.
+	if detail != "" && !strings.Contains(server, detail) {
+		fmt.Fprintf(os.Stderr, "  %s\n", detail)
+	}
+	fmt.Fprintln(os.Stderr, "The validator needs it to check codes and value sets. Either:")
+	fmt.Fprintln(os.Stderr, "  --proxy / --https-proxy       if this network requires a proxy")
+	fmt.Fprintln(os.Stderr, "  --terminology-server <url>    point at a reachable server")
+	fmt.Fprintln(os.Stderr, "  --no-terminology-server       validate without terminology checks")
+	return errors.New("terminology server unreachable")
+}
+
+// trimJavaFrames keeps the exception message and the first few stack frames,
+// replacing the rest with a count. A validator stack trace runs to dozens of
+// frames of HAPI internals, which pushes the one line that says what went wrong
+// off the top of the terminal.
+func trimJavaFrames(stderr string) string {
+	const keep = 3
+	lines := strings.Split(stderr, "\n")
+	var out []string
+	frames, dropped := 0, 0
+	for _, l := range lines {
+		if strings.HasPrefix(strings.TrimRight(l, "\r"), "\tat ") {
+			frames++
+			if frames > keep {
+				dropped++
+				continue
+			}
+		}
+		out = append(out, l)
+	}
+	if dropped > 0 {
+		out = append(out, fmt.Sprintf("\t… %d more frames", dropped))
+	}
+	return strings.Join(out, "\n")
 }
 
 func oomError(stderr string) error {

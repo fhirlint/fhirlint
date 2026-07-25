@@ -270,3 +270,72 @@ func containsStr(s, substr string) bool {
 			return false
 		}())
 }
+
+// The three shapes an unreachable terminology server takes in practice, all
+// captured from the real JAR.
+const (
+	txRefusedStderr = "org.hl7.fhir.exceptions.FHIRException: Error fetching the server's " +
+		"capability statement: Failed to connect to /127.0.0.1:9\n" +
+		"\tat org.hl7.fhir.r4.utils.client.FHIRToolingClient.getCapabilitiesStatement(FHIRToolingClient.java:146)\n"
+	txUnknownHostStderr = "org.hl7.fhir.exceptions.FHIRException: Error fetching the server's " +
+		"capability statement: tx.invalid.example\n"
+)
+
+func TestTxUnreachableError_DetectsRefusedConnection(t *testing.T) {
+	err := txUnreachableError(txRefusedStderr, Options{})
+	if err == nil {
+		t.Fatal("an unreachable terminology server must be recognised, not reported as a crash")
+	}
+	if !strings.Contains(err.Error(), "terminology") {
+		t.Errorf("error should name the cause, got: %v", err)
+	}
+}
+
+func TestTxUnreachableError_DetectsUnknownHost(t *testing.T) {
+	if err := txUnreachableError(txUnknownHostStderr, Options{}); err == nil {
+		t.Fatal("an unresolvable terminology host must be recognised too")
+	}
+}
+
+func TestTxUnreachableError_IgnoresUnrelatedStderr(t *testing.T) {
+	if err := txUnreachableError("java.lang.NullPointerException\n\tat Foo.bar(Foo.java:1)\n", Options{}); err != nil {
+		t.Errorf("an unrelated failure must not be reported as a terminology problem, got: %v", err)
+	}
+}
+
+func TestTxUnreachableError_EmptyStderr(t *testing.T) {
+	if err := txUnreachableError("", Options{}); err != nil {
+		t.Errorf("expected nil for empty stderr, got: %v", err)
+	}
+}
+
+func TestTrimJavaFrames_KeepsMessageAndCountsRest(t *testing.T) {
+	stderr := "org.hl7.fhir.exceptions.FHIRException: boom\n" +
+		"\tat A.a(A.java:1)\n\tat B.b(B.java:2)\n\tat C.c(C.java:3)\n" +
+		"\tat D.d(D.java:4)\n\tat E.e(E.java:5)\n"
+	got := trimJavaFrames(stderr)
+
+	if !strings.Contains(got, "FHIRException: boom") {
+		t.Error("the exception message must survive trimming — it is the whole point")
+	}
+	if !strings.Contains(got, "A.a") || !strings.Contains(got, "C.c") {
+		t.Error("the first frames should be kept")
+	}
+	if strings.Contains(got, "D.d") || strings.Contains(got, "E.e") {
+		t.Error("frames beyond the limit should be dropped")
+	}
+	if !strings.Contains(got, "2 more frames") {
+		t.Errorf("dropped frames must be accounted for, got:\n%s", got)
+	}
+}
+
+func TestTrimJavaFrames_ShortTraceUnchanged(t *testing.T) {
+	stderr := "some error\n\tat A.a(A.java:1)\n"
+	got := trimJavaFrames(stderr)
+	if strings.Contains(got, "more frames") {
+		t.Errorf("a short trace needs no summary line, got:\n%s", got)
+	}
+	if !strings.Contains(got, "A.a") {
+		t.Error("the frame should be kept")
+	}
+}
