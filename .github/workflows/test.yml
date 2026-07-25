@@ -10,10 +10,24 @@ on:
 
 jobs:
   test:
-    name: Unit tests
-    runs-on: ubuntu-latest
+    # GoReleaser ships darwin and windows binaries, so the suite runs on every
+    # platform we release for. The path handling in the exclude matcher
+    # (cmd/validate.go) normalises separators deliberately; this is what
+    # actually verifies it.
+    name: Unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    strategy:
+      # One platform failing should not hide the result on the other two.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        # Git Bash on the Windows runner, so the pipe in the coverage step
+        # below behaves the same everywhere.
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,3 +46,23 @@ jobs:
 
       - name: Show coverage summary
         run: go tool cover -func=coverage.out | tail -1
+
+  # Branch protection on main requires the check context "Unit tests" verbatim,
+  # and a matrix appends the OS to the job name, so the required context would
+  # never appear again and every PR would block. This job carries that name and
+  # collects the matrix, which also keeps the protection settings valid if the
+  # matrix dimensions ever change.
+  test-result:
+    name: Unit tests
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check the matrix succeeded
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "Matrix result: $RESULT"
+          [ "$RESULT" = "success" ]

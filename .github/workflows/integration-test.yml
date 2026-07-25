@@ -9,10 +9,18 @@ on:
 
 jobs:
   integration:
-    name: Integration tests (real JAR)
-    runs-on: ubuntu-latest
+    # The unit job runs with -short and never touches exec.Command("java"),
+    # the JAR download or the temp IG bundling in internal/localig — that all
+    # sits behind the integration tag. macOS is here because it is where those
+    # paths differ and where the Homebrew cask installs.
+    name: Integration tests (real JAR, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,7 +44,8 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.fhirlint
-          key: fhirlint-jar-${{ hashFiles('internal/validator/jar.go') }}
+          # Scoped by OS so the two runners cannot restore each other's cache.
+          key: fhirlint-jar-${{ runner.os }}-${{ hashFiles('internal/validator/jar.go') }}
 
       - name: Run integration tests
         run: go test -v -tags integration -count=1 -timeout 10m ./internal/validator/...
