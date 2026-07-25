@@ -2,9 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
+	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/spf13/cobra"
 )
@@ -20,11 +19,11 @@ var cacheClearCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir, _ := cmd.Flags().GetString("cache-dir")
 		if dir == "" {
-			home, err := os.UserHomeDir()
+			resolved, err := cache.ResultCacheDir()
 			if err != nil {
-				return fmt.Errorf("resolving home dir: %w", err)
+				return fmt.Errorf("resolving cache dir: %w", err)
 			}
-			dir = filepath.Join(home, ".fhirlint", "result-cache")
+			dir = resolved
 		}
 		n, err := resultcache.Clear(dir)
 		if err != nil {

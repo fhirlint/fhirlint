@@ -22,6 +22,7 @@ func TestDir_CreatesDirectory(t *testing.T) {
 }
 
 func TestDir_IsUnderHomeDir(t *testing.T) {
+	t.Setenv(DirEnvVar, "") // this test is about the home-based default
 	home, _ := os.UserHomeDir()
 	dir, err := Dir()
 	if err != nil {
@@ -33,6 +34,7 @@ func TestDir_IsUnderHomeDir(t *testing.T) {
 }
 
 func TestDir_ContainsFhirlint(t *testing.T) {
+	t.Setenv(DirEnvVar, "") // this test is about the home-based default
 	dir, err := Dir()
 	if err != nil {
 		t.Fatalf("Dir() error: %v", err)
@@ -92,5 +94,65 @@ func TestDir_IdempotentCalls(t *testing.T) {
 	}
 	if dir1 != dir2 {
 		t.Errorf("Dir() not idempotent: %q != %q", dir1, dir2)
+	}
+}
+
+func TestDir_HonoursEnvOverride(t *testing.T) {
+	want := filepath.Join(t.TempDir(), "custom-cache")
+	t.Setenv(DirEnvVar, want)
+
+	dir, err := Dir()
+	if err != nil {
+		t.Fatalf("Dir() error: %v", err)
+	}
+	if dir != want {
+		t.Errorf("expected %q, got %q", want, dir)
+	}
+	// The override must be created, not merely returned — callers write into it
+	// straight away.
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("override directory was not created: %v", err)
+	}
+	if !info.IsDir() {
+		t.Errorf("%q is not a directory", dir)
+	}
+}
+
+func TestDir_EmptyEnvFallsBackToHome(t *testing.T) {
+	t.Setenv(DirEnvVar, "   ")
+	home, _ := os.UserHomeDir()
+
+	dir, err := Dir()
+	if err != nil {
+		t.Fatalf("Dir() error: %v", err)
+	}
+	if !strings.HasPrefix(dir, home) {
+		t.Errorf("a blank override must fall back to the home dir, got %q", dir)
+	}
+}
+
+// Every cache path must sit inside the override, or an override that only moves
+// some of the files is worse than none.
+func TestCachePaths_AllInsideEnvOverride(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv(DirEnvVar, root)
+
+	paths := map[string]func() (string, error){
+		"JARPath":              JARPath,
+		"ValidatorVersionPath": ValidatorVersionPath,
+		"UpdateCheckPath":      UpdateCheckPath,
+		"ChecksumStatusPath":   ChecksumStatusPath,
+		"ResultCacheDir":       ResultCacheDir,
+	}
+	for name, fn := range paths {
+		got, err := fn()
+		if err != nil {
+			t.Errorf("%s() error: %v", name, err)
+			continue
+		}
+		if !strings.HasPrefix(got, root) {
+			t.Errorf("%s() = %q, expected it inside the override %q", name, got, root)
+		}
 	}
 }

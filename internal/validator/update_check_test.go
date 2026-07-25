@@ -72,15 +72,11 @@ func TestCheckForUpdate_ReturnsEmptyWhenUpToDate(t *testing.T) {
 }
 
 func TestCheckForUpdate_ReturnsEmptyWhenVersionUnknown(t *testing.T) {
-	// Redirect the cache to an empty temp HOME so there is no version file AND
-	// no JAR — otherwise ValidatorVersion() falls back to the real JAR's
-	// manifest and reports a concrete version, which makes this case unreachable
-	// (and the test fails whenever a JAR is installed, e.g. in the integration job).
-	// USERPROFILE too: os.UserHomeDir() reads that on Windows and ignores HOME,
-	// so setting HOME alone would leave the real cache in play.
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("USERPROFILE", dir)
+	// Point the cache at an empty temp dir so there is no version file AND no
+	// JAR — otherwise ValidatorVersion() falls back to the real JAR's manifest
+	// and reports a concrete version, which makes this case unreachable (and
+	// the test fails whenever a JAR is installed, e.g. in the integration job).
+	t.Setenv(cache.DirEnvVar, t.TempDir())
 
 	got := CheckForUpdate()
 	if got != "" {
