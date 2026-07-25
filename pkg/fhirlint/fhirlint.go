@@ -79,6 +79,12 @@ type Options struct {
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
 
+	// ValidatorVersion pins the auto-downloaded JAR to a specific upstream
+	// release (e.g. "6.9.12"). Empty tracks the latest release, which means
+	// results can change when HL7 publishes a new validator. Ignored when
+	// JARPath is set.
+	ValidatorVersion string
+
 	// ExtraArgs are raw arguments appended verbatim to the validator JAR
 	// invocation, an escape hatch for validator options fhirlint does not
 	// model yet. They are not validated; arguments that collide with the
@@ -244,6 +250,7 @@ func toInternalOpts(opts Options) validator.Options {
 		DisplayIssuesAreWarnings: opts.DisplayIssuesAreWarnings,
 		POFiles:                  opts.POFiles,
 		JARPath:                  opts.JARPath,
+		ValidatorVersion:         opts.ValidatorVersion,
 		ExtraArgs:                opts.ExtraArgs,
 		Timeout:                  opts.Timeout,
 	}

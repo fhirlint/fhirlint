@@ -367,6 +367,12 @@
         "null"
       ]
     },
+    "validator-version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "valueset": {
       "items": {
         "type": "string"

@@ -83,6 +83,7 @@ type Options struct {
 	DisplayIssuesAreWarnings bool          // downgrade coded-display mismatches to warnings (-display-issues-are-warnings)
 	POFiles                  []string      // .po translation override files loaded at runtime (-po, repeatable)
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	ValidatorVersion         string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
 	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
 	Timeout                  time.Duration // 0 means no timeout
 }
@@ -224,7 +225,7 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 		return err
 	}
 
-	jarPath, err := EnsureJAR(opts.JARPath)
+	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return err
 	}
@@ -271,7 +272,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, err
 	}
 
-	jarPath, err := EnsureJAR(opts.JARPath)
+	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return nil, err
 	}

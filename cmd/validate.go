@@ -489,6 +489,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		DisplayIssuesAreWarnings: flagDisplayIssuesAreWarnings,
 		POFiles:                  flagPO,
 		JARPath:                  viper.GetString("jar"),
+		ValidatorVersion:         viper.GetString("validator-version"),
 		ExtraArgs:                flagValidatorArg,
 		Timeout:                  validatorTimeout,
 	}
@@ -791,7 +792,8 @@ func collectAllIGs(base []string, overrides []configOverride) []string {
 	return out
 }
 
-// runLockWrite writes or updates fhirlint.lock with current IG hashes.
+// runLockWrite writes or updates fhirlint.lock with current IG hashes and the
+// validator version in use.
 func runLockWrite(igs []string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
@@ -804,17 +806,27 @@ func runLockWrite(igs []string) error {
 	if err != nil {
 		return err
 	}
-	if n == 0 {
+	// Record the validator too, so the lock covers every input that can change
+	// the result. This is also why an unchanged package set no longer short-
+	// circuits: the validator may still need recording.
+	running := validator.ValidatorVersion()
+	validatorChanged := running != "" && lf.Validator != running
+	if validatorChanged {
+		lf.Validator = running
+	}
+	if n == 0 && !validatorChanged {
 		return nil
 	}
 	if err := iglock.Write(iglock.LockFileName, lf); err != nil {
 		return fmt.Errorf("writing %s: %w", iglock.LockFileName, err)
 	}
-	fmt.Fprintf(os.Stderr, "Lock file updated: %s (%d package(s))\n", iglock.LockFileName, n)
+	fmt.Fprintf(os.Stderr, "Lock file updated: %s (%d package(s), validator %s)\n",
+		iglock.LockFileName, n, lf.Validator)
 	return nil
 }
 
-// runLockVerify verifies IGs against fhirlint.lock when the file exists.
+// runLockVerify verifies IGs and the validator version against fhirlint.lock
+// when the file exists.
 func runLockVerify(igs []string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
@@ -822,6 +834,9 @@ func runLockVerify(igs []string) error {
 	}
 	if lf == nil {
 		return nil
+	}
+	if err := iglock.VerifyValidator(lf, validator.ValidatorVersion(), os.Stderr); err != nil {
+		return err
 	}
 	return iglock.Verify(lf, igs, os.Stderr)
 }

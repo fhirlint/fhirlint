@@ -49,7 +49,12 @@ func TestAllKnownConfigKeysHaveFlag(t *testing.T) {
 		if configOnlyKeys[key] {
 			continue
 		}
-		if validateCmd.Flags().Lookup(key) == nil {
+		// Root persistent flags count too (--validator-version). Checked via
+		// rootCmd rather than validateCmd.InheritedFlags(), because that call
+		// merges the persistent flags into validateCmd.Flags() as a side effect
+		// and would make the flag-documentation test below fail depending on
+		// which test ran first.
+		if validateCmd.Flags().Lookup(key) == nil && rootCmd.PersistentFlags().Lookup(key) == nil {
 			t.Errorf("configcheck key %q has no --flag in validateCmd — add it or mark it configOnlyKeys", key)
 		}
 	}

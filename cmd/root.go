@@ -10,8 +10,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:          "fhirlint",
-	Short:        "Lightweight FHIR validator CLI",
+	Use:           "fhirlint",
+	Short:         "Lightweight FHIR validator CLI",
 	SilenceErrors: true,
 	Long: `fhirlint validates FHIR resources against profiles and implementation guides.
 
@@ -55,9 +55,13 @@ func init() {
 
 	rootCmd.PersistentFlags().String("config", "", "Config file (default: fhirlint.yml or .fhirlint.yml in project root)")
 	rootCmd.PersistentFlags().String("jar", "", "Path to a local validator_cli.jar (overrides auto-download, also: FHIRLINT_JAR env var)")
+	rootCmd.PersistentFlags().String("validator-version", "",
+		"Pin the auto-downloaded validator JAR to an upstream release, e.g. 6.9.12 (default: latest)")
 	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 	_ = viper.BindPFlag("jar", rootCmd.PersistentFlags().Lookup("jar"))
 	_ = viper.BindEnv("jar", "FHIRLINT_JAR")
+	_ = viper.BindPFlag("validator-version", rootCmd.PersistentFlags().Lookup("validator-version"))
+	_ = viper.BindEnv("validator-version", "FHIRLINT_VALIDATOR_VERSION")
 
 	rootCmd.Version = fhirlintVersion()
 

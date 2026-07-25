@@ -119,8 +119,9 @@ func runStats(_ *cobra.Command, args []string) error {
 
 func validationSummary(paths []string) (*stats.ValidationSummary, error) {
 	results, err := validator.RunMultiple(paths, validator.Options{
-		FHIRVersion: flagStatsFHIRVersion,
-		JARPath:     viper.GetString("jar"),
+		FHIRVersion:      flagStatsFHIRVersion,
+		JARPath:          viper.GetString("jar"),
+		ValidatorVersion: viper.GetString("validator-version"),
 	})
 	if err != nil {
 		return nil, err

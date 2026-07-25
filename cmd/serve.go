@@ -73,6 +73,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		TerminologyServer:   flagServeTerminologyServer,
 		TxCache:             flagServeTxCache,
 		JARPath:             viper.GetString("jar"),
+		ValidatorVersion:    viper.GetString("validator-version"),
 	}
 
 	fmt.Fprintf(os.Stderr, "Starting validator server on port %d (FHIR %s)…\n", cfg.Port, cfg.FHIRVersion)

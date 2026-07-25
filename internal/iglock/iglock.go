@@ -23,7 +23,36 @@ type Entry struct {
 
 // LockFile is the in-memory representation of fhirlint.lock.
 type LockFile struct {
-	Packages map[string]Entry `json:"packages"`
+	// Validator is the upstream validator release the lock was written against.
+	// Omitted in files written before validator pinning existed, and treated as
+	// "unknown, do not check" when absent so those keep working.
+	Validator string           `json:"validator,omitempty"`
+	Packages  map[string]Entry `json:"packages"`
+}
+
+// VerifyValidator checks the running validator against the version recorded in
+// the lock file. Pinning the IG packages but not the validator leaves the JAR as
+// the one unpinned input: the same sources and the same lock file can still
+// produce different findings after an upstream release.
+//
+// A lock file without a recorded version, or an unknown running version, is
+// skipped with a warning rather than failing — neither is evidence of a mismatch.
+func VerifyValidator(lf *LockFile, running string, w io.Writer) error {
+	if lf.Validator == "" {
+		_, _ = fmt.Fprintf(w, "warn: no validator version in lock file — run with --lock to record it\n")
+		return nil
+	}
+	if running == "" {
+		_, _ = fmt.Fprintf(w, "warn: cannot determine the running validator version — skipping lock check\n")
+		return nil
+	}
+	if running != lf.Validator {
+		return fmt.Errorf(
+			"lock file expects validator %s, running %s — "+
+				"pin it with --validator-version %s, or run with --lock to accept %s",
+			lf.Validator, running, lf.Validator, running)
+	}
+	return nil
 }
 
 // ParseIGID splits a "name#version" IG string into its components.

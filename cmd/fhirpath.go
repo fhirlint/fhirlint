@@ -79,9 +79,10 @@ func runFHIRPath(_ *cobra.Command, args []string) error {
 	}
 
 	result, err := validator.RunFHIRPath(expr, in.Path, validator.FHIRPathOptions{
-		FHIRVersion: flagFHIRPathFHIRVersion,
-		JARPath:     viper.GetString("jar"),
-		Timeout:     5 * time.Minute,
+		FHIRVersion:      flagFHIRPathFHIRVersion,
+		JARPath:          viper.GetString("jar"),
+		ValidatorVersion: viper.GetString("validator-version"),
+		Timeout:          5 * time.Minute,
 	})
 	if err != nil {
 		return &exitErr{code: 2, err: err}

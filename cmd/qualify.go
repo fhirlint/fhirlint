@@ -87,7 +87,7 @@ func runQualify(_ *cobra.Command, _ []string) error {
 		return &exitErr{code: 2, err: fmt.Errorf("no test cases to run")}
 	}
 
-	jarPath, err := validator.EnsureJAR(viper.GetString("jar"))
+	jarPath, err := validator.EnsureJAR(viper.GetString("jar"), viper.GetString("validator-version"))
 	if err != nil {
 		return &exitErr{code: 2, err: fmt.Errorf("preparing validator JAR: %w", err)}
 	}

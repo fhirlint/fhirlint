@@ -192,6 +192,13 @@ ignore:
 #   - -some-new-validator-flag
 #   - value-for-that-flag
 
+# Pin the auto-downloaded validator JAR to a specific upstream release.
+# Without this fhirlint tracks the latest release, so a fresh CI runner can pick
+# up a new validator and report different findings from unchanged sources.
+# Commit this alongside fhirlint.lock for reproducible runs.
+# Move the pin deliberately: fhirlint update --validator-version <new>
+# validator-version: "6.9.12"
+
 # Check referential integrity across the validated set (dangling references).
 # Unresolved local references (relative, urn:uuid, contained #id) are errors
 # (ref:unresolved); absolute references to external servers are information

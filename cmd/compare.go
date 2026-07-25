@@ -116,11 +116,12 @@ func runCompare(_ *cobra.Command, _ []string) error {
 	defer cleanup()
 
 	result, err := validator.RunCompare(leftCanonical, rightCanonical, validator.CompareOptions{
-		FHIRVersion: flagCompareFHIRVersion,
-		IGs:         igs,
-		DestDir:     destDir,
-		JARPath:     viper.GetString("jar"),
-		Timeout:     10 * time.Minute,
+		FHIRVersion:      flagCompareFHIRVersion,
+		IGs:              igs,
+		DestDir:          destDir,
+		JARPath:          viper.GetString("jar"),
+		ValidatorVersion: viper.GetString("validator-version"),
+		Timeout:          10 * time.Minute,
 	})
 	if err != nil {
 		return &exitErr{code: 2, err: err}

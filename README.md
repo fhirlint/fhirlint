@@ -1082,7 +1082,7 @@ fhirlint validate patient.json --fail-on never
 
 ### IG lock file
 
-`--lock` writes a `fhirlint.lock` file containing SHA256 hashes of all resolved IG packages. On subsequent runs (without `--lock`), fhirlint verifies that cached packages match the recorded hashes, ensuring reproducible builds.
+`--lock` writes a `fhirlint.lock` file containing SHA256 hashes of all resolved IG packages **and the validator version they were validated against**. On subsequent runs (without `--lock`), fhirlint verifies that cached packages match the recorded hashes and that the validator in use is the recorded one.
 
 ```bash
 # Generate or update the lock file
@@ -1093,6 +1093,36 @@ fhirlint validate ./fhir/
 ```
 
 Commit `fhirlint.lock` to version control. This prevents silent package changes from affecting CI results.
+
+### Pinning the validator
+
+The IG packages are only half the input. By default fhirlint downloads whatever HL7 published most recently, so a fresh CI runner can pick up a new validator and report different findings from the same sources and the same lock file.
+
+`--validator-version` pins it:
+
+```yaml
+# fhirlint.yml
+validator-version: "6.9.12"
+```
+
+```bash
+fhirlint validate ./fhir/ --validator-version 6.9.12
+```
+
+The cache holds one JAR at a time, so switching between pinned versions re-downloads it. Move a pin deliberately with:
+
+```bash
+fhirlint update --validator-version 6.9.13
+```
+
+The lock file records the version in use, and a later run against a different validator fails rather than quietly producing different results:
+
+```
+Error: lock file expects validator 6.9.12, running 6.9.13 — pin it with
+--validator-version 6.9.12, or run with --lock to accept 6.9.13
+```
+
+Lock files written before this existed carry no validator version; those runs warn instead of failing, so nothing breaks on upgrade. `--jar` takes precedence over a pin — you are pointing at a specific file — and warns if that file is a different version than the pin.
 
 ### Result caching
 
@@ -1252,6 +1282,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
 | `--watch-interval` | — | Polling interval for `--watch` in milliseconds |
 | `--jar` | — | Path to a local validator JAR (overrides auto-download; also via `FHIRLINT_JAR`) |
+| `--validator-version` | latest | Pin the auto-downloaded validator to an upstream release, e.g. `6.9.12` (also via `FHIRLINT_VALIDATOR_VERSION`) |
 
 ### `fhirlint.yml` keys
 

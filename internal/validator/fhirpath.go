@@ -11,9 +11,10 @@ import (
 
 // FHIRPathOptions configures a FHIRPath evaluation.
 type FHIRPathOptions struct {
-	FHIRVersion string        // FHIR context version (e.g. "4.0.1")
-	JARPath     string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
-	Timeout     time.Duration // 0 means no timeout
+	FHIRVersion      string        // FHIR context version (e.g. "4.0.1")
+	JARPath          string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	ValidatorVersion string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
+	Timeout          time.Duration // 0 means no timeout
 }
 
 // FHIRPathResult holds the outcome of evaluating one FHIRPath expression.
@@ -47,7 +48,7 @@ func RunFHIRPath(expr, inputPath string, opts FHIRPathOptions) (*FHIRPathResult,
 		return nil, err
 	}
 
-	jarPath, err := EnsureJAR(opts.JARPath)
+	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return nil, err
 	}

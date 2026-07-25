@@ -3,6 +3,7 @@ package validator
 import (
 	"archive/zip"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,22 +16,49 @@ import (
 )
 
 const (
-	jarURL        = "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar"
+	jarLatestURL  = "https://github.com/hapifhir/org.hl7.fhir.core/releases/latest/download/validator_cli.jar"
 	jarSourceRepo = "https://github.com/hapifhir/org.hl7.fhir.core"
 )
 
 var versionFromURL = regexp.MustCompile(`/releases/download/([^/]+)/`)
 
+// errNoSuchRelease marks a pinned version that upstream does not have, so the
+// caller can skip the firewall/proxy advice that does not apply to a typo.
+var errNoSuchRelease = errors.New("no validator release")
+
+// jarURLForVersion returns the download URL for a specific validator release,
+// or the "latest" URL when version is empty.
+func jarURLForVersion(version string) string {
+	if version == "" {
+		return jarLatestURL
+	}
+	return jarSourceRepo + "/releases/download/" + version + "/validator_cli.jar"
+}
+
 // EnsureJAR returns the path to the validator JAR.
 // If override is non-empty (from --jar flag or FHIRLINT_JAR env var), that path is used directly.
 // Otherwise the JAR is auto-downloaded to the cache directory on first use.
-func EnsureJAR(override string) (string, error) {
+//
+// A non-empty version pins the JAR to that upstream release. The cache holds one
+// JAR at a time, so switching between pinned versions re-downloads; that keeps the
+// cache path stable for the Docker image, which bakes the JAR in at build time.
+func EnsureJAR(override, version string) (string, error) {
 	if override != "" {
 		if _, err := os.Stat(override); err != nil {
 			return "", fmt.Errorf("JAR not found at %q (set via --jar or FHIRLINT_JAR): %w", override, err)
 		}
 		if !isValidJAR(override) {
 			return "", fmt.Errorf("JAR at %q appears to be corrupted or is not a valid JAR file", override)
+		}
+		// An explicit JAR path wins over a pin: the user is pointing at a
+		// specific file, and silently re-downloading over it would be worse
+		// than the mismatch. Say so rather than letting it pass unnoticed.
+		if version != "" {
+			if got := versionFromJARManifest(override); got != "" && got != version {
+				fmt.Fprintf(os.Stderr,
+					"warning: --jar points at validator %s but %s is pinned — using %s\n",
+					got, version, got)
+			}
 		}
 		return override, nil
 	}
@@ -41,24 +69,42 @@ func EnsureJAR(override string) (string, error) {
 	}
 
 	_, statErr := os.Stat(jarPath)
+	needsDownload := os.IsNotExist(statErr)
+
 	if statErr == nil && !isValidJAR(jarPath) {
 		fmt.Fprintln(os.Stderr, "validator JAR appears to be corrupted — re-downloading...")
-		_ = os.Remove(jarPath)
-		statErr = os.ErrNotExist
+		needsDownload = true
 	}
 
-	if os.IsNotExist(statErr) {
-		fmt.Fprintln(os.Stderr, "Downloading FHIR validator JAR (first run, ~250 MB)...")
-		if err := downloadJAR(jarPath); err != nil {
-			_ = os.Remove(jarPath)
-			fmt.Fprintf(os.Stderr,
-				"\nJAR download failed (URL: %s).\n"+
-					"To work around firewall or proxy restrictions, download the JAR manually\n"+
-					"from %s/releases and use:\n"+
-					"  --jar /path/to/validator_cli.jar\n"+
-					"  FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate\n\n",
-				jarURL, jarSourceRepo,
-			)
+	// A pin that does not match what is cached means fetching the pinned release.
+	// The cached JAR stays in place until the replacement is on disk: a typo in
+	// the version or an offline runner must not leave the user with no validator.
+	if !needsDownload && version != "" && ValidatorVersion() != version {
+		fmt.Fprintf(os.Stderr, "Cached validator is %s, %s is pinned — downloading...\n",
+			ValidatorVersion(), version)
+		needsDownload = true
+	}
+
+	if needsDownload {
+		if version == "" {
+			fmt.Fprintln(os.Stderr, "Downloading FHIR validator JAR (first run, ~250 MB)...")
+		} else {
+			fmt.Fprintf(os.Stderr, "Downloading FHIR validator JAR %s (~250 MB)...\n", version)
+		}
+		if err := downloadJAR(jarPath, version); err != nil {
+			// No os.Remove here: downloadJAR only replaces jarPath once the new
+			// file is complete and checksum-checked, so whatever was cached
+			// before is still usable.
+			if !errors.Is(err, errNoSuchRelease) {
+				fmt.Fprintf(os.Stderr,
+					"\nJAR download failed (URL: %s).\n"+
+						"To work around firewall or proxy restrictions, download the JAR manually\n"+
+						"from %s/releases and use:\n"+
+						"  --jar /path/to/validator_cli.jar\n"+
+						"  FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate\n\n",
+					jarURLForVersion(version), jarSourceRepo,
+				)
+			}
 			return "", fmt.Errorf("downloading JAR: %w", err)
 		}
 		fmt.Fprintln(os.Stderr, "Download complete.")
@@ -82,13 +128,20 @@ func isValidJAR(path string) bool {
 	return magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04
 }
 
-func UpdateJAR() error {
+// UpdateJAR re-downloads the validator JAR. An empty version fetches the latest
+// release; a non-empty one fetches exactly that release, which is how a pin is
+// moved deliberately rather than by drift.
+func UpdateJAR(version string) error {
 	jarPath, err := cache.JARPath()
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "Updating FHIR validator JAR...")
-	if err := downloadJAR(jarPath); err != nil {
+	if version == "" {
+		fmt.Fprintln(os.Stderr, "Updating FHIR validator JAR...")
+	} else {
+		fmt.Fprintf(os.Stderr, "Updating FHIR validator JAR to %s...\n", version)
+	}
+	if err := downloadJAR(jarPath, version); err != nil {
 		return fmt.Errorf("updating JAR: %w", err)
 	}
 	fmt.Fprintln(os.Stderr, "Update complete.")
@@ -187,14 +240,20 @@ func formatBytes(n int64) string {
 	}
 }
 
-func downloadJAR(dest string) error {
-	return downloadJARFrom(jarURL, dest)
+func downloadJAR(dest, pinned string) error {
+	return downloadJARFrom(jarURLForVersion(pinned), dest, pinned)
 }
 
-func downloadJARFrom(url, dest string) error {
+// downloadJARFrom fetches the JAR at url into dest. pinned is the release the
+// caller asked for, empty when tracking latest.
+func downloadJARFrom(url, dest, pinned string) error {
 	// GitHub redirects /releases/latest/download/ → /releases/download/VERSION/ → CDN.
 	// The final URL is a CDN URL without the version; capture it from the intermediate redirect.
-	var version string
+	//
+	// A pinned URL is already /releases/download/VERSION/, so it redirects straight
+	// to the CDN and the callback never sees a URL carrying the version — seed it
+	// from the pin instead, or the checksum lookup below has nothing to work with.
+	version := pinned
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
 			if m := versionFromURL.FindStringSubmatch(req.URL.String()); len(m) == 2 {
@@ -209,18 +268,26 @@ func downloadJARFrom(url, dest string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound && pinned != "" {
+			return fmt.Errorf(
+				"%w %q (HTTP 404 from %s) — check the pinned version against %s/releases",
+				errNoSuchRelease, pinned, url, jarSourceRepo)
+		}
 		return fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
 	}
 
-	if version != "" {
-		_ = saveValidatorVersion(version)
-	}
-
-	f, err := os.Create(dest) //nolint:gosec // intentional: dest is our own cache path
+	// Download beside the destination and move it into place only once the file
+	// is complete and checksum-checked, so a failed or tampered download leaves
+	// any previously cached JAR untouched and usable.
+	tmp := dest + ".download"
+	f, err := os.Create(tmp) //nolint:gosec // intentional: our own cache path
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(tmp) // no-op once the rename below has succeeded
+	}()
 	pw := &progressWriter{dest: f, out: os.Stderr, total: resp.ContentLength}
 	if _, err = io.Copy(pw, resp.Body); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr)
@@ -231,13 +298,21 @@ func downloadJARFrom(url, dest string) error {
 		return err
 	}
 
-	verified, err := verifyJARChecksum(dest, version)
+	verified, err := verifyJARChecksum(tmp, version)
 	if err != nil {
-		_ = os.Remove(dest)
 		return fmt.Errorf(
 			"JAR checksum mismatch — download may be corrupted or tampered with.\n"+
-				"File deleted. Re-run fhirlint to attempt a fresh download.\n"+
+				"Discarded; any previously cached JAR is untouched.\n"+
 				"Details: %w", err)
+	}
+
+	if err := os.Rename(tmp, dest); err != nil {
+		return err
+	}
+	// Recorded only now: a version file written ahead of a failed download would
+	// label the still-cached older JAR as the version that never arrived.
+	if version != "" {
+		_ = saveValidatorVersion(version)
 	}
 	_ = saveChecksumStatus(verified)
 	if !verified {
