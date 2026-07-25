@@ -242,3 +242,84 @@ func TestUpdate_ErrorForMissingPackage(t *testing.T) {
 	}
 }
 
+func TestVerifyValidator_Matching(t *testing.T) {
+	lf := &iglock.LockFile{Validator: "6.9.12"}
+	var w strings.Builder
+	if err := iglock.VerifyValidator(lf, "6.9.12", &w); err != nil {
+		t.Errorf("expected no error for a matching version, got: %v", err)
+	}
+	if w.Len() != 0 {
+		t.Errorf("expected no output on a match, got: %q", w.String())
+	}
+}
+
+func TestVerifyValidator_Mismatch(t *testing.T) {
+	lf := &iglock.LockFile{Validator: "6.9.12"}
+	var w strings.Builder
+	err := iglock.VerifyValidator(lf, "6.9.13", &w)
+	if err == nil {
+		t.Fatal("expected an error when the running validator differs from the lock")
+	}
+	if !strings.Contains(err.Error(), "6.9.12") || !strings.Contains(err.Error(), "6.9.13") {
+		t.Errorf("error should name both versions, got: %v", err)
+	}
+}
+
+// Lock files written before validator pinning existed have no version recorded.
+// Those must keep working rather than failing every run after an upgrade.
+func TestVerifyValidator_NoVersionRecorded_WarnsOnly(t *testing.T) {
+	lf := &iglock.LockFile{Packages: map[string]iglock.Entry{}}
+	var w strings.Builder
+	if err := iglock.VerifyValidator(lf, "6.9.12", &w); err != nil {
+		t.Errorf("a lock file without a validator version must not fail, got: %v", err)
+	}
+	if !strings.Contains(w.String(), "no validator version") {
+		t.Errorf("expected a warning about the missing version, got: %q", w.String())
+	}
+}
+
+func TestVerifyValidator_UnknownRunningVersion_WarnsOnly(t *testing.T) {
+	lf := &iglock.LockFile{Validator: "6.9.12"}
+	var w strings.Builder
+	if err := iglock.VerifyValidator(lf, "", &w); err != nil {
+		t.Errorf("an unknown running version is not evidence of a mismatch, got: %v", err)
+	}
+	if !strings.Contains(w.String(), "cannot determine") {
+		t.Errorf("expected a warning about the unknown version, got: %q", w.String())
+	}
+}
+
+// A lock file from before pinning must round-trip without growing a validator
+// key, so committing it back does not produce spurious diffs.
+func TestLockFile_OmitsValidatorWhenUnset(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fhirlint.lock")
+	if err := iglock.Write(path, &iglock.LockFile{Packages: map[string]iglock.Entry{}}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // path is this test's own t.TempDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "validator") {
+		t.Errorf("an unset validator must be omitted from the lock file, got: %s", data)
+	}
+}
+
+func TestLockFile_RoundTripsValidator(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fhirlint.lock")
+	if err := iglock.Write(path, &iglock.LockFile{
+		Validator: "6.9.12",
+		Packages:  map[string]iglock.Entry{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	read, err := iglock.Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.Validator != "6.9.12" {
+		t.Errorf("expected validator 6.9.12 to round-trip, got %q", read.Validator)
+	}
+}

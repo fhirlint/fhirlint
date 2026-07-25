@@ -30,6 +30,7 @@ type ServerConfig struct {
 	TerminologyServer   string
 	TxCache             string
 	JARPath             string
+	ValidatorVersion    string
 }
 
 // Server is a handle to a running validator HTTP server process.
@@ -71,7 +72,7 @@ func StartServer(cfg ServerConfig, logW io.Writer, readyTimeout time.Duration) (
 	if err := validateFHIRVersion(cfg.FHIRVersion); err != nil {
 		return nil, err
 	}
-	jarPath, err := EnsureJAR(cfg.JARPath)
+	jarPath, err := EnsureJAR(cfg.JARPath, cfg.ValidatorVersion)
 	if err != nil {
 		return nil, err
 	}

@@ -161,7 +161,7 @@ func TestIsValidJAR_NonExistent(t *testing.T) {
 func TestEnsureJAR_Override_ExistingFile(t *testing.T) {
 	path := writeJAR(t, append(zipMagic, []byte("fake jar content")...))
 
-	got, err := EnsureJAR(path)
+	got, err := EnsureJAR(path, "")
 	if err != nil {
 		t.Fatalf("EnsureJAR() error: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestEnsureJAR_Override_ExistingFile(t *testing.T) {
 func TestEnsureJAR_Override_CorruptedFile_ReturnsError(t *testing.T) {
 	path := writeJAR(t, []byte("not a jar"))
 
-	_, err := EnsureJAR(path)
+	_, err := EnsureJAR(path, "")
 	if err == nil {
 		t.Error("expected error for corrupted JAR, got nil")
 	}
@@ -286,7 +286,7 @@ func TestVerifyJARChecksum_EmptyChecksumFile_DoesNotPanic(t *testing.T) {
 }
 
 func TestEnsureJAR_Override_MissingFile_ReturnsError(t *testing.T) {
-	_, err := EnsureJAR("/nonexistent/validator_cli.jar")
+	_, err := EnsureJAR("/nonexistent/validator_cli.jar", "")
 	if err == nil {
 		t.Error("expected error for non-existent JAR path, got nil")
 	}
@@ -390,7 +390,7 @@ func TestDownloadJARFrom_CapturesVersionFromRedirect(t *testing.T) {
 	t.Setenv("FHIRLINT_CACHE_DIR", tmp)
 
 	dest := tmp + "/validator_cli.jar"
-	if err := downloadJARFrom(gh.URL+"/releases/latest/download/validator_cli.jar", dest); err != nil {
+	if err := downloadJARFrom(gh.URL+"/releases/latest/download/validator_cli.jar", dest, ""); err != nil {
 		t.Fatalf("downloadJARFrom() error: %v", err)
 	}
 
@@ -405,5 +405,25 @@ func TestDownloadJARFrom_CapturesVersionFromRedirect(t *testing.T) {
 	got := strings.TrimSpace(string(data))
 	if got != "6.9.7" {
 		t.Errorf("expected version %q, got %q", "6.9.7", got)
+	}
+}
+
+func TestJARURLForVersion_EmptyTracksLatest(t *testing.T) {
+	got := jarURLForVersion("")
+	if got != jarLatestURL {
+		t.Errorf("expected the latest URL for an empty version, got %q", got)
+	}
+}
+
+func TestJARURLForVersion_PinnedTargetsThatRelease(t *testing.T) {
+	got := jarURLForVersion("6.9.12")
+	want := "https://github.com/hapifhir/org.hl7.fhir.core/releases/download/6.9.12/validator_cli.jar"
+	if got != want {
+		t.Errorf("expected %q, got %q", want, got)
+	}
+	// The version regex must be able to read the version back out of a pinned
+	// URL, since that is what the checksum lookup keys on.
+	if m := versionFromURL.FindStringSubmatch(got); len(m) != 2 || m[1] != "6.9.12" {
+		t.Errorf("versionFromURL could not recover the version from %q", got)
 	}
 }

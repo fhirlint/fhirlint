@@ -15,11 +15,12 @@ import (
 
 // CompareOptions configures a profile comparison.
 type CompareOptions struct {
-	FHIRVersion string        // FHIR context version (e.g. "4.0.1")
-	IGs         []string      // implementation guides / files to load (-ig): both sides plus extras
-	DestDir     string        // directory the JAR writes its HTML site to; created if needed
-	JARPath     string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
-	Timeout     time.Duration // 0 means no timeout
+	FHIRVersion      string        // FHIR context version (e.g. "4.0.1")
+	IGs              []string      // implementation guides / files to load (-ig): both sides plus extras
+	DestDir          string        // directory the JAR writes its HTML site to; created if needed
+	JARPath          string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
+	ValidatorVersion string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
+	Timeout          time.Duration // 0 means no timeout
 }
 
 // CompareMessage is one difference the validator's ComparisonService reports
@@ -62,7 +63,7 @@ func RunCompare(left, right string, opts CompareOptions) (*CompareResult, error)
 		return nil, fmt.Errorf("creating output directory: %w", err)
 	}
 
-	jarPath, err := EnsureJAR(opts.JARPath)
+	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return nil, err
 	}
