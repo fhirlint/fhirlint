@@ -122,7 +122,7 @@ go install github.com/fhirlint/fhirlint@latest
 docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint validate /work/fhir/
 
 # Pin to a specific version
-docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.5.0 validate /work/fhir/
+docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.6.0 validate /work/fhir/
 ```
 
 The image includes a JRE — no separate Java installation required.
@@ -146,7 +146,7 @@ Group `0` matters: the baked-in validator JAR and the cache directory are group-
 
 #### Verifying the image
 
-From **v1.5.0** onward, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry a build-provenance attestation. The SBOM attestation applies from the release after v1.5.0 — the v1.5.0 image is signed and provenance-attested but has no SBOM attestation ([#266](https://github.com/fhirlint/fhirlint/issues/266)).
+From **v1.5.0** onward, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry a build-provenance attestation. The SBOM attestation applies from **v1.6.0** onward — the v1.5.0 image is signed and provenance-attested but has no SBOM attestation ([#266](https://github.com/fhirlint/fhirlint/issues/266)).
 
 Check the signature:
 
@@ -172,7 +172,7 @@ Images published before v1.5.0 are unsigned.
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.5.0
+- uses: fhirlint/fhirlint@v1.6.0
   with:
     path: ./fhir/
     fail-on: error
@@ -186,7 +186,7 @@ Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format
 `--format github` emits [workflow commands](https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions), which the runner turns into annotations shown directly on the offending lines in the PR's "Files changed" view:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.5.0
+- uses: fhirlint/fhirlint@v1.6.0
   with:
     path: ./fhir/
     format: github
@@ -235,7 +235,7 @@ fhirlint ships hook definitions for the [pre-commit](https://pre-commit.com/) fr
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/fhirlint/fhirlint
-    rev: v1.5.0
+    rev: v1.6.0
     hooks:
       - id: fhirlint
         files: ^input/resources/.*\.json$
