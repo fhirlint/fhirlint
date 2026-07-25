@@ -24,6 +24,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Verify module cache integrity
+        run: go mod verify
+
       - name: Run unit tests
         run: go test -short -race -count=1 -coverprofile=coverage.out ./...
 

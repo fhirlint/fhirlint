@@ -40,6 +40,9 @@ jobs:
           go-version-file: go.mod
           cache: false
 
+      - name: Verify module cache integrity
+        run: go mod verify
+
       # GoReleaser's `sboms` block shells out to syft, so it has to be on PATH
       # before the release runs.
       - name: Install syft
