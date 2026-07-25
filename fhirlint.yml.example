@@ -202,6 +202,16 @@ ignore:
 # validation-timeout: 2m
 # max-messages: 500
 
+# Proxy for the validator's terminology calls, as host:port. fhirlint's own
+# requests already honour HTTP_PROXY/HTTPS_PROXY; the JAR does not, which is why
+# these exist. Both default to those environment variables when unset.
+# proxy: proxy.example.org:3128
+# https-proxy: proxy.example.org:3128
+#
+# Credentials for a proxy requiring basic auth go in FHIRLINT_PROXY_AUTH
+# ("username:password"). There is deliberately no key for them here — this file
+# is meant to be committed.
+
 # Pin the auto-downloaded validator JAR to a specific upstream release.
 # Without this fhirlint tracks the latest release, so a fresh CI runner can pick
 # up a new validator and report different findings from unchanged sources.

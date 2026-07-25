@@ -73,6 +73,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		TerminologyServer:   flagServeTerminologyServer,
 		TxCache:             flagServeTxCache,
 		JARPath:             viper.GetString("jar"),
+		Proxy:               validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 		ValidatorVersion:    viper.GetString("validator-version"),
 	}
 

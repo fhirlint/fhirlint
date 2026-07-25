@@ -89,6 +89,8 @@ var (
 	flagCacheDir                 string
 	flagTimeout                  string
 	flagValidationTimeout        string
+	flagProxy                    string
+	flagHTTPSProxy               string
 	flagMaxMessages              int
 	flagURLTimeout               string
 	flagLock                     bool
@@ -199,6 +201,14 @@ func init() {
 		"Stop after this many validation messages and report partial results. 0 = unbounded.")
 	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
 	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
+	// Credentials deliberately have no flag and no config key — see
+	// validator.ProxyAuthEnvVar.
+	validateCmd.Flags().StringVar(&flagProxy, "proxy", "",
+		"HTTP proxy for the validator's terminology calls, host:port (default: $HTTP_PROXY)")
+	validateCmd.Flags().StringVar(&flagHTTPSProxy, "https-proxy", "",
+		"HTTPS proxy for the validator's terminology calls, host:port (default: $HTTPS_PROXY)")
+	_ = viper.BindPFlag("proxy", validateCmd.Flags().Lookup("proxy"))
+	_ = viper.BindPFlag("https-proxy", validateCmd.Flags().Lookup("https-proxy"))
 	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
 	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
@@ -377,6 +387,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("max-messages") && viper.IsSet("max-messages") {
 		flagMaxMessages = viper.GetInt("max-messages")
 	}
+	if !cmd.Flags().Changed("proxy") && viper.IsSet("proxy") {
+		flagProxy = viper.GetString("proxy")
+	}
+	if !cmd.Flags().Changed("https-proxy") && viper.IsSet("https-proxy") {
+		flagHTTPSProxy = viper.GetString("https-proxy")
+	}
 	if !cmd.Flags().Changed("baseline") && viper.IsSet("baseline") {
 		flagBaseline = viper.GetString("baseline")
 	}
@@ -525,6 +541,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		ExtraArgs:                flagValidatorArg,
 		ValidationTimeout:        validationTimeout,
 		MaxMessages:              flagMaxMessages,
+		Proxy:                    validator.ProxyConfig{Proxy: flagProxy, HTTPSProxy: flagHTTPSProxy},
 		Timeout:                  validatorTimeout,
 	}
 

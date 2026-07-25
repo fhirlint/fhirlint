@@ -30,6 +30,7 @@ type ServerConfig struct {
 	TerminologyServer   string
 	TxCache             string
 	JARPath             string
+	Proxy               ProxyConfig
 	ValidatorVersion    string
 }
 
@@ -58,6 +59,7 @@ func serverArgs(jarPath string, cfg ServerConfig) []string {
 	for _, p := range cfg.Profiles {
 		args = append(args, "-profile", p)
 	}
+	args = append(args, proxyArgs(cfg.Proxy)...)
 	return args
 }
 

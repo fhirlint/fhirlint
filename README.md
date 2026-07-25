@@ -1019,6 +1019,44 @@ fhirlint validate patient.json --best-practice error     # escalate to errors
   run: fhirlint validate ./fhir/ --tx-cache .fhirlint-tx-cache/
 ```
 
+### Behind a proxy
+
+Two different programs make network calls here, and they read their configuration differently:
+
+| Call | Made by | Reads |
+|---|---|---|
+| Validator JAR download, `--url` inputs, update check | fhirlint | `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` |
+| Terminology server (`tx.fhir.org`) | the validator JAR | nothing, unless told |
+
+That asymmetry produces a confusing failure on a proxied network: the JAR downloads fine, then validation stalls against the terminology server. `--proxy` and `--https-proxy` close it:
+
+```bash
+fhirlint validate ./fhir/ --https-proxy proxy.example.org:3128
+```
+
+If unset, both default to the standard environment variables, so exporting them the way every other tool expects is usually enough:
+
+```bash
+export HTTPS_PROXY=http://proxy.example.org:3128
+fhirlint validate ./fhir/
+```
+
+The JAR wants a bare `host:port` while the environment variables are URLs, so the scheme is stripped for you. Credentials embedded in the URL (`http://user:pass@proxy:3128`) are split out and passed separately, as the validator requires.
+
+`NO_PROXY` applies to fhirlint's own requests but **not** to the validator's — it has no equivalent option. On a network where the terminology server is reachable directly but everything else goes through a proxy, set `--tx` to a local terminology server or `--no-tx` instead.
+
+#### Proxy credentials
+
+For a proxy requiring basic auth, use the environment:
+
+```bash
+export FHIRLINT_PROXY_AUTH='username:password'
+```
+
+There is deliberately no `--proxy-auth` flag and no `fhirlint.yml` key: the first would put the credential in shell history and CI job logs, the second in a file meant to be committed.
+
+Be aware of what this does not fix. The validator takes the credential as a command-line argument, so it is visible in `ps` to other users on the same host for the duration of the run. fhirlint cannot change that. Where you have the choice, a proxy that does not require basic auth avoids the problem entirely.
+
 ---
 
 ## Watch mode
@@ -1302,6 +1340,8 @@ The schema is **generated from the same key definitions `config check` validates
 | `--timeout` | `5m` | Timeout for the Java validator process |
 | `--validation-timeout` | — | Stop validating after this long and report partial results (e.g. `90s`, `2m`) |
 | `--max-messages` | `0` | Stop after this many validation messages and report partial results (`0` = unbounded) |
+| `--proxy` | `$HTTP_PROXY` | HTTP proxy for the validator's terminology calls, `host:port` |
+| `--https-proxy` | `$HTTPS_PROXY` | HTTPS proxy for the validator's terminology calls, `host:port` |
 | `--cache` | `false` | Cache validation results per file hash |
 | `--cache-dir` | — | Directory for result cache (default: `~/.fhirlint/result-cache/`) |
 | `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |

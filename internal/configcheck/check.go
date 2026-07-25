@@ -91,6 +91,8 @@ var topLevelKeys = map[string]keySpec{
 	"validator-arg":               {kind: kindStringList},
 	"validation-timeout":          {kind: kindString},
 	"max-messages":                {kind: kindInt},
+	"proxy":                       {kind: kindString},
+	"https-proxy":                 {kind: kindString},
 	"validator-version":           {kind: kindString},
 	"require-suppress-reason":     {kind: kindBool},
 	"show-source":                 {kind: kindBool},
