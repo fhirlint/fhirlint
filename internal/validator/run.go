@@ -85,6 +85,7 @@ type Options struct {
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 	ValidatorVersion         string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
 	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
+	Proxy                    ProxyConfig   // http/https proxy for the JAR's terminology calls (-proxy/-https-proxy/-auth)
 	ValidationTimeout        time.Duration // stop validating after this long, returning partial results (-validation-timeout); 0 = unbounded
 	MaxMessages              int           // stop after this many validation messages, returning partial results (-max-validation-messages); 0 = unbounded
 	Timeout                  time.Duration // 0 means no timeout
@@ -175,6 +176,10 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	if opts.MaxMessages > 0 {
 		args = append(args, "-max-validation-messages", strconv.Itoa(opts.MaxMessages))
 	}
+	// fhirlint's own downloads already honour the proxy environment via Go's
+	// default transport; the JAR does not, so its terminology calls need these
+	// passed explicitly.
+	args = append(args, proxyArgs(opts.Proxy)...)
 	// Passthrough arguments go last so that, for flags the JAR resolves
 	// last-wins, the user's explicit choice takes effect. Reserved flags are
 	// rejected up front by validateExtraArgs.

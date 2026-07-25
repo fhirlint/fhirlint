@@ -107,6 +107,12 @@
       },
       "type": "array"
     },
+    "https-proxy": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "ig": {
       "items": {
         "type": "string"
@@ -259,6 +265,12 @@
     "profile-map": {
       "type": [
         "object",
+        "null"
+      ]
+    },
+    "proxy": {
+      "type": [
+        "string",
         "null"
       ]
     },

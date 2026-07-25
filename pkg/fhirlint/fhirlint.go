@@ -89,6 +89,24 @@ type Options struct {
 	// issues found so far. Zero is unbounded.
 	MaxMessages int
 
+	// Proxy and HTTPSProxy route the validator's terminology calls through a
+	// proxy, as "host:port". Empty falls back to $HTTP_PROXY / $HTTPS_PROXY.
+	//
+	// Note that fhirlint's own HTTP requests already honour those variables via
+	// Go's default transport; these settings exist because the validator JAR
+	// does not read them.
+	Proxy      string
+	HTTPSProxy string
+
+	// ProxyAuth is "username:password" for a proxy requiring basic auth. Empty
+	// falls back to $FHIRLINT_PROXY_AUTH, or to credentials embedded in the
+	// proxy URL.
+	//
+	// The validator takes this as a command-line argument, so the credential is
+	// visible in `ps` to other users on the same host. It is not a secret-safe
+	// channel.
+	ProxyAuth string
+
 	// ValidatorVersion pins the auto-downloaded JAR to a specific upstream
 	// release (e.g. "6.9.12"). Empty tracks the latest release, which means
 	// results can change when HL7 publishes a new validator. Ignored when
@@ -264,7 +282,12 @@ func toInternalOpts(opts Options) validator.Options {
 		ExtraArgs:                opts.ExtraArgs,
 		ValidationTimeout:        opts.ValidationTimeout,
 		MaxMessages:              opts.MaxMessages,
-		Timeout:                  opts.Timeout,
+		Proxy: validator.ProxyConfig{
+			Proxy:      opts.Proxy,
+			HTTPSProxy: opts.HTTPSProxy,
+			Auth:       opts.ProxyAuth,
+		},
+		Timeout: opts.Timeout,
 	}
 }
 
