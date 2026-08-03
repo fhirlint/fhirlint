@@ -97,6 +97,7 @@ var topLevelKeys = map[string]keySpec{
 	"require-suppress-reason":     {kind: kindBool},
 	"show-source":                 {kind: kindBool},
 	"check-references":            {kind: kindBool},
+	"since":                       {kind: kindString},
 	"server":                      {kind: kindString},
 	"quiet":                       {kind: kindBool},
 	"no-color":                    {kind: kindBool},

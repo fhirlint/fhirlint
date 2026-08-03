@@ -314,6 +314,12 @@
     "show-suppressed": {
       "type": "boolean"
     },
+    "since": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "skip-non-fhir": {
       "type": "boolean"
     },

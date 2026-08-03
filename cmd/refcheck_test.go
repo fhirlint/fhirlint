@@ -32,7 +32,7 @@ func TestApplyReferenceCheck_CrossFileResolution(t *testing.T) {
 	patient := writeResultFile(t, "patient.json", `{"resourceType":"Patient","id":"p1"}`)
 	enc := writeResultFile(t, "enc.json", `{"resourceType":"Encounter","id":"e1","subject":{"reference":"Patient/p1"},"participant":[{"individual":{"reference":"Practitioner/ghost"}}]}`)
 
-	applyReferenceCheck([]*validator.Result{patient, enc})
+	applyReferenceCheck([]*validator.Result{patient, enc}, nil)
 
 	// Patient/p1 resolves across files; Practitioner/ghost does not.
 	if !hasIssueID(enc, "ref:unresolved") {
@@ -58,7 +58,7 @@ func TestApplyReferenceCheck_CrossFileResolution(t *testing.T) {
 
 func TestApplyReferenceCheck_SkipsXML(t *testing.T) {
 	xml := writeResultFile(t, "enc.xml", `<Encounter xmlns="http://hl7.org/fhir"><subject><reference value="Patient/nope"/></subject></Encounter>`)
-	applyReferenceCheck([]*validator.Result{xml})
+	applyReferenceCheck([]*validator.Result{xml}, nil)
 	if len(xml.Issues) != 0 {
 		t.Fatalf("XML must be skipped by reference check, got %+v", xml.Issues)
 	}
@@ -66,5 +66,5 @@ func TestApplyReferenceCheck_SkipsXML(t *testing.T) {
 
 func TestApplyReferenceCheck_EmptySet(t *testing.T) {
 	// No panics and no findings for an empty result set.
-	applyReferenceCheck(nil)
+	applyReferenceCheck(nil, nil)
 }

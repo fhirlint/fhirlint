@@ -225,6 +225,14 @@ ignore:
 # (ref:external). Runs in-process on JSON; XML is skipped. See docs/references.md.
 # check-references: true
 
+# Validate only files changed against a git ref, instead of the whole input set.
+# Covers committed changes since the merge base (ref...HEAD), uncommitted edits,
+# and untracked files that are not gitignored. Deleted files are skipped.
+# Needs a git working tree, so it rules out --url, stdin and --watch.
+# With check-references, unchanged files are still indexed so references into
+# them still resolve.
+# since: main
+
 # Validate against a running warm validator server instead of a per-run JVM.
 # Start one with: fhirlint serve --port 8080 --ig <package>
 # The server's FHIR version/IGs/tx are fixed at its startup; see docs/daemon.md.

@@ -105,6 +105,7 @@ var (
 	flagNoColor                  bool
 	flagRulesFile                string
 	flagCheckReferences          bool
+	flagSince                    string
 	flagServer                   string
 )
 
@@ -244,6 +245,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagCheckReferences, "check-references", false,
 		"Check that references resolve within the validated resource set (dangling-reference detection)")
 	_ = viper.BindPFlag("check-references", validateCmd.Flags().Lookup("check-references"))
+	validateCmd.Flags().StringVar(&flagSince, "since", "",
+		"Validate only files changed against this git ref (e.g. main), including uncommitted and untracked ones")
+	_ = viper.BindPFlag("since", validateCmd.Flags().Lookup("since"))
 	validateCmd.Flags().StringVar(&flagServer, "server", "",
 		"Validate via a running validator server instead of a per-run JVM (e.g. http://localhost:8080; see 'fhirlint serve')")
 	_ = viper.BindPFlag("server", validateCmd.Flags().Lookup("server"))
@@ -414,6 +418,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
 	}
+	if !cmd.Flags().Changed("since") && viper.IsSet("since") {
+		flagSince = viper.GetString("since")
+	}
 	if !cmd.Flags().Changed("server") && viper.IsSet("server") {
 		flagServer = viper.GetString("server")
 	}
@@ -555,6 +562,32 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if flagSince != "" {
+		switch {
+		case len(flagURLs) > 0:
+			return fmt.Errorf("--since is not compatible with --url; it selects files from a git working tree")
+		case arg == "" || arg == "-":
+			return fmt.Errorf("--since needs a file or directory argument; it cannot select from stdin")
+		case flagWatch != "":
+			return fmt.Errorf("--since is not compatible with --watch")
+		}
+		// Resolve the repository from the input path, not the working directory:
+		// validating a checkout from somewhere else is ordinary usage and should
+		// not fail with "needs a git repository".
+		workdir := arg
+		if info, statErr := os.Stat(arg); statErr == nil && !info.IsDir() {
+			workdir = filepath.Dir(arg)
+		}
+		changed, serr := input.ChangedSince(flagSince, workdir)
+		if serr != nil {
+			return serr
+		}
+		sinceChanged = make(map[string]bool, len(changed))
+		for _, p := range changed {
+			sinceChanged[p] = true
+		}
+	}
+
 	if flagWatch != "" {
 		if len(flagURLs) > 0 {
 			return fmt.Errorf("--watch is not compatible with --url")
@@ -637,11 +670,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("--extract-each is not supported for NDJSON input")
 			}
 			results, err = validateNDJSON(in.Path, opts, profileMap, overrides)
-		} else if len(filterFHIRPaths([]string{in.Path})) == 0 {
-			// --skip-non-fhir and this file is not a FHIR resource. Applies to an
-			// explicitly named file too: tooling that shells out to fhirlint
-			// (pre-commit) passes concrete paths, so filtering only directories
-			// would miss the case the flag exists for.
+		} else if len(filterSincePaths(filterFHIRPaths([]string{in.Path}))) == 0 {
+			// Either --skip-non-fhir and this file is not a FHIR resource, or
+			// --since and it did not change. Applies to an explicitly named file
+			// too: tooling that shells out to fhirlint (pre-commit) passes
+			// concrete paths, so filtering only directories would miss the case
+			// these flags exist for.
 			results, err = nil, nil
 		} else {
 			// Apply --extract and --ignore on JSON input
@@ -684,6 +718,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Say so explicitly: an empty run and a run that found nothing wrong both
+	// exit 0, and only the message distinguishes them.
+	if flagSince != "" && len(results) == 0 {
+		fmt.Fprintf(os.Stderr, "No changed files to validate (--since %s)\n", flagSince)
+	}
+
 	// Apply custom FHIRPath rules and built-in style/naming lint rules before
 	// suppression so their findings flow through suppression, baseline, severity
 	// filtering and every reporter.
@@ -693,7 +733,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Check referential integrity across the whole validated set (dangling refs).
 	if flagCheckReferences {
-		applyReferenceCheck(results)
+		applyReferenceCheck(results, sinceExcluded)
 	}
 
 	// Apply suppression rules (CLI flags + config file).
@@ -1352,6 +1392,46 @@ func looksLikeFHIR(filePath string) bool {
 // filterFHIRPaths drops non-FHIR files when --skip-non-fhir is set and reports
 // on stderr how many were dropped — skipping inputs silently would be the very
 // blind spot this flag is meant to avoid.
+// sinceChanged holds the absolute paths --since resolved from git, or nil when
+// the flag is not in use. sinceExcluded collects the FHIR files that were
+// dropped because they did not change, so --check-references can still index
+// them (see filterSincePaths).
+var (
+	sinceChanged  map[string]bool
+	sinceExcluded []string
+)
+
+// filterSincePaths drops paths that are unchanged against --since.
+//
+// Dropped paths are remembered rather than forgotten: the reference graph spans
+// the whole dataset, so --check-references over a changed subset alone would
+// report every reference into the unchanged remainder as unresolved. The
+// excluded files are indexed for reference resolution without being validated.
+func filterSincePaths(paths []string) []string {
+	if sinceChanged == nil {
+		return paths
+	}
+	kept := make([]string, 0, len(paths))
+	for _, p := range paths {
+		abs, err := filepath.Abs(p)
+		if err != nil {
+			// Only fails if the working directory is gone. Validate rather than
+			// silently skip — too much work is recoverable, a missed error is not.
+			kept = append(kept, p)
+			continue
+		}
+		if sinceChanged[abs] {
+			kept = append(kept, p)
+			continue
+		}
+		sinceExcluded = append(sinceExcluded, p)
+	}
+	if n := len(paths) - len(kept); n > 0 {
+		fmt.Fprintf(os.Stderr, "Skipped %d unchanged file(s) (--since %s)\n", n, flagSince)
+	}
+	return kept
+}
+
 func filterFHIRPaths(paths []string) []string {
 	if !flagSkipNonFHIR {
 		return paths
@@ -1911,7 +1991,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 // them into as few JVM invocations as possible. It is shared by directory input
 // and by multiple positional file arguments.
 func validatePaths(paths []string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
-	paths = filterFHIRPaths(paths)
+	paths = filterSincePaths(filterFHIRPaths(paths))
 	if len(paths) == 0 {
 		return nil, nil
 	}
@@ -2344,7 +2424,13 @@ func runValidation(paths []string, opts validator.Options) ([]*validator.Result,
 // applyReferenceCheck indexes every validated JSON resource and reports literal
 // references that do not resolve within the set. It reads each file once, builds
 // a shared index, then checks each resource. XML resources are skipped.
-func applyReferenceCheck(results []*validator.Result) {
+// applyReferenceCheck resolves every literal reference in the validated set.
+//
+// indexOnly names files that are part of the dataset but were not validated —
+// currently the ones --since dropped as unchanged. They are added to the
+// identity index but never checked themselves, so a changed resource pointing
+// into the unchanged remainder resolves instead of being reported as dangling.
+func applyReferenceCheck(results []*validator.Result, indexOnly []string) {
 	type parsed struct {
 		res *validator.Result
 		raw []byte
@@ -2352,6 +2438,13 @@ func applyReferenceCheck(results []*validator.Result) {
 	docs := make([]parsed, 0, len(results))
 	index := refcheck.NewIndex()
 	skippedXML := 0
+	for _, p := range indexOnly {
+		content, err := os.ReadFile(p) //nolint:gosec // path from resolved input
+		if err != nil || isXMLContent(content) {
+			continue
+		}
+		index.Add(content)
+	}
 	for _, res := range results {
 		if res.Filename == "" {
 			continue
