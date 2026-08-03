@@ -124,7 +124,7 @@ go install github.com/fhirlint/fhirlint@latest
 docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint validate /work/fhir/
 
 # Pin to a specific version
-docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.6.0 validate /work/fhir/
+docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.7.0 validate /work/fhir/
 ```
 
 The image includes a JRE — no separate Java installation required.
@@ -174,7 +174,7 @@ Images published before v1.5.0 are unsigned.
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.6.0
+- uses: fhirlint/fhirlint@v1.7.0
   with:
     path: ./fhir/
     fail-on: error
@@ -218,7 +218,7 @@ Point `tx-dir` at the recording if it is not in the default `.fhirlint-tx/`. See
 `--format github` emits [workflow commands](https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions), which the runner turns into annotations shown directly on the offending lines in the PR's "Files changed" view:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.6.0
+- uses: fhirlint/fhirlint@v1.7.0
   with:
     path: ./fhir/
     format: github
@@ -267,7 +267,7 @@ fhirlint ships hook definitions for the [pre-commit](https://pre-commit.com/) fr
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/fhirlint/fhirlint
-    rev: v1.6.0
+    rev: v1.7.0
     hooks:
       - id: fhirlint
         files: ^input/resources/.*\.json$

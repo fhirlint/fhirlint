@@ -1,7 +1,7 @@
 {
   "name": "fhirlint",
   "description": "Validate FHIR resources from inside Claude Code: runs the fhirlint CLI, interprets the HL7 validator's findings, and fixes the offending resource in place.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": {
     "name": "fhirlint",
     "url": "https://github.com/fhirlint/fhirlint"
