@@ -181,7 +181,37 @@ Use the action to validate FHIR resources in one step — it installs fhirlint a
     severity: warning
 ```
 
-Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
+Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, `since`, `tx-offline`, `tx-dir`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
+
+#### Validating only what the pull request changed
+
+`since` scopes the run to files changed against the base branch. It needs the full history, so `actions/checkout` must be told not to make a shallow clone:
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    fetch-depth: 0          # required: the default shallow clone has no merge base
+
+- uses: fhirlint/fhirlint@v1.7.0
+  with:
+    path: ./fhir/
+    since: origin/${{ github.base_ref }}
+```
+
+With `fetch-depth: 0` missing, the action stops with an error naming the fix rather than passing git's own message through.
+
+#### Running without a terminology server
+
+`tx-offline` replays a recording made by `fhirlint tx warm`, so the run does not depend on `tx.fhir.org`:
+
+```yaml
+- uses: fhirlint/fhirlint@v1.7.0
+  with:
+    path: ./fhir/
+    tx-offline: true
+```
+
+Point `tx-dir` at the recording if it is not in the default `.fhirlint-tx/`. See [offline terminology](#offline-terminology).
 
 #### Inline PR annotations
 

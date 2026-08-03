@@ -38,6 +38,18 @@ inputs:
     description: 'Write the report to this file (stdout if omitted)'
     required: false
     default: ''
+  since:
+    description: 'Validate only files changed against this git ref, e.g. the base branch of a pull request. Needs fetch-depth: 0 on actions/checkout'
+    required: false
+    default: ''
+  tx-offline:
+    description: 'Replay terminology recorded by "fhirlint tx warm" instead of contacting a terminology server'
+    required: false
+    default: 'false'
+  tx-dir:
+    description: 'Directory holding the terminology recording (default: .fhirlint-tx/)'
+    required: false
+    default: ''
   version:
     description: "fhirlint version to install — a release tag (e.g. v1.3.0) or 'latest'"
     required: false
@@ -74,8 +86,19 @@ runs:
         IN_FAIL_ON: ${{ inputs.fail-on }}
         IN_FORMAT: ${{ inputs.format }}
         IN_OUTPUT: ${{ inputs.output }}
+        IN_SINCE: ${{ inputs.since }}
+        IN_TX_OFFLINE: ${{ inputs.tx-offline }}
+        IN_TX_DIR: ${{ inputs.tx-dir }}
       run: |
         set -euo pipefail
+        # A shallow checkout has no merge base, so --since would fail with git's
+        # own message and no clue about the cause. actions/checkout clones with
+        # fetch-depth: 1 by default, so this is the common case, not the edge one.
+        if [ -n "$IN_SINCE" ] && [ "$(git rev-parse --is-shallow-repository 2>/dev/null || echo false)" = "true" ]; then
+          echo "::error::'since' needs the full history, but this checkout is shallow." \
+               "Add 'fetch-depth: 0' to your actions/checkout step."
+          exit 1
+        fi
         args=(validate)
         if [ -n "$IN_PATH" ]; then args+=("$IN_PATH"); fi
         if [ -n "$IN_URL" ]; then args+=(--url "$IN_URL"); fi
@@ -94,5 +117,12 @@ runs:
         if [ -n "$IN_FAIL_ON" ]; then args+=(--fail-on "$IN_FAIL_ON"); fi
         if [ -n "$IN_FORMAT" ]; then args+=(--format "$IN_FORMAT"); fi
         if [ -n "$IN_OUTPUT" ]; then args+=(--output "$IN_OUTPUT"); fi
+        if [ -n "$IN_SINCE" ]; then args+=(--since "$IN_SINCE"); fi
+        if [ -n "$IN_TX_DIR" ]; then args+=(--tx-dir "$IN_TX_DIR"); fi
+        case "${IN_TX_OFFLINE,,}" in
+          true|yes|1) args+=(--tx-offline) ;;
+          ''|false|no|0) ;;
+          *) echo "::error::'tx-offline' must be true or false, got '$IN_TX_OFFLINE'"; exit 1 ;;
+        esac
         echo "+ fhirlint ${args[*]}"
         fhirlint "${args[@]}"
