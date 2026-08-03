@@ -233,6 +233,16 @@ ignore:
 # them still resolve.
 # since: main
 
+# Replay terminology responses recorded by 'fhirlint tx warm' instead of
+# contacting a terminology server. Makes a run reproducible and independent of
+# the terminology server's availability — unlike tx-cache, which still needs a
+# reachable server for the capability statement the validator fetches at startup.
+# A request that was not recorded is an error, never a silent network call.
+# tx-offline: true
+
+# Where the terminology recording lives (default: .fhirlint-tx/).
+# tx-dir: .fhirlint-tx
+
 # Validate against a running warm validator server instead of a per-run JVM.
 # Start one with: fhirlint serve --port 8080 --ig <package>
 # The server's FHIR version/IGs/tx are fixed at its startup; see docs/daemon.md.

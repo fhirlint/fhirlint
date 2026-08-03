@@ -37,6 +37,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Comparing profiles](#comparing-profiles)
 - [Computer System Validation (qualify)](#computer-system-validation-qualify)
 - [Terminology server](#terminology-server)
+  - [Offline terminology](#offline-terminology)
 - [Watch mode](#watch-mode)
 - [Server mode (warm validator)](#server-mode-warm-validator)
 - [Pipeline integration](#pipeline-integration)
@@ -1007,7 +1008,7 @@ fhirlint validate patient.json --best-practice ignore    # silence all dom-6 war
 fhirlint validate patient.json --best-practice error     # escalate to errors
 ```
 
-**Caching the terminology responses in CI** significantly speeds up repeated runs. Add the cache directory to `actions/cache`:
+**Caching the terminology responses in CI** speeds up repeated runs. Add the cache directory to `actions/cache`:
 
 ```yaml
 - uses: actions/cache@v4
@@ -1018,6 +1019,64 @@ fhirlint validate patient.json --best-practice error     # escalate to errors
 - name: Validate FHIR resources
   run: fhirlint validate ./fhir/ --tx-cache .fhirlint-tx-cache/
 ```
+
+> **`--tx-cache` does not make a run independent of the terminology server.** It is a latency optimisation, not a reproducibility measure. The validator fetches the server's capability statement at startup, before validating anything, and aborts when that fails — warm cache or not. With a fully populated cache and an unreachable server you get no report at all:
+>
+> ```
+> FHIRException: Error fetching the server's capability statement: Failed to connect to ...
+> ```
+>
+> For runs that must not depend on the server, see [offline terminology](#offline-terminology) below.
+
+### Offline terminology
+
+`--tx-offline` replays terminology responses recorded earlier, so a validation run needs no terminology server at all. This is what makes a run reproducible: same inputs, same recording, same result, no network.
+
+Record once against the real server:
+
+```bash
+fhirlint tx warm ./fhir/
+# Recording terminology traffic from https://tx.fhir.org into .fhirlint-tx/ (42 file(s))…
+# Recorded 137 terminology interaction(s) (137 new) in .fhirlint-tx/
+```
+
+Then replay, offline, as often as you like:
+
+```bash
+fhirlint validate ./fhir/ --tx-offline
+# Replaying 137 recorded terminology interaction(s) from .fhirlint-tx/
+```
+
+Under the hood fhirlint runs a loopback HTTP server that stands in for the terminology server and points the validator at it. Recording proxies to the real server and stores each request and response; replay serves them from disk. Recordings are stored as one pretty-printed JSON file per interaction, so a committed recording stays reviewable in a diff.
+
+**A request that was not recorded is an error, never a silent fallback to the network:**
+
+```
+Error: 2 terminology request(s) were not in the recording in .fhirlint-tx/:
+  POST /r4/ValueSet/$validate-code (system http://loinc.org, code 8302-2)
+  POST /r4/CodeSystem/$validate-code (system http://snomed.info/sct, code 271649006)
+Re-record with: fhirlint tx warm ./fhir/
+```
+
+This matters more than it looks: the validator downgrades some terminology failures to warnings and carries on, so an incomplete recording could otherwise produce a green run that quietly skipped real terminology checks. fhirlint tracks the misses itself and fails the run regardless of how the validator reacted.
+
+Record with the same profiles and IGs you validate with, since those determine which codes get checked:
+
+```bash
+fhirlint tx warm ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0
+fhirlint validate ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0 --tx-offline
+```
+
+Use `--tx-dir` to put the recording somewhere other than `.fhirlint-tx/`. In CI, either commit the recording or rebuild it as an artifact:
+
+```yaml
+- name: Validate FHIR resources
+  run: fhirlint validate ./fhir/ --tx-offline
+```
+
+See the [Offline terminology guide](docs/terminology-offline.md) for the recording format, CI patterns and server mode.
+
+`--tx-offline` cannot be combined with `--no-terminology-server` (which skips terminology instead of replaying it), `--terminology-server` (which it replaces), or `--server` (whose terminology is fixed when the validator server starts).
 
 ### Behind a proxy
 
@@ -1363,6 +1422,8 @@ The schema is **generated from the same key definitions `config check` validates
 | `--no-terminology-server` | `false` | Disable terminology server — no data sent to `tx.fhir.org` |
 | `--terminology-server` | — | Custom terminology server URL |
 | `--tx-cache` | — | Terminology cache directory (`n/a` to disable) |
+| `--tx-offline` | `false` | Replay recorded terminology responses; an unrecorded request is an error |
+| `--tx-dir` | `.fhirlint-tx/` | Directory holding the terminology recording |
 | `--allow-insecure-tx` | `false` | Suppress warning when terminology server uses HTTP |
 | `--tx-log` | — | Write terminology request log to file |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
@@ -1404,6 +1465,8 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `max-warnings` | int | `--max-warnings` |
 | `exclude` | list | `--exclude` |
 | `since` | string | `--since` |
+| `tx-offline` | bool | `--tx-offline` |
+| `tx-dir` | string | `--tx-dir` |
 | `bundle-entries` | bool | `--bundle-entries` |
 | `url` | list | `--url` |
 | `url-timeout` | string | `--url-timeout` |
@@ -1556,6 +1619,7 @@ Detailed guides for common workflows:
 - [Suppression rules](docs/suppression.md) — when to suppress vs. fix, selector types, committing decisions to `fhirlint.yml`
 - [Baseline mode](docs/baseline.md) — incremental adoption, managing technical debt, CI regression detection
 - [German FHIR profiles](docs/german-profiles.md) — KBV, MII, DiGA: aliases, version pinning, combining profiles
+- [Offline terminology](docs/terminology-offline.md) — recording and replaying terminology so a run needs no terminology server
 
 ## Contributing
 

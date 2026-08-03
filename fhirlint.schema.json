@@ -358,11 +358,20 @@
         "null"
       ]
     },
+    "tx-dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "tx-log": {
       "type": [
         "string",
         "null"
       ]
+    },
+    "tx-offline": {
+      "type": "boolean"
     },
     "url": {
       "items": {

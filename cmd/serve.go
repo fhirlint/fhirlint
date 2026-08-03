@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/txreplay"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -24,6 +25,8 @@ var (
 	flagServeNoTerminologyServer bool
 	flagServeTerminologyServer   string
 	flagServeTxCache             string
+	flagServeTxOffline           bool
+	flagServeTxDir               string
 )
 
 var serveCmd = &cobra.Command{
@@ -57,6 +60,10 @@ func init() {
 	serveCmd.Flags().BoolVar(&flagServeNoTerminologyServer, "no-terminology-server", false, "Disable the terminology server (-tx n/a)")
 	serveCmd.Flags().StringVar(&flagServeTerminologyServer, "terminology-server", "", "Terminology server URL")
 	serveCmd.Flags().StringVar(&flagServeTxCache, "tx-cache", "", "Terminology cache directory")
+	serveCmd.Flags().BoolVar(&flagServeTxOffline, "tx-offline", false,
+		"Replay terminology responses recorded by 'fhirlint tx warm' instead of contacting a server")
+	serveCmd.Flags().StringVar(&flagServeTxDir, "tx-dir", "",
+		"Directory holding the terminology recording (default: "+txreplay.DefaultDir+"/)")
 
 	noFile := cobra.ShellCompDirectiveNoFileComp
 	_ = serveCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -64,14 +71,47 @@ func init() {
 	})
 }
 
-func runServe(_ *cobra.Command, _ []string) error {
+func runServe(cmd *cobra.Command, _ []string) error {
+	// Offline terminology: stand in for the terminology server for the whole
+	// lifetime of the validator server.
+	var txPlayer *txreplay.Server
+	txServer := flagServeTerminologyServer
+	txCache := flagServeTxCache
+	if flagServeTxOffline {
+		switch {
+		case flagServeNoTerminologyServer:
+			return fmt.Errorf("--tx-offline and --no-terminology-server are mutually exclusive: one replays terminology, the other skips it")
+		case cmd.Flags().Changed("terminology-server"):
+			return fmt.Errorf("--tx-offline replaces the terminology server; drop --terminology-server or record against it with 'fhirlint tx warm'")
+		}
+		dir := txRecordingDir(flagServeTxDir)
+		store, err := txreplay.Open(dir)
+		if err != nil {
+			return err
+		}
+		if store.Len() == 0 {
+			return fmt.Errorf("no terminology recording in %s/ — record one first with: fhirlint tx warm <path>", dir)
+		}
+		txPlayer = txreplay.NewPlayer(store)
+		baseURL, err := txPlayer.Start()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = txPlayer.Stop() }()
+		txServer = baseURL
+		// Every request has to reach the replay server, or an incomplete
+		// recording stays invisible behind the JAR's own cache.
+		txCache = "n/a"
+		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
+	}
+
 	cfg := validator.ServerConfig{
 		Port:                flagServePort,
 		FHIRVersion:         flagServeFHIRVersion,
 		IGs:                 resolveIGs(flagServeIG),
 		NoTerminologyServer: flagServeNoTerminologyServer,
-		TerminologyServer:   flagServeTerminologyServer,
-		TxCache:             flagServeTxCache,
+		TerminologyServer:   txServer,
+		TxCache:             txCache,
 		JARPath:             viper.GetString("jar"),
 		Proxy:               validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 		ValidatorVersion:    viper.GetString("validator-version"),
@@ -92,6 +132,26 @@ func runServe(_ *cobra.Command, _ []string) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	exited := make(chan error, 1)
 	go func() { exited <- srv.Wait() }()
+
+	// Unlike a one-shot validate, a long-lived server cannot fail the run on a
+	// replay miss — the request has already been answered. Report them at
+	// shutdown so an incomplete recording still surfaces.
+	defer func() {
+		if txPlayer == nil {
+			return
+		}
+		if misses := txPlayer.Misses(); len(misses) > 0 {
+			fmt.Fprintf(os.Stderr, "\nwarn: %d terminology request(s) were not in the recording:\n", len(misses))
+			for i, m := range misses {
+				if i == maxReportedMisses {
+					fmt.Fprintf(os.Stderr, "  … and %d more\n", len(misses)-maxReportedMisses)
+					break
+				}
+				fmt.Fprintf(os.Stderr, "  %s\n", m)
+			}
+			fmt.Fprintln(os.Stderr, "Re-record with: fhirlint tx warm <path>")
+		}
+	}()
 
 	select {
 	case <-sigCh:

@@ -98,6 +98,8 @@ var topLevelKeys = map[string]keySpec{
 	"show-source":                 {kind: kindBool},
 	"check-references":            {kind: kindBool},
 	"since":                       {kind: kindString},
+	"tx-offline":                  {kind: kindBool},
+	"tx-dir":                      {kind: kindString},
 	"server":                      {kind: kindString},
 	"quiet":                       {kind: kindBool},
 	"no-color":                    {kind: kindBool},

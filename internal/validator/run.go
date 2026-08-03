@@ -354,6 +354,28 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 // answering; only the detail after the colon differs.
 const txCapabilityFailure = "Error fetching the server's capability statement"
 
+// DefaultTerminologyServer is the server the validator uses when none is given.
+// Recording and replay need to name it explicitly, so it cannot stay implicit
+// in the JAR's own defaults.
+const DefaultTerminologyServer = "https://tx.fhir.org"
+
+// DefaultTerminologyEndpoint returns the versioned base URL the validator would
+// use for a FHIR version when no -tx is given.
+//
+// The distinction matters for recording: the JAR appends a version path to its
+// own default (tx.fhir.org/r4/metadata) but uses an explicit -tx URL verbatim.
+// Pointing the JAR at a local recorder therefore means reconstructing the path
+// it would otherwise have used, or every proxied request 404s.
+//
+// R4B maps to /r4, not /r4b — confirmed against the JAR, and tx.fhir.org serves
+// no /r4b endpoint.
+func DefaultTerminologyEndpoint(fhirVersion string) string {
+	if strings.HasPrefix(fhirVersion, "5") {
+		return DefaultTerminologyServer + "/r5"
+	}
+	return DefaultTerminologyServer + "/r4"
+}
+
 // txUnreachableError turns an unreachable terminology server into an
 // explanation instead of "the JAR may have crashed". The JAR did not crash: it
 // could not reach the server it needs for code and value-set checks, and the
@@ -366,7 +388,7 @@ func txUnreachableError(stderr string, opts Options) error {
 
 	server := opts.TerminologyServer
 	if server == "" {
-		server = "https://tx.fhir.org (the default)"
+		server = DefaultTerminologyServer + " (the default)"
 	}
 	detail := strings.TrimSpace(stderr[idx+len(txCapabilityFailure):])
 	detail = strings.TrimSpace(strings.TrimPrefix(detail, ":"))
