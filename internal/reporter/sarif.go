@@ -186,7 +186,13 @@ func buildSARIFLocation(filename, location string) *sarifLocation {
 }
 
 // parseLocationString splits "expression (line N, col M)" into its parts.
-func parseLocationString(loc string) (expression string, line, col int) {
+// ParseLocation splits a validator location such as
+// "Patient.gender (line 12, col 5)" into its FHIRPath expression and 1-based
+// line/column. Line and column are 0 when the validator did not report them.
+//
+// Exported for the language server, which needs the same coordinates the SARIF
+// and GitHub reporters derive from this string.
+func ParseLocation(loc string) (expression string, line, col int) {
 	loc = strings.TrimSpace(loc)
 	if m := locationRE.FindStringSubmatch(loc); m != nil {
 		expression = strings.TrimSpace(m[1])
@@ -195,6 +201,10 @@ func parseLocationString(loc string) (expression string, line, col int) {
 		return
 	}
 	return loc, 0, 0
+}
+
+func parseLocationString(loc string) (expression string, line, col int) {
+	return ParseLocation(loc)
 }
 
 func sarifLevel(severity string) string {

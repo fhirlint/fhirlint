@@ -187,6 +187,18 @@ func RunMultipleViaServer(serverURL string, paths []string, opts Options) ([]*Re
 	return results, nil
 }
 
+// ValidateBytesViaServer validates in-memory content against a running
+// validator server. It exists for callers that hold a document rather than a
+// file — the language server validates unsaved editor buffers, which never
+// reach disk.
+func ValidateBytesViaServer(serverURL string, content []byte, label string, opts Options) (*Result, error) {
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+	return validateBytesViaServer(&http.Client{Timeout: timeout}, serverURL, content, label, opts.Profiles)
+}
+
 // validateBytesViaServer posts one resource to the server's /validateResource
 // endpoint and parses the returned OperationOutcome into a Result.
 func validateBytesViaServer(client *http.Client, serverURL string, resource []byte, label string, profiles []string) (*Result, error) {

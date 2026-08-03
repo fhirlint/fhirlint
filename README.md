@@ -36,6 +36,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Comparing runs (change control)](#comparing-runs-change-control)
 - [Comparing profiles](#comparing-profiles)
 - [Computer System Validation (qualify)](#computer-system-validation-qualify)
+- [Editor integration (language server)](#editor-integration-language-server)
 - [Terminology server](#terminology-server)
   - [Offline terminology](#offline-terminology)
 - [Watch mode](#watch-mode)
@@ -1118,6 +1119,27 @@ Be aware of what this does not fix. The validator takes the credential as a comm
 
 ---
 
+## Editor integration (language server)
+
+`fhirlint lsp` runs a Language Server Protocol server over stdio, so findings appear inline while you edit instead of only when you run the CLI:
+
+```bash
+fhirlint lsp
+```
+
+It is launched by your editor, not by hand. Diagnostics carry the HL7 message id as the diagnostic code, hovering a finding renders the same offline explanation `fhirlint explain` prints, and a quick fix writes a suppression into `fhirlint.yml`.
+
+A validator server is started once and kept warm for the session, so validating a buffer takes milliseconds rather than the tens of seconds a cold JVM needs. Share one across editors by starting it yourself:
+
+```bash
+fhirlint serve --port 8080 --ig hl7.fhir.us.core#9.0.0
+fhirlint lsp --server http://localhost:8080
+```
+
+`--fhir-version`, `--ig` and `--profile` fall back to `fhirlint.yml`, so a project that already has a config needs no editor-side setup. See the [Language server guide](docs/lsp.md) for Neovim, Helix and VS Code configuration.
+
+---
+
 ## Watch mode
 
 Re-validate automatically whenever a file changes — useful during local development:
@@ -1620,6 +1642,7 @@ Detailed guides for common workflows:
 - [Baseline mode](docs/baseline.md) — incremental adoption, managing technical debt, CI regression detection
 - [German FHIR profiles](docs/german-profiles.md) — KBV, MII, DiGA: aliases, version pinning, combining profiles
 - [Offline terminology](docs/terminology-offline.md) — recording and replaying terminology so a run needs no terminology server
+- [Language server](docs/lsp.md) — editor setup, hover, quick fixes, and how diagnostics differ from a CLI run
 
 ## Contributing
 
