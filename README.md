@@ -1210,6 +1210,39 @@ Cache the result directory in CI with `actions/cache`:
   run: fhirlint validate ./fhir/ --cache --cache-dir .fhirlint-cache/
 ```
 
+### Validating only what changed
+
+On a large repository, validating every resource on every pull request costs minutes to confirm that three files are still fine. `--since` scopes the run to what changed against a git ref:
+
+```bash
+fhirlint validate ./fhir/ --since main
+fhirlint validate ./fhir/ --since HEAD~1
+```
+
+Three sets are validated:
+
+- **Committed changes**, compared as `main...HEAD` — changes since the merge base, i.e. what the branch contributes, not whatever else landed on `main` meanwhile.
+- **Uncommitted changes** against `HEAD`, staged or not, so a local run sees the file you are editing.
+- **Untracked files** that are not gitignored, so a resource you just created is not silently skipped.
+
+Deleted files are skipped; a renamed file is validated at its new path. Files that did not change are reported and then left alone:
+
+```
+Skipped 214 unchanged file(s) (--since main)
+```
+
+An empty change set exits 0 and says so rather than passing silently:
+
+```
+No changed files to validate (--since main)
+```
+
+`--since` needs a git working tree, so it cannot be combined with `--url`, stdin input or `--watch`. An unresolvable ref, or running outside a repository, is an error — quietly validating everything instead would hide a broken CI configuration.
+
+**With `--check-references`,** the unchanged files are still indexed for reference resolution even though they are not validated. Reference integrity is a property of the whole dataset, so a changed resource pointing at an untouched one resolves normally instead of being reported as a dangling reference.
+
+This composes with `--cache` rather than replacing it: `--since` needs no state at all and works on a cold runner, while the result cache also helps for repeated local runs and for content that changed and changed back.
+
 ### Example GitHub Actions workflow
 
 ```yaml
@@ -1315,6 +1348,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--fail-on` | `error` | Exit non-zero when issues at this level or above are found: `error`, `warning`, `never` |
 | `--max-warnings` | `-1` | Exit non-zero when warning count exceeds N (`-1` = disabled) |
 | `--exclude` | — | Exclude files/dirs matching pattern (repeatable, gitignore-style) |
+| `--since` | — | Validate only files changed against this git ref, e.g. `main` |
 | `--bundle-entries` | `false` | Also validate each `entry.resource` in a FHIR Bundle separately |
 | `--url` | — | Fetch and validate from an HTTP endpoint (repeatable) |
 | `--url-timeout` | `30s` | Timeout for HTTP fetches via `--url` |
@@ -1369,6 +1403,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `fail-on` | string | `--fail-on` |
 | `max-warnings` | int | `--max-warnings` |
 | `exclude` | list | `--exclude` |
+| `since` | string | `--since` |
 | `bundle-entries` | bool | `--bundle-entries` |
 | `url` | list | `--url` |
 | `url-timeout` | string | `--url-timeout` |
