@@ -39,7 +39,7 @@ inputs:
     required: false
     default: ''
   since:
-    description: 'Validate only files changed against this git ref, e.g. origin/${{ github.base_ref }}. Needs fetch-depth: 0 on actions/checkout'
+    description: 'Validate only files changed against this git ref, e.g. the base branch of a pull request. Needs fetch-depth: 0 on actions/checkout'
     required: false
     default: ''
   tx-offline:
