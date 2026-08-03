@@ -549,3 +549,20 @@ func TestBuildArgs_SubSecondValidationTimeout(t *testing.T) {
 	})
 	mustContainPair(t, args, "-validation-timeout", "250")
 }
+
+func TestDefaultTerminologyEndpoint(t *testing.T) {
+	// The JAR appends a version path to its own default but uses an explicit
+	// -tx URL verbatim, so recording has to reconstruct exactly this.
+	// R4B maps to /r4: tx.fhir.org serves no /r4b endpoint.
+	tests := []struct{ version, want string }{
+		{"4.0.1", "https://tx.fhir.org/r4"},
+		{"4.3.0", "https://tx.fhir.org/r4"},
+		{"5.0.0", "https://tx.fhir.org/r5"},
+		{"", "https://tx.fhir.org/r4"},
+	}
+	for _, tt := range tests {
+		if got := DefaultTerminologyEndpoint(tt.version); got != tt.want {
+			t.Errorf("DefaultTerminologyEndpoint(%q) = %q, want %q", tt.version, got, tt.want)
+		}
+	}
+}

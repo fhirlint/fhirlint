@@ -28,6 +28,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/rules"
 	"github.com/fhirlint/fhirlint/internal/suppress"
+	"github.com/fhirlint/fhirlint/internal/txreplay"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -106,6 +107,8 @@ var (
 	flagRulesFile                string
 	flagCheckReferences          bool
 	flagSince                    string
+	flagTxOffline                bool
+	flagTxDir                    string
 	flagServer                   string
 )
 
@@ -248,6 +251,12 @@ func init() {
 	validateCmd.Flags().StringVar(&flagSince, "since", "",
 		"Validate only files changed against this git ref (e.g. main), including uncommitted and untracked ones")
 	_ = viper.BindPFlag("since", validateCmd.Flags().Lookup("since"))
+	validateCmd.Flags().BoolVar(&flagTxOffline, "tx-offline", false,
+		"Replay terminology responses recorded by 'fhirlint tx warm' instead of contacting a server; an unrecorded request is an error")
+	_ = viper.BindPFlag("tx-offline", validateCmd.Flags().Lookup("tx-offline"))
+	validateCmd.Flags().StringVar(&flagTxDir, "tx-dir", "",
+		"Directory holding the terminology recording (default: "+txreplay.DefaultDir+"/)")
+	_ = viper.BindPFlag("tx-dir", validateCmd.Flags().Lookup("tx-dir"))
 	validateCmd.Flags().StringVar(&flagServer, "server", "",
 		"Validate via a running validator server instead of a per-run JVM (e.g. http://localhost:8080; see 'fhirlint serve')")
 	_ = viper.BindPFlag("server", validateCmd.Flags().Lookup("server"))
@@ -421,6 +430,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("since") && viper.IsSet("since") {
 		flagSince = viper.GetString("since")
 	}
+	if !cmd.Flags().Changed("tx-offline") && viper.IsSet("tx-offline") {
+		flagTxOffline = viper.GetBool("tx-offline")
+	}
+	if !cmd.Flags().Changed("tx-dir") && viper.IsSet("tx-dir") {
+		flagTxDir = viper.GetString("tx-dir")
+	}
 	if !cmd.Flags().Changed("server") && viper.IsSet("server") {
 		flagServer = viper.GetString("server")
 	}
@@ -442,6 +457,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	} else {
 		excludePatterns = append(excludePatterns, ignorePatterns...)
 	}
+	excludePatterns = append(excludePatterns, txRecordingExcludes(flagTxDir)...)
 
 	profileMap := loadProfileMap()
 	overrides, oerr := loadOverrides()
@@ -550,6 +566,44 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		MaxMessages:              flagMaxMessages,
 		Proxy:                    validator.ProxyConfig{Proxy: flagProxy, HTTPSProxy: flagHTTPSProxy},
 		Timeout:                  validatorTimeout,
+	}
+
+	// Offline terminology: stand in for the terminology server with recorded
+	// responses. The JAR cannot do this itself — its own -txCache still needs a
+	// reachable server for the capability statement it fetches at startup.
+	var txPlayer *txreplay.Server
+	if flagTxOffline {
+		switch {
+		case flagNoTerminologyServer:
+			return fmt.Errorf("--tx-offline and --no-terminology-server are mutually exclusive: one replays terminology, the other skips it")
+		case flagServer != "":
+			return fmt.Errorf("--tx-offline is not compatible with --server; the validator server's terminology is fixed at its startup")
+		case cmd.Flags().Changed("terminology-server"):
+			return fmt.Errorf("--tx-offline replaces the terminology server; drop --terminology-server or record against it with 'fhirlint tx warm'")
+		}
+		dir := txRecordingDir(flagTxDir)
+		store, serr := txreplay.Open(dir)
+		if serr != nil {
+			return serr
+		}
+		if store.Len() == 0 {
+			return fmt.Errorf("no terminology recording in %s/ — record one first with: fhirlint tx warm %s", dir, arg)
+		}
+		txPlayer = txreplay.NewPlayer(store)
+		baseURL, perr := txPlayer.Start()
+		if perr != nil {
+			return perr
+		}
+		defer func() { _ = txPlayer.Stop() }()
+		opts.TerminologyServer = baseURL
+		// Loopback HTTP to our own process; the insecure-transport warning is
+		// about sending data unencrypted to a remote server.
+		opts.AllowInsecureTx = true
+		// Disable the JAR's own terminology cache so every request reaches the
+		// replay server. Left on, it would answer from ~/.fhir and hide an
+		// incomplete recording — green here, failing on a clean CI runner.
+		opts.TxCache = "n/a"
+		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
@@ -716,6 +770,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// A replay miss must fail the run. The JAR treats some terminology failures
+	// as warnings and carries on, so a silently incomplete recording would
+	// otherwise produce a green result that skipped real terminology checks.
+	if txPlayer != nil {
+		if err := txMissError(txPlayer.Misses(), txRecordingDir(flagTxDir), arg); err != nil {
+			return err
+		}
 	}
 
 	// Say so explicitly: an empty run and a run that found nothing wrong both
@@ -1392,6 +1455,30 @@ func looksLikeFHIR(filePath string) bool {
 // filterFHIRPaths drops non-FHIR files when --skip-non-fhir is set and reports
 // on stderr how many were dropped — skipping inputs silently would be the very
 // blind spot this flag is meant to avoid.
+// maxReportedMisses bounds the replay misses listed in an error. A recording
+// that is badly out of date can miss on hundreds of codes, and a wall of them
+// helps nobody decide what to do.
+const maxReportedMisses = 10
+
+// txMissError turns unreplayable terminology requests into an actionable error.
+// It returns nil when there were none.
+func txMissError(misses []txreplay.Miss, dir, arg string) error {
+	if len(misses) == 0 {
+		return nil
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%d terminology request(s) were not in the recording in %s/:\n", len(misses), dir)
+	for i, m := range misses {
+		if i == maxReportedMisses {
+			fmt.Fprintf(&b, "  … and %d more\n", len(misses)-maxReportedMisses)
+			break
+		}
+		fmt.Fprintf(&b, "  %s\n", m)
+	}
+	fmt.Fprintf(&b, "Re-record with: fhirlint tx warm %s", arg)
+	return errors.New(b.String())
+}
+
 // sinceChanged holds the absolute paths --since resolved from git, or nil when
 // the flag is not in use. sinceExcluded collects the FHIR files that were
 // dropped because they did not change, so --check-references can still index
