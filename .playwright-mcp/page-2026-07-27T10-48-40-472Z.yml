@@ -1,0 +1,1466 @@
+- generic [active] [ref=f2e1]:
+  - link "Skip to main content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f2e6]:
+    - generic:
+      - generic: Health Information Technology
+      - banner [ref=f2e10]:
+        - navigation [ref=f2e11]:
+          - generic [ref=f2e12]:
+            - button [ref=f2e16] [cursor=pointer]
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - link "Home":
+                        - /url: https://www.reddit.com/
+          - search [ref=f2e31]:
+            - generic [ref=f2e33]:
+              - generic "Remove r/healthIT filter and expand search to all of Reddit" [ref=f2e39] [cursor=pointer]:
+                - button [pressed] [ref=f2e40]:
+                  - generic [ref=f2e44]: r/healthIT
+              - textbox "Remove r/healthIT filter and expand search to all of Reddit" [ref=f2e51]:
+                - /placeholder: Search in ⁨r/healthIT⁩
+          - generic [ref=f2e52]:
+            - link "Log In" [ref=f2e56] [cursor=pointer]:
+              - /url: https://www.reddit.com/login/
+            - button [ref=f2e63] [cursor=pointer]
+      - generic [ref=f2e70]:
+        - region "Community actions" [ref=f2e74]:
+          - generic [ref=f2e75]:
+            - heading "r/healthIT" [level=1] [ref=f2e83]
+            - generic [ref=f2e84]:
+              - button "Create Post" [ref=f2e88] [cursor=pointer]
+              - button "Join" [ref=f2e98] [cursor=pointer]
+        - main [ref=f2e101]:
+          - generic [ref=f2e102]:
+            - generic [ref=f2e104]:
+              - tab "Feed" [selected] [ref=f2e105] [cursor=pointer]
+              - tab "About" [ref=f2e109] [cursor=pointer]
+            - generic [ref=f2e114]:
+              - generic "Sort by" [ref=f2e118]:
+                - 'button "Sort by: New" [ref=f2e120] [cursor=pointer]':
+                  - generic [ref=f2e121]: New
+              - generic "View" [ref=f2e128]:
+                - 'button "View: Card" [ref=f2e130] [cursor=pointer]'
+          - generic [ref=f2e136]:
+            - button "collapse/expand community highlights" [ref=f2e137] [cursor=pointer]:
+              - heading "Community highlights" [level=3] [ref=f2e138]
+              - button "collapse/expand community highlights" [ref=f2e143]
+            - list [ref=f2e150]:
+              - listitem [ref=f2e151]:
+                - link "\"I want to be an Epic analyst\" FAQ 395 votes • 95 comments" [ref=f2e152] [cursor=pointer]:
+                  - /url: /r/healthIT/comments/1hlot86/i_want_to_be_an_epic_analyst_faq/
+                  - generic [ref=f2e158]:
+                    - heading "\"I want to be an Epic analyst\" FAQ" [level=2] [ref=f2e160]
+                    - generic [ref=f2e163]:
+                      - generic [ref=f2e164]: "395"
+                      - text: votes •
+                      - generic [ref=f2e165]: "95"
+                      - text: comments
+          - generic [ref=f2e177]:
+            - generic "Health Information Technology"
+            - separator [ref=f2e178]
+            - generic [ref=f2e179]:
+              - heading "Feed" [level=1] [ref=f2e181]
+              - generic:
+                - article [ref=f2e182]:
+                  - generic [ref=f2e183] [cursor=pointer]:
+                    - link [ref=f2e184]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                    - generic [ref=f2e186]:
+                      - generic [ref=f2e187]:
+                        - 'link "Author: u/AcceptableMonk1670" [ref=f2e192]':
+                          - /url: https://www.reddit.com/user/AcceptableMonk1670/
+                          - generic [ref=f2e193]:
+                            - img "u/AcceptableMonk1670 avatar" [ref=f2e196]
+                            - generic [ref=f2e197]: u/AcceptableMonk1670
+                        - generic [ref=f2e198]: •
+                        - time [ref=f2e200]: 3 days ago
+                      - button "Open user actions" [ref=f2e206]
+                    - generic [ref=f2e212]:
+                      - heading [level=2] [ref=f2e213]:
+                        - link "vendor fatigue for front desk texting + review collection (3 locations)" [ref=f2e214]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                      - 'link "Flair: Advice" [ref=f2e217]':
+                        - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                        - 'generic "Flair: Advice" [ref=f2e219]': Advice
+                      - generic [ref=f2e220]:
+                        - generic:
+                          - 'link "Our clinical side runs on eClinicalWorks, but our front desk staff has been using a sloppy mix of Podium for reviews, paper intake, and an old VoIP line for calls. Management wants me to consolidate this whole setup under one platform with a BAA signed by a Q3. I need something that handles 2-way SMS, missed call text-backs, and web forms without breaking our eCW sync every week. On my shortlist to evaluate this week I put down Weave, PatientGain, and Klara to compare costs and API stability. Anyone managing a similar setup? Curious what software isn''t causing constant sync failures or front desk complaints. Edit: Thanks for the input. Decided to go with PatientGain for this roll-out. Setting up the SMS triggers and web intake this week, so I’ll update this thread in a month or two with how the eCW sync holds up under daily use."':
+                            - /url: /r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                            - generic:
+                              - generic:
+                                - paragraph: Our clinical side runs on eClinicalWorks, but our front desk staff has been using a sloppy mix of Podium for reviews, paper intake, and an old VoIP line for calls. Management wants me to consolidate this whole setup under one platform with a BAA signed by a Q3.
+                                - paragraph: I need something that handles 2-way SMS, missed call text-backs, and web forms without breaking our eCW sync every week. On my shortlist to evaluate this week I put down Weave, PatientGain, and Klara to compare costs and API stability.
+                                - paragraph: Anyone managing a similar setup? Curious what software isn't causing constant sync failures or front desk complaints.
+                                - paragraph: "Edit: Thanks for the input. Decided to go with PatientGain for this roll-out. Setting up the SMS triggers and web intake this week, so I’ll update this thread in a month or two with how the eCW sync holds up under daily use."
+                    - generic "Actions available for this post" [ref=f2e222]:
+                      - generic [ref=f2e225]:
+                        - button [ref=f2e226]
+                        - generic [ref=f2e231]: "1"
+                        - button [ref=f2e233]
+                      - link "5 Go to comments" [ref=f2e238]:
+                        - /url: /r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                        - generic [ref=f2e239]: "5"
+                        - generic [ref=f2e245]: Go to comments
+                      - button "Share" [ref=f2e249]
+                - separator [ref=f2e256]
+                - generic [ref=f2e257]:
+                  - link [ref=f2e259] [cursor=pointer]:
+                    - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                  - generic [ref=f2e261]:
+                    - generic [ref=f2e262]:
+                      - link "u/check24" [ref=f2e265] [cursor=pointer]:
+                        - /url: /user/check24/
+                        - img "u/check24 avatar" [ref=f2e268]
+                      - generic [ref=f2e270]: •
+                      - link "Promoted" [ref=f2e272] [cursor=pointer]:
+                        - /url: /user/check24/
+                      - link [ref=f2e275] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                    - button "Open user actions" [ref=f2e281] [cursor=pointer]
+                  - heading [level=2] [ref=f2e288]:
+                    - 'link "Steuererklärung gratis beim Testsieger ist king 🤌 CHECK24 Steuer: Note 1,0 bei Stiftung Warentest." [ref=f2e291] [cursor=pointer]':
+                      - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                  - generic [ref=f2e292]:
+                    - link [ref=f2e296] [cursor=pointer]:
+                      - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                      - 'img "Steuererklärung gratis beim Testsieger ist king 🤌 CHECK24 Steuer: Note 1,0 bei Stiftung Warentest." [ref=f2e298]'
+                    - separator [ref=f2e299]
+                    - generic [ref=f2e300]:
+                      - link [ref=f2e302] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                      - generic [ref=f2e303]:
+                        - link "steuer.check24.de" [ref=f2e306] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                        - link [ref=f2e308] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                  - generic "Actions available for this post" [ref=f2e312]:
+                    - generic [ref=f2e315]:
+                      - button [ref=f2e316] [cursor=pointer]
+                      - text: Vote
+                      - button [ref=f2e321] [cursor=pointer]
+                    - link "0 Go to comments" [ref=f2e326] [cursor=pointer]:
+                      - /url: /user/check24/comments/1v1olhy/steuererkl%C3%A4rung_gratis_beim_testsieger_ist_king/?p=1&impressionid=6114290292783862422&ad_label_eligible=1
+                      - generic [ref=f2e327]: "0"
+                      - generic [ref=f2e333]: Go to comments
+                    - button "Share" [ref=f2e337] [cursor=pointer]
+                    - link [ref=f2e345] [cursor=pointer]:
+                      - /url: https://alb.reddit.com/cr?za=s_dziD3m9RBbqr0hAMd9jxlpc8yy3IkfrWHGhxAxqipxcu4Vh7dVZ51SX5IDbhx4pNKWs2RhAcj6SvjXhJZY9NN8Dm-0G2gotSeHetK8E7XMSOwemi96PW0g2MW4qpzTX6p2EdSjhFrZrpXfnOaFHpoNzorNv9jBs_pSR7Zbt2Ws78Eo3bwdJ8V97Scesu13JdeXdhOpM4GBzoeQ0yDeShY68bVO4TSM2xXhUfMZUEFl4JvXYzMmcCEjxpK3x_h9lxbIUbVKezbsAT41Vc0ggSZk3eHSAfrr8Bl11cWp_GUHG64hYrD9nZaOz5HFOb9vpY4i2ww7TbJL3N04yw3oda7vfuYcJ0vX7y8OPcl2YQHwykuga_39As7gxzbXRHOamgnEArSjgd7cCcMJojR0qDyhRsRrGzt3hcOS-CwyJyyuhuu36DEgBJ7UGTGTw1H-G0FMQclnnNaWLKyZjfbCAo7xRoPhlUpBPA7VllL5b60Gr8peh-5eDKNzWR7W8dguqwkSe712Zmnpt2_-HI4GlKAY6SExzWKF4uxR0vq0CcqUDqYGKPXHnE-MP5WDmVAMj0t8hT-_fYDQ9CZjsUOuX7UZFhKSIlJlTfeVXXUHJ_zDp2itN9oB_EXLNq5JR5vJ01I-WF0GWSAKnegHT_P7atytyhIhxZN1V4BS8ESadQ&zp=6t-ENKchjfM9daymQFUFWVPNgLZT7hItCS1sN4gDGZTKAtrL4JfO_zashM6BQ7Th-D_NgbU-6kn2OryOpwNDKNR9hDO5bpbtNgu6I1HCvlElFQip-3zUVjx_S065ZtcZR1feISrWyw-shCKXJVV30rrAaAX3bsFxNtNRvbu3IhrHKJp0AqXcOOV0145yUkC5ZezOmryFDmtVhlu0LM5zZjrm-RJKiWq3PqZT68yjcyBecsg2t3Vx24I4ots429AbCSnk2fwX0cotV8lmgIs3Ned126r_5HftNid2gSM6Ky5oBPpt6mkicYA1cu2M3YbiFBQ
+                - separator [ref=f2e346]
+                - article [ref=f2e347]:
+                  - generic [ref=f2e348] [cursor=pointer]:
+                    - link [ref=f2e349]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                    - generic [ref=f2e351]:
+                      - generic [ref=f2e352]:
+                        - 'link "Author: u/baby-bellamushrooms" [ref=f2e357]':
+                          - /url: https://www.reddit.com/user/baby-bellamushrooms/
+                          - generic [ref=f2e358]:
+                            - img "u/baby-bellamushrooms avatar" [ref=f2e361]
+                            - generic [ref=f2e362]: u/baby-bellamushrooms
+                        - generic [ref=f2e363]: •
+                        - time [ref=f2e365]: 3 days ago
+                      - button "Open user actions" [ref=f2e371]
+                    - generic [ref=f2e377]:
+                      - heading [level=2] [ref=f2e378]:
+                        - link "Trying to get a job as an Epic Analyst from RN; my company denied approval for self-proficiency?" [ref=f2e379]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                      - generic [ref=f2e380]:
+                        - generic:
+                          - link "So I'm an RN for a big hospital system and I am trying to become an Epic Analyst. I've connected with some people and they said to do self-proficiencies because my hospital doesn't look at anyone's application that doesn't have at least a proficiency. I requested approval and it was denied due to approvals being for informatics, analysts, etc. It seems impossible to transition into the role and I've been applying for months within my company/ Any advice? I've been an end-user of Epic for 3-4 years.":
+                            - /url: /r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                            - generic:
+                              - generic:
+                                - paragraph: So I'm an RN for a big hospital system and I am trying to become an Epic Analyst. I've connected with some people and they said to do self-proficiencies because my hospital doesn't look at anyone's application that doesn't have at least a proficiency. I requested approval and it was denied due to approvals being for informatics, analysts, etc. It seems impossible to transition into the role and I've been applying for months within my company/ Any advice? I've been an end-user of Epic for 3-4 years.
+                    - generic "Actions available for this post" [ref=f2e382]:
+                      - generic [ref=f2e385]:
+                        - button [ref=f2e386]
+                        - generic [ref=f2e391]: "7"
+                        - button [ref=f2e393]
+                      - link "26 Go to comments" [ref=f2e398]:
+                        - /url: /r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                        - generic [ref=f2e399]: "26"
+                        - generic [ref=f2e405]: Go to comments
+                      - button "Share" [ref=f2e409]
+                - separator [ref=f2e416]
+                - article [ref=f2e417]:
+                  - generic [ref=f2e418] [cursor=pointer]:
+                    - link [ref=f2e419]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                    - generic [ref=f2e421]:
+                      - generic [ref=f2e422]:
+                        - 'link "Author: u/theultimatethought" [ref=f2e427]':
+                          - /url: https://www.reddit.com/user/theultimatethought/
+                          - generic [ref=f2e428]:
+                            - img "u/theultimatethought avatar" [ref=f2e431]
+                            - generic [ref=f2e432]: u/theultimatethought
+                        - generic [ref=f2e433]: •
+                        - time [ref=f2e435]: 3 days ago
+                      - button "Open user actions" [ref=f2e441]
+                    - generic [ref=f2e447]:
+                      - heading [level=2] [ref=f2e448]:
+                        - link "RN now New Epic Analayst, I am LOST" [ref=f2e449]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                      - generic [ref=f2e450]:
+                        - generic:
+                          - link:
+                            - /url: /r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                            - generic:
+                              - generic:
+                                - paragraph: 15+ yr RN very thankful to get an Epic Analyst position at my organization, but will you all tell me, will I always feel this lost?!!!
+                                - paragraph: Knowing the clinical workflow for the application I worked in is one thing but my gosh I was not prepared for the onslaught of learning I take in everyday. Most days I’m more lost, frustrated that it takes me an hour or so to digest problems. Building on top of existing build mixes, requests are getting bigger, I still don’t have half the knowledge others do. Galaxy is a good guide, but you still have to navigate through build, which is not my strength
+                                - paragraph: Don’t sugar coat it, does it get better? I keep hearing 2 years to feel comfortable, that the learning is lifelong, but can someone at least build a solid foundation in a timely manner….?
+                                - paragraph: 3 months into this. I’m at the point where I go home, take a deep breath, and for a few seconds reconsider going back to bedside.
+                    - generic "Actions available for this post" [ref=f2e452]:
+                      - generic [ref=f2e455]:
+                        - button [ref=f2e456]
+                        - generic [ref=f2e461]: "86"
+                        - button [ref=f2e463]
+                      - link "81 Go to comments" [ref=f2e468]:
+                        - /url: /r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                        - generic [ref=f2e469]: "81"
+                        - generic [ref=f2e475]: Go to comments
+                      - button "Share" [ref=f2e479]
+                - separator [ref=f2e486]
+                - generic [ref=f2e487]:
+                  - generic:
+                    - article [ref=f2e488]:
+                      - generic [ref=f2e489] [cursor=pointer]:
+                        - link [ref=f2e490]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v4p9o6/independent_consulting/
+                        - generic [ref=f2e492]:
+                          - generic [ref=f2e493]:
+                            - 'link "Author: u/avocados_onmytoast" [ref=f2e498]':
+                              - /url: https://www.reddit.com/user/avocados_onmytoast/
+                              - generic [ref=f2e499]: u/avocados_onmytoast
+                            - generic [ref=f2e507]: •
+                            - time [ref=f2e509]: 4 days ago
+                          - button "Open user actions" [ref=f2e515]
+                        - generic [ref=f2e521]:
+                          - heading [level=2] [ref=f2e522]:
+                            - link "Independent Consulting" [ref=f2e523]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v4p9o6/independent_consulting/
+                          - 'link "Flair: Advice" [ref=f2e526]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                            - 'generic "Flair: Advice" [ref=f2e528]': Advice
+                          - generic [ref=f2e529]:
+                            - generic:
+                              - 'link "I’m exploring the idea of starting an independent consulting business focused on healthtech and biotech startups, and I’d love to hear from people who’ve done it. Some questions I have getting started are: • How did you determine pricing? Hourly, project-based, or retainer fee? • What are the necessary business, legal, and financial steps to get started? (LLC, insurance, bookkeeping, etc.) I’m not necessarily looking to build a huge consulting firm. I enjoy solving complex EHR integration problems, I get frequent requests for my services, and I am just lost on how to get started the right way. Any advice, lessons learned, or resources you’d recommend would be greatly appreciated. Thanks!"':
+                                - /url: /r/healthIT/comments/1v4p9o6/independent_consulting/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I’m exploring the idea of starting an independent consulting business focused on healthtech and biotech startups, and I’d love to hear from people who’ve done it.
+                                    - paragraph: "Some questions I have getting started are:"
+                                    - paragraph: • How did you determine pricing? Hourly, project-based, or retainer fee?• What are the necessary business, legal, and financial steps to get started? (LLC, insurance, bookkeeping, etc.)
+                                    - paragraph: I’m not necessarily looking to build a huge consulting firm. I enjoy solving complex EHR integration problems, I get frequent requests for my services, and I am just lost on how to get started the right way.Any advice, lessons learned, or resources you’d recommend would be greatly appreciated. Thanks!
+                        - generic "Actions available for this post" [ref=f2e531]:
+                          - generic [ref=f2e534]:
+                            - button [ref=f2e535]
+                            - generic [ref=f2e540]: "4"
+                            - button [ref=f2e542]
+                          - link "2 Go to comments" [ref=f2e547]:
+                            - /url: /r/healthIT/comments/1v4p9o6/independent_consulting/
+                            - generic [ref=f2e548]: "2"
+                            - generic [ref=f2e554]: Go to comments
+                          - button "Share" [ref=f2e558]
+                    - separator [ref=f2e565]
+                    - article [ref=f2e566]:
+                      - generic [ref=f2e567] [cursor=pointer]:
+                        - link [ref=f2e568]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v4mm2n/is_fhir_not_achieving_interoperability_as_intended/
+                        - generic [ref=f2e570]:
+                          - generic [ref=f2e571]:
+                            - 'link "Author: u/Brandor7" [ref=f2e576]':
+                              - /url: https://www.reddit.com/user/Brandor7/
+                              - generic [ref=f2e577]:
+                                - img "u/Brandor7 avatar" [ref=f2e580]
+                                - generic [ref=f2e581]: u/Brandor7
+                            - generic [ref=f2e582]: •
+                            - time [ref=f2e584]: 4 days ago
+                          - button "Open user actions" [ref=f2e590]
+                        - generic [ref=f2e596]:
+                          - heading [level=2] [ref=f2e597]:
+                            - link "Is FHIR not achieving interoperability as intended?" [ref=f2e598]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v4mm2n/is_fhir_not_achieving_interoperability_as_intended/
+                          - generic [ref=f2e599]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v4mm2n/is_fhir_not_achieving_interoperability_as_intended/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hello,
+                                    - paragraph: I am 3 years into my Software/Integration Engineering career, and I have been working on a FHIR Bulk/Backend extractor for the last 1.5 years. I have made this highly automated app solo at my current job that only requires the user to essentially just get approved for FHIR with a vendor and fill out a questionnaire I made and an automated Bulk FHIR extract occurs weekly to get clinical data. It is quite complicated and handles 5+ vendors and many clients underneath them currently. It connects all the FHIR data together and Mirth Connect creates HL7 messages that send to a legacy system.
+                                    - paragraph: I have had incredible difficulties making the program handle all the different vendors due to how different everyone seems to be doing Bulk/Backend FHIR. No vendor has been 100% the same, typically about 80% is the same between some vendors, but I have to add in a bunch more conditionals to account for the other 20% differences. I am new to all this, but it seems like the standards get interpreted quite differently. Has this been anyone else's experience working with multiple vendors and their FHIR apis? Security has thankfully been consistent between all the vendors when it comes to using JWKS and token request. The data retrieved can be varied in many ways just like CCDAs have been. I've had some vendors combine scopes together and a lot of EMR workflows do not seem to be fully accounted for with FHIR or input without any connecting information other than a patient's ID.
+                                    - paragraph: I would like to feel proud of my creation, but I currently feel great frustration with all the different vendor interpretations. It feels like it will never be complete if there is always a vendor out there I have not connected to yet.
+                        - generic "Actions available for this post" [ref=f2e601]:
+                          - generic [ref=f2e604]:
+                            - button [ref=f2e605]
+                            - generic [ref=f2e610]: "17"
+                            - button [ref=f2e612]
+                          - link "39 Go to comments" [ref=f2e617]:
+                            - /url: /r/healthIT/comments/1v4mm2n/is_fhir_not_achieving_interoperability_as_intended/
+                            - generic [ref=f2e618]: "39"
+                            - generic [ref=f2e624]: Go to comments
+                          - button "Share" [ref=f2e628]
+                    - separator [ref=f2e635]
+                    - article [ref=f2e636]:
+                      - generic [ref=f2e637] [cursor=pointer]:
+                        - link [ref=f2e638]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v4krrm/interface_engine_troubles_new_opensource_free/
+                        - generic [ref=f2e640]:
+                          - generic [ref=f2e641]:
+                            - 'link "Author: u/Wsz2020" [ref=f2e646]':
+                              - /url: https://www.reddit.com/user/Wsz2020/
+                              - generic [ref=f2e647]: u/Wsz2020
+                            - generic [ref=f2e661]: •
+                            - time [ref=f2e663]: 4 days ago
+                          - button "Open user actions" [ref=f2e669]
+                        - generic [ref=f2e675]:
+                          - heading [level=2] [ref=f2e676]:
+                            - link "Interface Engine Troubles? New Open-Source Free Option" [ref=f2e677]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v4krrm/interface_engine_troubles_new_opensource_free/
+                          - generic [ref=f2e678]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v4krrm/interface_engine_troubles_new_opensource_free/
+                                - generic:
+                                  - generic:
+                                    - paragraph: There's been a lot happening with interface engines.
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Mirth Connect has stopped receiving updates. Instead of open source, it is now a paid closed-source tool.
+                                      - listitem:
+                                        - paragraph: Private equity firms have taken over the leading paid options and are raising prices dramatically.
+                                      - listitem:
+                                        - paragraph:
+                                          - text: "Then there is this:"
+                                          - 'link "What’s up with iNTERFACEWARE (Iguana)? : r/healthIT"':
+                                            - /url: https://www.reddit.com/r/healthIT/comments/1u37mob/whats_up_with_interfaceware_iguana/
+                                    - paragraph:
+                                      - text: We're creating a new open-source (
+                                      - strong: free
+                                      - text: ) alternative --
+                                      - strong: and we need your help
+                                      - text: .
+                                      - strong: We're looking for organizations that need this solution.
+                                    - paragraph:
+                                      - text: Check out
+                                      - link "MessageFoundry.org":
+                                        - /url: http://MessageFoundry.org
+                                        - strong: MessageFoundry.org
+                                      - text: "and see how we're creating an interface engine with:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Top cybersecurity protection for your PHI (ASVS 5 Level 3)
+                                      - listitem:
+                                        - paragraph: The power of Python
+                                      - listitem:
+                                        - paragraph: A "steps" programming layer that builds your Python scripts if you want
+                                      - listitem:
+                                        - paragraph: Simplicity for uses like small, integrated deployments
+                                      - listitem:
+                                        - paragraph:
+                                          - text: P
+                                          - strong: ower for any size organization (up to 40 million messages per day)
+                                    - paragraph: We're on v0.3.0 right now and are moving fast, adding new layers of security and additional features.
+                                    - paragraph:
+                                      - strong: We're now looking for a partner organization to be first in line when the product is ready.
+                                      - text: "You would get:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Top priority on your feedback, letting you guide MessageFoundry's future.
+                                      - listitem:
+                                        - paragraph: Free support as you test out and use MessageFoundry.
+                                    - paragraph:
+                                      - text: If you're interested, please contact us via
+                                      - link "Ask a question — MessageFoundry":
+                                        - /url: https://messagefoundry.org/contact.html
+                                      - text: .
+                        - generic "Actions available for this post" [ref=f2e680]:
+                          - generic [ref=f2e683]:
+                            - button [ref=f2e684]
+                            - generic [ref=f2e689]: "4"
+                            - button [ref=f2e691]
+                          - link "26 Go to comments" [ref=f2e696]:
+                            - /url: /r/healthIT/comments/1v4krrm/interface_engine_troubles_new_opensource_free/
+                            - generic [ref=f2e697]: "26"
+                            - generic [ref=f2e703]: Go to comments
+                          - button "Share" [ref=f2e707]
+                    - separator [ref=f2e714]
+                    - article [ref=f2e715]:
+                      - generic [ref=f2e716] [cursor=pointer]:
+                        - link [ref=f2e717]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v3ubc0/medicaid_cm_to_healthcare_data_analyst/
+                        - generic [ref=f2e719]:
+                          - generic [ref=f2e720]:
+                            - 'link "Author: u/Positive_Airport_293" [ref=f2e725]':
+                              - /url: https://www.reddit.com/user/Positive_Airport_293/
+                              - generic [ref=f2e726]: u/Positive_Airport_293
+                            - generic [ref=f2e734]: •
+                            - time [ref=f2e736]: 5 days ago
+                          - button "Open user actions" [ref=f2e742]
+                        - generic [ref=f2e748]:
+                          - heading [level=2] [ref=f2e749]:
+                            - link "Medicaid CM to Healthcare data analyst" [ref=f2e750]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v3ubc0/medicaid_cm_to_healthcare_data_analyst/
+                          - 'link "Flair: Careers" [ref=f2e753]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Careers%22
+                            - 'generic "Flair: Careers" [ref=f2e755]': Careers
+                        - generic [ref=f2e756]:
+                          - link [ref=f2e757]:
+                            - /url: /r/analytics/comments/1v3tyhq/medicaid_cm_to_healthcare_data_analyst/
+                          - generic [ref=f2e759]:
+                            - generic [ref=f2e760]:
+                              - link "r/analytics" [ref=f2e761]:
+                                - /url: /r/analytics/
+                              - generic [ref=f2e762]: •
+                              - time [ref=f2e764]: 5 days ago
+                            - link "Medicaid CM to Healthcare data analyst" [ref=f2e766]:
+                              - /url: /r/analytics/comments/1v3tyhq/medicaid_cm_to_healthcare_data_analyst/
+                          - generic [ref=f2e768]:
+                            - paragraph [ref=f2e769]: Hey all. I was debating going to nursing school to get a clinical license under my belt. My bachelor's is general studies in social sciences and humanities. Ive been a Medicaid Waiver Case manager and a CNA (PRN now) for over a year. Just pays horrible and I can't live like this anymore.
+                            - paragraph [ref=f2e770]: Im wondering if I should bother with getting at least my LPN(then likely RN>BSN) or instead just start learning SQL, Excel, and Tableau and start building a portfolio and apply for tons of jobs. How hard is it to get a job in Healthcare data analytics?
+                            - paragraph [ref=f2e771]: Wwyd?
+                          - generic [ref=f2e774]:
+                            - generic [ref=f2e775]: "2"
+                            - text: upvotes ·
+                            - link "4 comments" [ref=f2e777]:
+                              - /url: /r/analytics/comments/1v3tyhq/medicaid_cm_to_healthcare_data_analyst/
+                              - generic [ref=f2e778]: "4"
+                              - text: comments
+                        - generic "Actions available for this post" [ref=f2e780]:
+                          - generic [ref=f2e783]:
+                            - button [ref=f2e784]
+                            - generic [ref=f2e789]: "1"
+                            - button [ref=f2e791]
+                          - link "0 Go to comments" [ref=f2e796]:
+                            - /url: /r/healthIT/comments/1v3ubc0/medicaid_cm_to_healthcare_data_analyst/
+                            - generic [ref=f2e797]: "0"
+                            - generic [ref=f2e803]: Go to comments
+                          - button "Share" [ref=f2e807]
+                    - separator [ref=f2e814]
+                    - generic [ref=f2e815]:
+                      - link [ref=f2e817] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                      - generic [ref=f2e819]:
+                        - generic [ref=f2e820]:
+                          - link "u/AOK_RLP_SL" [ref=f2e823] [cursor=pointer]:
+                            - /url: /user/AOK_RLP_SL/
+                            - img "u/AOK_RLP_SL avatar" [ref=f2e826]
+                          - generic [ref=f2e828]: •
+                          - link "Promoted" [ref=f2e830] [cursor=pointer]:
+                            - /url: /user/AOK_RLP_SL/
+                          - link [ref=f2e833] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                        - button "Open user actions" [ref=f2e839] [cursor=pointer]
+                      - heading [level=2] [ref=f2e846]:
+                        - link "Jetzt kennt ihr Klaras beste Showkatze. Aber kennt ihr schon Deutschlands beste Krankenkasse? Willkommen bei den Besten.🏆" [ref=f2e849] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                      - generic [ref=f2e850]:
+                        - button "Play" [ref=f2e857] [cursor=pointer]
+                        - separator [ref=f2e860]
+                        - generic [ref=f2e861]:
+                          - link [ref=f2e863] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                          - generic [ref=f2e864]:
+                            - link "gerngesund.de" [ref=f2e867] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                            - link [ref=f2e869] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                      - generic "Actions available for this post" [ref=f2e873]:
+                        - generic [ref=f2e876]:
+                          - button [ref=f2e877] [cursor=pointer]
+                          - text: Vote
+                          - button [ref=f2e882] [cursor=pointer]
+                        - link "0 Go to comments" [ref=f2e887] [cursor=pointer]:
+                          - /url: /user/AOK_RLP_SL/comments/1uiu16b/jetzt_kennt_ihr_klaras_beste_showkatze_aber_kennt/?p=1&impressionid=5316472422847758363&ad_label_eligible=1
+                          - generic [ref=f2e888]: "0"
+                          - generic [ref=f2e894]: Go to comments
+                        - button "Share" [ref=f2e898] [cursor=pointer]
+                        - link [ref=f2e906] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=AlVcIeJfKS7ncvnAJ2ZB3tGcQ_7J_OIMJxSB6KfAHgb3f_ndmbQhslImmeg3IRNZzlprT8BSCNs4cNj_6jD0Pn2R7QbxXX6eK14FW-4Qhsq1nEhTmwDMUUzZRzlRk-48aykcpcrJOyOnmkvU7mW6HQJheKw6tqXwT6nat2HLLsCBxQ5iS7ekDh_u0tvcHrCMjvyKpNIv_2D8jefVE58TJwZcnq_11blQYimpYzgWv3fpwWFCyHsN28FwAEts3oZnK1ENncgZz-NZcSszKsYoS6VLLJaojwnB9J8teFclQC5yiLf6jTHp-dh2ufKNMDfwGcrMBO7I8IIz4Y_xMRJzDJAgIU-DF1Lo8s7-1ctM7zpwD6IkRO2Ryz1zeg7bRL2wBTeV7AO7HAkHrnZ8gtLtt3hLUVzRjxqqcmwCLz6-fBJLjPcjP71k7sfTK_SaYOzU6pZYpkTj5-nk-XnNUIZDUcNOWsHg5KTrVGrxEq9p68nokrAIR0nVqaIw5kq0zyJVoUOBuCvjDAajKG8GxaB9wpC-8adX5neVwG8PGxfLbmgRR0ossyotMr1zGCyaovyLfdBkATQixwJveixWsB5aMY90YU7w0Tk58GzaX5HG2skqIRNpzRWbYC2Qdr1aQgKQ_DaRGJYpJHPZgKzQ5qbMx3vzWil4usNH39DAoe9llWnWOh_alPXqtAxVc4rMwiuHNtYmJYxpm8UUWL9gIj2kIKH57cEhPh_YmP4G0XBM5T5xZc0&zp=_857Xsa7KOVkabS0hYLez2jbOg_ESpRC2hqsO92EOpfrhLCkikQ_HI1hChn9VoD6DWBpTOfw25xO6QRsgMJCg-XVVfFVxrCt0uUbZ5OOlQjFnajyqfIyacWtYJ6naxwILiiz1HsvymVqhhmptFulrCanjE8ECC5AR0jYCzZKPRcI2YeHKi-du9PgDSCodVHHIFSqhAoPLkiXj3fLRyDSDMGLVfVWtnqjQTi2tJ0gMZdxeZTLBkrbABeZiUhM3lB8ORHas5rpxg
+                    - separator [ref=f2e907]
+                    - article [ref=f2e908]:
+                      - generic [ref=f2e909] [cursor=pointer]:
+                        - link [ref=f2e910]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v3slwb/questions_for_my_fellow_cogitocaboodleclarity/
+                        - generic [ref=f2e912]:
+                          - generic [ref=f2e913]:
+                            - 'link "Author: u/Emotional_Error_7246" [ref=f2e918]':
+                              - /url: https://www.reddit.com/user/Emotional_Error_7246/
+                              - generic [ref=f2e919]: u/Emotional_Error_7246
+                            - generic [ref=f2e927]: •
+                            - time [ref=f2e929]: 5 days ago
+                          - button "Open user actions" [ref=f2e935]
+                        - generic [ref=f2e941]:
+                          - heading [level=2] [ref=f2e942]:
+                            - link "Questions for my fellow Cogito/Caboodle/Clarity friends" [ref=f2e943]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v3slwb/questions_for_my_fellow_cogitocaboodleclarity/
+                          - generic [ref=f2e944]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v3slwb/questions_for_my_fellow_cogitocaboodleclarity/
+                                - generic:
+                                  - generic:
+                                    - paragraph:
+                                      - strong: How do you deal with burnout?
+                                    - paragraph: I feel myself getting more burnt out and overwhelmed as time goes on, and I'm honestly wondering if this is just normal for BI/business analyst roles or if I'm in an unusually difficult situation.
+                                    - paragraph: For some background, I used to really love my job. I worked on a team that handled analytics requests from start to finish. We worked directly with stakeholders, had reasonable deadlines, rarely had after-hours work, and mostly built reports in Epic. When something more customized was needed then we pivot to sql. It was a very collaborative team, and I felt supported.I was later promoted into a different analytics role on a completely new team. and the experience has been completely different to say the least. It’s only caboodle/clarity sql build. No more build within epic. The work feels much more reactive. Requirements are handed to me after they've already been discussed, so I don't have the opportunity to ask questions or understand the business need before I start building or even where the data point lives. INI’s are a thing of the past I’m afraid. I'm often given a LARGE list of fields to pull or existing SQL to fix with extremely tight turnaround times, sometimes same-day. A week timeframe is the norm for new builds. Its very overwhelming. Im starting to hate sql with a passion.
+                                    - paragraph: For anyone who might suggest it, moving back to my previous team isn't an option. I'm trying to figure out whether I just need a different environment or whether this is simply the reality of most analytics roles. The burnout is really getting to me though.
+                                    - paragraph: I'm starting to wonder if this is just what BI/analytics is like, or if this is more of a team or management issue?
+                                    - paragraph: "TLDR; For those of you working in Epic analytics, Caboodle/Clarity, or in BI roles:"
+                                    - paragraph: How do you keep from burning out?
+                                    - paragraph: Do you usually own projects from beginning to end, or do you mainly receive assigned development work?Is it normal for nearly every request to be treated as urgent? Whats a normal project lifecycle timeframe for you?Do you feel supported by your manager and team?
+                        - generic "Actions available for this post" [ref=f2e946]:
+                          - generic [ref=f2e949]:
+                            - button [ref=f2e950]
+                            - generic [ref=f2e955]: "7"
+                            - button [ref=f2e957]
+                          - link "8 Go to comments" [ref=f2e962]:
+                            - /url: /r/healthIT/comments/1v3slwb/questions_for_my_fellow_cogitocaboodleclarity/
+                            - generic [ref=f2e963]: "8"
+                            - generic [ref=f2e969]: Go to comments
+                          - button "Share" [ref=f2e973]
+                    - separator [ref=f2e980]
+                    - article [ref=f2e981]:
+                      - generic [ref=f2e982] [cursor=pointer]:
+                        - link [ref=f2e983]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v3rycb/can_i_get_hired_as_an_epic_analyst_being_a_pt/
+                        - generic [ref=f2e985]:
+                          - generic [ref=f2e986]:
+                            - 'link "Author: u/undercntrol" [ref=f2e991]':
+                              - /url: https://www.reddit.com/user/undercntrol/
+                              - generic [ref=f2e992]: u/undercntrol
+                            - generic [ref=f2e1000]: •
+                            - time [ref=f2e1002]: 5 days ago
+                          - button "Open user actions" [ref=f2e1008]
+                        - generic [ref=f2e1014]:
+                          - heading [level=2] [ref=f2e1015]:
+                            - link "Can I get hired as an Epic analyst being a PT?" [ref=f2e1016]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v3rycb/can_i_get_hired_as_an_epic_analyst_being_a_pt/
+                          - generic [ref=f2e1017]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v3rycb/can_i_get_hired_as_an_epic_analyst_being_a_pt/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I’m currently a Principal Trainer ( instructional designer) for a healthcare company that uses epic. I have experience working with Ambulatory epic care, Willow Ambulatory, beacon, and Optime and Anesthesia workflows but I am only certified as a Principal in Willow Ambulatory and Optime and Anesthesia ( completed implementation ) I want to transition into an analyst role for a couple of reasons:- i like solving things, love being involved in projects and finding solutions etc- salary ( i know that experience is important )- remote jobs- instructional designer job market is so saturated, and requires a ton of experience. Not a lot of companies offer PT roles.
+                                    - paragraph: I want to move out of the city I live in and my current job unfortunately is hybrid.
+                                    - paragraph: How can I get hired as an analyst without any actual analyst experience. I only have experience building training environment is MST but I am familiar with most healthcare workflows as mentioned earlier.
+                                    - paragraph: Do I have a shot at being hired as an analyst?
+                        - generic "Actions available for this post" [ref=f2e1019]:
+                          - generic [ref=f2e1022]:
+                            - button [ref=f2e1023]
+                            - generic [ref=f2e1028]: "2"
+                            - button [ref=f2e1030]
+                          - link "12 Go to comments" [ref=f2e1035]:
+                            - /url: /r/healthIT/comments/1v3rycb/can_i_get_hired_as_an_epic_analyst_being_a_pt/
+                            - generic [ref=f2e1036]: "12"
+                            - generic [ref=f2e1042]: Go to comments
+                          - button "Share" [ref=f2e1046]
+                    - separator [ref=f2e1053]
+                    - article [ref=f2e1054]:
+                      - generic [ref=f2e1055] [cursor=pointer]:
+                        - link [ref=f2e1056]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v3qy08/has_anyone_automated_medication_cost_reporting/
+                        - generic [ref=f2e1058]:
+                          - generic [ref=f2e1059]:
+                            - 'link "Author: u/LilMJ69" [ref=f2e1064]':
+                              - /url: https://www.reddit.com/user/LilMJ69/
+                              - generic [ref=f2e1065]:
+                                - img "u/LilMJ69 avatar" [ref=f2e1068]
+                                - generic [ref=f2e1069]: u/LilMJ69
+                            - generic [ref=f2e1070]: •
+                            - time [ref=f2e1072]: 5 days ago
+                          - button "Open user actions" [ref=f2e1078]
+                        - generic [ref=f2e1084]:
+                          - heading [level=2] [ref=f2e1085]:
+                            - link "Has anyone automated medication cost reporting extracts from Cardinal Health using anything other than desktop Power Automate + RPA?" [ref=f2e1086]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v3qy08/has_anyone_automated_medication_cost_reporting/
+                          - 'link "Flair: Advice" [ref=f2e1089]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                            - 'generic "Flair: Advice" [ref=f2e1091]': Advice
+                          - generic [ref=f2e1092]:
+                            - generic:
+                              - link "It’s crazy to me that they don’t have report automation/scheduling capabilities or a good API to request the data from. Trying to avoid my users to have to log in and search costs by each NDC individually or keep manually pulling the data. If there are truly no options other than RPA for full automation I might just have to suggest we keep a recurring manual report pull of all NDC’s we can and ingest that data into SharePoint or somewhere where PA can access.":
+                                - /url: /r/healthIT/comments/1v3qy08/has_anyone_automated_medication_cost_reporting/
+                                - generic:
+                                  - generic:
+                                    - paragraph: It’s crazy to me that they don’t have report automation/scheduling capabilities or a good API to request the data from.
+                                    - paragraph: Trying to avoid my users to have to log in and search costs by each NDC individually or keep manually pulling the data.
+                                    - paragraph: If there are truly no options other than RPA for full automation I might just have to suggest we keep a recurring manual report pull of all NDC’s we can and ingest that data into SharePoint or somewhere where PA can access.
+                        - generic "Actions available for this post" [ref=f2e1094]:
+                          - generic [ref=f2e1097]:
+                            - button [ref=f2e1098]
+                            - generic [ref=f2e1103]: "0"
+                            - button [ref=f2e1105]
+                          - link "7 Go to comments" [ref=f2e1110]:
+                            - /url: /r/healthIT/comments/1v3qy08/has_anyone_automated_medication_cost_reporting/
+                            - generic [ref=f2e1111]: "7"
+                            - generic [ref=f2e1117]: Go to comments
+                          - button "Share" [ref=f2e1121]
+                    - separator [ref=f2e1128]
+                    - article [ref=f2e1129]:
+                      - generic [ref=f2e1130] [cursor=pointer]:
+                        - link [ref=f2e1131]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v3m29m/ai_applied_to_cell_research_bioinformatics_for/
+                        - generic [ref=f2e1133]:
+                          - generic [ref=f2e1134]:
+                            - 'link "Author: u/ScientistMundane7126" [ref=f2e1139]':
+                              - /url: https://www.reddit.com/user/ScientistMundane7126/
+                              - generic [ref=f2e1140]: u/ScientistMundane7126
+                            - generic [ref=f2e1154]: •
+                            - time [ref=f2e1156]: 5 days ago
+                          - button "Open user actions" [ref=f2e1162]
+                        - generic [ref=f2e1168]:
+                          - heading [level=2] [ref=f2e1169]:
+                            - link "AI applied to cell research, bioinformatics for living information processors" [ref=f2e1170]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v3m29m/ai_applied_to_cell_research_bioinformatics_for/
+                          - 'link "Flair: Integrations" [ref=f2e1173]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Integrations%22
+                            - 'generic "Flair: Integrations" [ref=f2e1175]': Integrations
+                          - generic [ref=f2e1176]:
+                            - generic:
+                              - link "\"As laboratories continue to adopt more connected and scalable workflows, automation is improving the consistency, efficiency, and reproducibility of complex cell culture and organoid research. At the same time, AI-powered analytical tools are enhancing the speed and accuracy of cellular analysis, supporting more informed decision-making in research and diagnostic applications.\" https://www.news-medical.net/industry-focus/Industry-focus-eBook-Cell-biology-(4th-edition)?erid=f296de632d1b45c0bc0f857bc0ec9b8a&erknd=4":
+                                - /url: /r/healthIT/comments/1v3m29m/ai_applied_to_cell_research_bioinformatics_for/
+                                - generic:
+                                  - generic:
+                                    - paragraph: "\"As laboratories continue to adopt more connected and scalable workflows, automation is improving the consistency, efficiency, and reproducibility of complex cell culture and organoid research. At the same time, AI-powered analytical tools are enhancing the speed and accuracy of cellular analysis, supporting more informed decision-making in research and diagnostic applications.\""
+                                    - paragraph:
+                                      - link "https://www.news-medical.net/industry-focus/Industry-focus-eBook-Cell-biology-(4th-edition)?erid=f296de632d1b45c0bc0f857bc0ec9b8a&erknd=4":
+                                        - /url: https://www.news-medical.net/industry-focus/Industry-focus-eBook-Cell-biology-(4th-edition)?erid=f296de632d1b45c0bc0f857bc0ec9b8a&erknd=4
+                        - generic "Actions available for this post" [ref=f2e1178]:
+                          - generic [ref=f2e1181]:
+                            - button [ref=f2e1182]
+                            - generic [ref=f2e1187]: "1"
+                            - button [ref=f2e1189]
+                          - link "0 Go to comments" [ref=f2e1194]:
+                            - /url: /r/healthIT/comments/1v3m29m/ai_applied_to_cell_research_bioinformatics_for/
+                            - generic [ref=f2e1195]: "0"
+                            - generic [ref=f2e1201]: Go to comments
+                          - button "Share" [ref=f2e1205]
+                    - separator [ref=f2e1212]
+                    - article [ref=f2e1213]:
+                      - generic [ref=f2e1214] [cursor=pointer]:
+                        - link [ref=f2e1215]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v2ttnp/looking_for_opportunities_in_mental_health/
+                        - generic [ref=f2e1217]:
+                          - generic [ref=f2e1218]:
+                            - 'link "Author: u/Entire_Mark8010" [ref=f2e1223]':
+                              - /url: https://www.reddit.com/user/Entire_Mark8010/
+                              - generic [ref=f2e1224]:
+                                - img "u/Entire_Mark8010 avatar" [ref=f2e1227]
+                                - generic [ref=f2e1228]: u/Entire_Mark8010
+                            - generic [ref=f2e1229]: •
+                            - time [ref=f2e1231]: 6 days ago
+                          - button "Open user actions" [ref=f2e1237]
+                        - generic [ref=f2e1243]:
+                          - heading [level=2] [ref=f2e1244]:
+                            - link "Looking for opportunities in Mental Health / HealthTech startups (Bangalore or Remote)" [ref=f2e1245]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v2ttnp/looking_for_opportunities_in_mental_health/
+                          - generic [ref=f2e1246]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v2ttnp/looking_for_opportunities_in_mental_health/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hi everyone,
+                                    - paragraph: I'm looking to join an early-stage HealthTech startup, particularly one working in mental health, neurodiversity, caregiving, or digital health. I'm open to remote roles (preferred) or opportunities in Bangalore.
+                                    - paragraph: "A bit about me:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Experience across Product, Operations, Marketing, Research, and AI startups Comfortable working in fast-paced startup environments, owning cross-functional projects, and solving ambiguous problems.
+                                      - listitem:
+                                        - paragraph: Strong analytical foundation (SQL, Excel, Python) with a keen interest in product, strategy, and operations.
+                                      - listitem:
+                                        - paragraph: Deeply passionate about building technology that creates meaningful impact in healthcare and mental health.
+                                    - paragraph: I'm looking for roles such as Product Associate, Program Associate, Product/Business Operations, Founder's Office, Strategy & Operations, or Research.
+                                    - paragraph: If your team is hiring; or you know someone building something meaningful in this space; I would truly appreciate a referral or introduction. Happy to share my resume over DM.
+                                    - paragraph: Thank you for reading!
+                        - generic "Actions available for this post" [ref=f2e1248]:
+                          - generic [ref=f2e1251]:
+                            - button [ref=f2e1252]
+                            - generic [ref=f2e1257]: "1"
+                            - button [ref=f2e1259]
+                          - link "0 Go to comments" [ref=f2e1264]:
+                            - /url: /r/healthIT/comments/1v2ttnp/looking_for_opportunities_in_mental_health/
+                            - generic [ref=f2e1265]: "0"
+                            - generic [ref=f2e1271]: Go to comments
+                          - button "Share" [ref=f2e1275]
+                    - separator [ref=f2e1282]
+                    - article [ref=f2e1283]:
+                      - generic [ref=f2e1284] [cursor=pointer]:
+                        - link [ref=f2e1285]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v2nufg/4_more_executives_leaving_epic/
+                        - generic [ref=f2e1287]:
+                          - generic [ref=f2e1289]:
+                            - generic [ref=f2e1290]:
+                              - 'link "Author: u/adifferentGOAT" [ref=f2e1295]':
+                                - /url: https://www.reddit.com/user/adifferentGOAT/
+                                - generic [ref=f2e1296]: u/adifferentGOAT
+                              - generic [ref=f2e1304]: •
+                              - time [ref=f2e1306]: 6 days ago
+                            - button "Open user actions" [ref=f2e1312]
+                          - generic [ref=f2e1317]:
+                            - link "4 more executives leaving Epic" [ref=f2e1319]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v2nufg/4_more_executives_leaving_epic/
+                            - link "https://www.beckershospitalreview.com/healthcare-information-technology/ehrs/4-more-executives-leaving-epic-report/" [ref=f2e1322]:
+                              - /url: https://www.beckershospitalreview.com/healthcare-information-technology/ehrs/4-more-executives-leaving-epic-report/
+                        - generic "Actions available for this post" [ref=f2e1325]:
+                          - generic [ref=f2e1328]:
+                            - button [ref=f2e1329]
+                            - generic [ref=f2e1334]: "124"
+                            - button [ref=f2e1336]
+                          - link "49 Go to comments" [ref=f2e1341]:
+                            - /url: /r/healthIT/comments/1v2nufg/4_more_executives_leaving_epic/
+                            - generic [ref=f2e1342]: "49"
+                            - generic [ref=f2e1348]: Go to comments
+                          - button "Share" [ref=f2e1352]
+                    - separator [ref=f2e1359]
+                    - article [ref=f2e1360]:
+                      - generic [ref=f2e1361] [cursor=pointer]:
+                        - link [ref=f2e1362]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v2919l/healthcare_b2b_data_for_us/
+                        - generic [ref=f2e1364]:
+                          - generic [ref=f2e1365]:
+                            - 'link "Author: u/01huMAN" [ref=f2e1370]':
+                              - /url: https://www.reddit.com/user/01huMAN/
+                              - generic [ref=f2e1371]: u/01huMAN
+                            - generic [ref=f2e1379]: •
+                            - time [ref=f2e1381]: 6 days ago
+                          - button "Open user actions" [ref=f2e1387]
+                        - generic [ref=f2e1393]:
+                          - heading [level=2] [ref=f2e1394]:
+                            - link "Healthcare B2B data for US" [ref=f2e1395]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v2919l/healthcare_b2b_data_for_us/
+                          - generic [ref=f2e1396]:
+                            - generic:
+                              - link "I am trying to do outbound into US healthcare - Providers, FQHCs and Payors - where can I get reliable filters for speciality and good mobile number. Because I have tried apollo, lusha, Zoominfo all seem to have generic Hospitals and healthcare filter which also includes tech companies, medical devices and other industries as they fetch how a company chooses to list itself on LinkedIn and phone numbers are mostly IVR/ Obsolete (retired) or outdated.":
+                                - /url: /r/healthIT/comments/1v2919l/healthcare_b2b_data_for_us/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I am trying to do outbound into US healthcare - Providers, FQHCs and Payors - where can I get reliable filters for speciality and good mobile number.
+                                    - paragraph: Because I have tried apollo, lusha, Zoominfo all seem to have generic Hospitals and healthcare filter which also includes tech companies, medical devices and other industries as they fetch how a company chooses to list itself on LinkedIn and phone numbers are mostly IVR/ Obsolete (retired) or outdated.
+                        - generic "Actions available for this post" [ref=f2e1398]:
+                          - generic [ref=f2e1401]:
+                            - button [ref=f2e1402]
+                            - generic [ref=f2e1407]: "1"
+                            - button [ref=f2e1409]
+                          - link "5 Go to comments" [ref=f2e1414]:
+                            - /url: /r/healthIT/comments/1v2919l/healthcare_b2b_data_for_us/
+                            - generic [ref=f2e1415]: "5"
+                            - generic [ref=f2e1421]: Go to comments
+                          - button "Share" [ref=f2e1425]
+                    - separator [ref=f2e1432]
+                    - generic [ref=f2e1433]:
+                      - link [ref=f2e1435] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                      - generic [ref=f2e1437]:
+                        - generic [ref=f2e1438]:
+                          - link "u/SonyPicturesGermany" [ref=f2e1441] [cursor=pointer]:
+                            - /url: /user/SonyPicturesGermany/
+                            - img "u/SonyPicturesGermany avatar" [ref=f2e1444]
+                          - generic [ref=f2e1446]: •
+                          - link "Promoted" [ref=f2e1448] [cursor=pointer]:
+                            - /url: /user/SonyPicturesGermany/
+                          - link [ref=f2e1451] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                        - button "Open user actions" [ref=f2e1457] [cursor=pointer]
+                      - heading [level=2] [ref=f2e1464]:
+                        - 'link "Bereit? Spider-Man: Brand New Day – Ab Mittwoch, 29.7. NUR im Kino. Jetzt Tickets sichern!" [ref=f2e1467] [cursor=pointer]':
+                          - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                      - generic [ref=f2e1468]:
+                        - button "Play" [ref=f2e1475] [cursor=pointer]
+                        - separator [ref=f2e1478]
+                        - generic [ref=f2e1479]:
+                          - link [ref=f2e1481] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                          - generic [ref=f2e1482]:
+                            - link "sonypictures-kinofinder.de" [ref=f2e1485] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                            - link [ref=f2e1487] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                      - generic "Actions available for this post" [ref=f2e1491]:
+                        - generic [ref=f2e1494]:
+                          - button [ref=f2e1495] [cursor=pointer]
+                          - text: Vote
+                          - button [ref=f2e1500] [cursor=pointer]
+                        - link "1 Go to comments" [ref=f2e1505] [cursor=pointer]:
+                          - /url: /user/SonyPicturesGermany/comments/1v7tsau/bereit_spiderman_brand_new_day_ab_mittwoch_297/?p=1&impressionid=5316472422847823899&ad_label_eligible=1
+                          - generic [ref=f2e1506]: "1"
+                          - generic [ref=f2e1512]: Go to comments
+                        - button "Share" [ref=f2e1516] [cursor=pointer]
+                        - link [ref=f2e1524] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=ZmvmmTH42xVJKr26pWqUuuxVK6h-h4LC03tjtJ-jOA6APvoKu3bt_YH9BQ3x120tj6O3jaWCiddq9_2M4yaqQIEqqm6Ngn0EJqOeSXpAVaE7NxgjZ5sEIQUZnTnqjjKf4hbOsDHGCo3xR7L1cbtg0yOXugUMTpMnJdTOJfUU55yZns3ZgJp1kiHiQM9ekdFjIbrkFM3Jir9lf6mxbsDXGgXHAZO2UTkRheDq9vy2XHLCa0w-v4TTAgbnBlfOVDhIMrfJktvxVZEPCDxAgiosqwYvIa0TbizmjB1ujS7yg7Svw9MrLdaaGh1qymfd0-e-MZJFr5qB8G1nXKZk9Y5WpcjuTQ-2o8CrUKFG6awipww3hUUEjKRyf421ymAr8FWS0hGi8iI7tbtwfYyVUZAtXoZqNKQQNNwT3m2XAAPklkju1QddsnVqLL8Tx3vvuzqXM9SrOe1u3ia-DUKMXCQwFzVRyXa3Gzd-nFYbz4enVuB677SEWmg6PCHmNf-gztqDJq4SYIkUHd1nnpbIxE09oouwzc5w_8-RF7fNKgiu7tog9LSRu_NNUCHjpYmyopO2Ey0svgpldvHnfQMwfj07Ex1x0DcaB9JlI-iEWZNk2_0SZkQK40UMvNdsYfQ_FXluNSbAl2zbLunvqY2uNLSarMsNbUAEKyNqzzXAxGtVdoCiY9QCdWf_F_0LiugJbScyd7eU0OxEuHWfRmm_exVBl5xmkm768THByLaBcVAWO89j6y4&zp=MrLQlNEiU9v8vZi5mrQji0VpObM_as7z85BI0DERFFiIR7e6b8snwkeRcBXe6XEnfLFUWAhxUsBwDVKIRXDC6Do1t9NaOGr2qe9FniFHSzgeww_8cONqD4Wq5P1_ssmn2du_gQbyuQ2hOWdTh42EFEH2mJxFgHHlv99ZOqGKB4wlrhF10hBPz6QgXHpGq2i3Y0FXGOmhPEDS1Ecg76olCXzFNQxIxDvVWWs3GUL3G5-bGpgtRIKeMMPPeLg_QnpMX3LKI51YlmRzmEJ5Jr7sG17mz9MZJFYU9yzN8QbeQtswqf4HZF8Xgs33vaAZjmucs0RHdGCkz17_gNQ14az6ofRX3PzJyvZTmYLszjUFzK3JgLxIyP87mBixepVhl8gZxckXJayjNPTytG82siu8PpzYu0RNIN5rYVKEyT9o0UTWZA
+                    - separator [ref=f2e1525]
+                    - article [ref=f2e1526]:
+                      - generic [ref=f2e1527] [cursor=pointer]:
+                        - link [ref=f2e1528]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v226wa/new_to_epic/
+                        - generic [ref=f2e1530]:
+                          - generic [ref=f2e1531]:
+                            - 'link "Author: u/StudentofLife__" [ref=f2e1536]':
+                              - /url: https://www.reddit.com/user/StudentofLife__/
+                              - generic [ref=f2e1537]: u/StudentofLife__
+                            - generic [ref=f2e1545]: •
+                            - time [ref=f2e1547]: 6 days ago
+                          - button "Open user actions" [ref=f2e1553]
+                        - generic [ref=f2e1559]:
+                          - heading [level=2] [ref=f2e1560]:
+                            - link "New to EPIC" [ref=f2e1561]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v226wa/new_to_epic/
+                          - 'link "Flair: Careers" [ref=f2e1564]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Careers%22
+                            - 'generic "Flair: Careers" [ref=f2e1566]': Careers
+                          - generic [ref=f2e1567]:
+                            - generic:
+                              - link "I recently told my manager that I'd like to learn Epic. Although I don't currently work in Epic, I was granted access so I can start getting familiar with it. The only challenge is that I'm not sure where to begin. For those of you who have experience with Epic, do you have any recommendations for a complete beginner? Are there any training modules, environments, workflows, or tips you'd suggest starting with? I'd appreciate any guidance. Thanks in advance!":
+                                - /url: /r/healthIT/comments/1v226wa/new_to_epic/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I recently told my manager that I'd like to learn Epic. Although I don't currently work in Epic, I was granted access so I can start getting familiar with it.
+                                    - paragraph: The only challenge is that I'm not sure where to begin. For those of you who have experience with Epic, do you have any recommendations for a complete beginner? Are there any training modules, environments, workflows, or tips you'd suggest starting with?
+                                    - paragraph: I'd appreciate any guidance. Thanks in advance!
+                        - generic "Actions available for this post" [ref=f2e1569]:
+                          - generic [ref=f2e1572]:
+                            - button [ref=f2e1573]
+                            - generic [ref=f2e1578]: "0"
+                            - button [ref=f2e1580]
+                          - link "6 Go to comments" [ref=f2e1585]:
+                            - /url: /r/healthIT/comments/1v226wa/new_to_epic/
+                            - generic [ref=f2e1586]: "6"
+                            - generic [ref=f2e1592]: Go to comments
+                          - button "Share" [ref=f2e1596]
+                    - separator [ref=f2e1603]
+                    - article [ref=f2e1604]:
+                      - generic [ref=f2e1605] [cursor=pointer]:
+                        - link [ref=f2e1606]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v1rtyp/sample_pyxis_return_message_to_emr/
+                        - generic [ref=f2e1608]:
+                          - generic [ref=f2e1609]:
+                            - 'link "Author: u/deWereldReiziger" [ref=f2e1614]':
+                              - /url: https://www.reddit.com/user/deWereldReiziger/
+                              - generic [ref=f2e1615]:
+                                - img "u/deWereldReiziger avatar" [ref=f2e1618]
+                                - generic [ref=f2e1619]: u/deWereldReiziger
+                            - generic [ref=f2e1620]: •
+                            - time [ref=f2e1622]: 7 days ago
+                          - button "Open user actions" [ref=f2e1628]
+                        - generic [ref=f2e1634]:
+                          - heading [level=2] [ref=f2e1635]:
+                            - link "Sample Pyxis Return Message to EMR" [ref=f2e1636]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v1rtyp/sample_pyxis_return_message_to_emr/
+                          - 'link "Flair: Integrations" [ref=f2e1639]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Integrations%22
+                            - 'generic "Flair: Integrations" [ref=f2e1641]': Integrations
+                          - generic [ref=f2e1642]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v1rtyp/sample_pyxis_return_message_to_emr/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I'm looking for a sample return message from Pyxis to EMR that contains a Prescription RX number.
+                                    - paragraph: We, a veterinary site, are working with a vendor to be the first site for InstyMeds cabinets. Our EMR vendor does not support outbound message in the format needed (which I have generated based off of InstyMeds HL7 interface documentation) but my EMR vendor wants us to reverse engeineer an HL7 message to send back to their Pyxis connector, which includes the Rx Number, which is supposed to mark the prescription as Dispensed.
+                                    - paragraph: I'm looking for an example HL7 message that someone might have where their Pyxis unit sent back to your EMR the message, which had originally been ordered in the EMR. (I hope this makes sense).
+                                    - paragraph: "Currently we do send DFT messages but none of our messages include an Rx Number because the drugs dispensed are not ordered in the EMR, thus, do not contain such data. But the EMR vendor (who has no documentation to provide) said this:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: The format of the PRESCRIPTION_NO in the database is stored as "[rxPrefix] - [rxFillNo]" - So 10000-0 for example.
+                                      - listitem:
+                                        - paragraph: The PRESCRIPTION_NO field is actually sent to VetView via Cubex as the field "profileId" in the HL7
+                                    - paragraph: I realize this says Cubex but I'm talking about Pyxis. We have Pyxis devices but their connector in the EMR is based off of Cubex.
+                        - generic "Actions available for this post" [ref=f2e1644]:
+                          - generic [ref=f2e1647]:
+                            - button [ref=f2e1648]
+                            - generic [ref=f2e1653]: "2"
+                            - button [ref=f2e1655]
+                          - link "5 Go to comments" [ref=f2e1660]:
+                            - /url: /r/healthIT/comments/1v1rtyp/sample_pyxis_return_message_to_emr/
+                            - generic [ref=f2e1661]: "5"
+                            - generic [ref=f2e1667]: Go to comments
+                          - button "Share" [ref=f2e1671]
+                    - separator [ref=f2e1678]
+                    - article [ref=f2e1679]:
+                      - generic [ref=f2e1680] [cursor=pointer]:
+                        - link [ref=f2e1681]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v1qlx6/failed_sphinx_assessment/
+                        - generic [ref=f2e1683]:
+                          - generic [ref=f2e1684]:
+                            - 'link "Author: u/skylarlove0" [ref=f2e1689]':
+                              - /url: https://www.reddit.com/user/skylarlove0/
+                              - generic [ref=f2e1690]: u/skylarlove0
+                            - generic [ref=f2e1698]: •
+                            - time [ref=f2e1700]: 7 days ago
+                          - button "Open user actions" [ref=f2e1706]
+                        - generic [ref=f2e1712]:
+                          - heading [level=2] [ref=f2e1713]:
+                            - link "Failed Sphinx Assessment" [ref=f2e1714]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v1qlx6/failed_sphinx_assessment/
+                          - generic [ref=f2e1715]:
+                            - generic:
+                              - link "I got the dreaded “moving on to another candidate” email. I saw people here said to wait 6 months but the email told me I can’t apply for another year. Does this apply just for their hospital or I can’t apply to any hospital that uses Epic? Pretty bummed because I have a friend who works in a different hospital organization that said they’ll refer me but unsure if I would be allowed to apply to them now.":
+                                - /url: /r/healthIT/comments/1v1qlx6/failed_sphinx_assessment/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I got the dreaded “moving on to another candidate” email. I saw people here said to wait 6 months but the email told me I can’t apply for another year. Does this apply just for their hospital or I can’t apply to any hospital that uses Epic? Pretty bummed because I have a friend who works in a different hospital organization that said they’ll refer me but unsure if I would be allowed to apply to them now.
+                        - generic "Actions available for this post" [ref=f2e1717]:
+                          - generic [ref=f2e1720]:
+                            - button [ref=f2e1721]
+                            - generic [ref=f2e1726]: "12"
+                            - button [ref=f2e1728]
+                          - link "30 Go to comments" [ref=f2e1733]:
+                            - /url: /r/healthIT/comments/1v1qlx6/failed_sphinx_assessment/
+                            - generic [ref=f2e1734]: "30"
+                            - generic [ref=f2e1740]: Go to comments
+                          - button "Share" [ref=f2e1744]
+                    - separator [ref=f2e1751]
+                    - article [ref=f2e1752]:
+                      - generic [ref=f2e1753] [cursor=pointer]:
+                        - link [ref=f2e1754]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v1evei/proof_of_concept_trauma_tracker_and_registry/
+                        - generic [ref=f2e1756]:
+                          - generic [ref=f2e1757]:
+                            - 'link "Author: u/thesurgepodcast" [ref=f2e1762]':
+                              - /url: https://www.reddit.com/user/thesurgepodcast/
+                              - generic [ref=f2e1763]: u/thesurgepodcast
+                            - generic [ref=f2e1771]: •
+                            - time [ref=f2e1773]: 7 days ago
+                          - button "Open user actions" [ref=f2e1779]
+                        - heading [level=2] [ref=f2e1786]:
+                          - link "Proof of Concept Trauma Tracker and Registry" [ref=f2e1787]:
+                            - /url: https://www.reddit.com/r/healthIT/comments/1v1evei/proof_of_concept_trauma_tracker_and_registry/
+                        - generic [ref=f2e1788]:
+                          - link [ref=f2e1789]:
+                            - /url: /r/nocode/comments/1v01fe8/proof_of_concept_trauma_tracker_and_registry/
+                          - generic [ref=f2e1791]:
+                            - generic [ref=f2e1792]:
+                              - link "r/nocode" [ref=f2e1793]:
+                                - /url: /r/nocode/
+                              - generic [ref=f2e1794]: •
+                              - time [ref=f2e1796]: 9 days ago
+                            - link "Proof of Concept Trauma Tracker and Registry" [ref=f2e1798]:
+                              - /url: /r/nocode/comments/1v01fe8/proof_of_concept_trauma_tracker_and_registry/
+                          - link [ref=f2e1803]:
+                            - /url: https://www.appsheet.com//templates/A-Trauma-Service-Managment-App-by-Saud-Alzaid-The-Trauma-Tracker-and-Registry-is-a-combined-in-patient-management-tool-data-registry-and-document-generation-and-archiving-tool-built-for-purpose-to-meet-WHO-injury-registry-standards-with-a-goal-of-meeting-NTDB-standards-?appGuidString=557194d5-0ff7-4406-9a2f-95d2fded0d58
+                            - img "r/healthIT - Proof of Concept Trauma Tracker and Registry" [ref=f2e1804]
+                          - generic [ref=f2e1807]:
+                            - generic [ref=f2e1808]: "2"
+                            - text: upvotes ·
+                            - link "5 comments" [ref=f2e1810]:
+                              - /url: /r/nocode/comments/1v01fe8/proof_of_concept_trauma_tracker_and_registry/
+                              - generic [ref=f2e1811]: "5"
+                              - text: comments
+                        - generic "Actions available for this post" [ref=f2e1813]:
+                          - generic [ref=f2e1816]:
+                            - button [ref=f2e1817]
+                            - generic [ref=f2e1822]: "0"
+                            - button [ref=f2e1824]
+                          - link "0 Go to comments" [ref=f2e1829]:
+                            - /url: /r/healthIT/comments/1v1evei/proof_of_concept_trauma_tracker_and_registry/
+                            - generic [ref=f2e1830]: "0"
+                            - generic [ref=f2e1836]: Go to comments
+                          - button "Share" [ref=f2e1840]
+                    - separator [ref=f2e1847]
+                    - article [ref=f2e1848]:
+                      - generic [ref=f2e1849] [cursor=pointer]:
+                        - link [ref=f2e1850]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v18t8l/hl7_v2_online_exam/
+                        - generic [ref=f2e1852]:
+                          - generic [ref=f2e1853]:
+                            - 'link "Author: u/Minion8194" [ref=f2e1858]':
+                              - /url: https://www.reddit.com/user/Minion8194/
+                              - generic [ref=f2e1859]: u/Minion8194
+                            - generic [ref=f2e1867]: •
+                            - time [ref=f2e1869]: 7 days ago
+                          - button "Open user actions" [ref=f2e1875]
+                        - generic [ref=f2e1881]:
+                          - heading [level=2] [ref=f2e1882]:
+                            - link "Hl7 v2 online exam" [ref=f2e1883]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v18t8l/hl7_v2_online_exam/
+                          - generic [ref=f2e1884]:
+                            - generic:
+                              - link "Has anyone recently prepared and gave HL7 v2 exam? And what are requirements for online exam? It says- an external web camera is needed. Not sure how it works.":
+                                - /url: /r/healthIT/comments/1v18t8l/hl7_v2_online_exam/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Has anyone recently prepared and gave HL7 v2 exam? And what are requirements for online exam? It says- an external web camera is needed. Not sure how it works.
+                        - generic "Actions available for this post" [ref=f2e1886]:
+                          - generic [ref=f2e1889]:
+                            - button [ref=f2e1890]
+                            - generic [ref=f2e1895]: "2"
+                            - button [ref=f2e1897]
+                          - link "12 Go to comments" [ref=f2e1902]:
+                            - /url: /r/healthIT/comments/1v18t8l/hl7_v2_online_exam/
+                            - generic [ref=f2e1903]: "12"
+                            - generic [ref=f2e1909]: Go to comments
+                          - button "Share" [ref=f2e1913]
+                    - separator [ref=f2e1920]
+                    - article [ref=f2e1921]:
+                      - generic [ref=f2e1922] [cursor=pointer]:
+                        - link [ref=f2e1923]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v0fzdf/nurse_homelab_nerd_looking_for_career_advice_for/
+                        - generic [ref=f2e1925]:
+                          - generic [ref=f2e1926]:
+                            - 'link "Author: u/Pasta-love" [ref=f2e1931]':
+                              - /url: https://www.reddit.com/user/Pasta-love/
+                              - generic [ref=f2e1932]: u/Pasta-love
+                            - generic [ref=f2e1940]: •
+                            - time [ref=f2e1942]: 8 days ago
+                          - button "Open user actions" [ref=f2e1948]
+                        - generic [ref=f2e1954]:
+                          - heading [level=2] [ref=f2e1955]:
+                            - link "Nurse/ homelab nerd looking for career advice for my weird mix of skills." [ref=f2e1956]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1v0fzdf/nurse_homelab_nerd_looking_for_career_advice_for/
+                          - generic [ref=f2e1957]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1v0fzdf/nurse_homelab_nerd_looking_for_career_advice_for/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hi everyone, I’m a Registered Nurse in the US along with being a massive linux nerd and homelabber. I took some time away from the field after covid wanting to try and get into IT with little luck, however I did come away with a love of homelabbing/ linux. I’ve done lots of stuff with Docker, Kubernetes, and local AI deployment. I have done fun projects like building a workflow that uses local AI models to analyze pt wounds, parse the results into snomed codes via JSON, and push it to a self hosted FHIR server.
+                                    - paragraph: Here is my issue. I love medicine and I love working with servers. I don’t know really how to turn that into a job. A lot of the informatics jobs that I have found, along with not being remote (I live a rural area), are mostly just creating EMR workflows and doing very surface level stuff. When I do interviews and start talking about my homelab stuff their eyes just start glazing over. I feel like this has to be a valuable skillset but I have no idea how to use it.
+                                    - paragraph: Which comes to this post. Does anyone know of any niche “med-dev-ops” field I could fit into? Any ideas on certs? I currently have no certifications but feel like I am at an awkward middle point of being too advanced for A+ plus it’s expensive. I’m considering getting CAHIMS or CHISP though I worry those are still informatics-focused rather than infrastructure.
+                                    - paragraph: If anyone has any advice I would greatly appreciate it!
+                        - generic "Actions available for this post" [ref=f2e1959]:
+                          - generic [ref=f2e1962]:
+                            - button [ref=f2e1963]
+                            - generic [ref=f2e1968]: "19"
+                            - button [ref=f2e1970]
+                          - link "26 Go to comments" [ref=f2e1975]:
+                            - /url: /r/healthIT/comments/1v0fzdf/nurse_homelab_nerd_looking_for_career_advice_for/
+                            - generic [ref=f2e1976]: "26"
+                            - generic [ref=f2e1982]: Go to comments
+                          - button "Share" [ref=f2e1986]
+                    - separator [ref=f2e1993]
+                    - article [ref=f2e1994]:
+                      - generic [ref=f2e1995] [cursor=pointer]:
+                        - link [ref=f2e1996]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uzqi80/i_keep_hearing_health_it_is_saturated_feeling/
+                        - generic [ref=f2e1998]:
+                          - generic [ref=f2e1999]:
+                            - 'link "Author: u/Pikahcu" [ref=f2e2004]':
+                              - /url: https://www.reddit.com/user/Pikahcu/
+                              - generic [ref=f2e2005]: u/Pikahcu
+                            - generic [ref=f2e2013]: •
+                            - time [ref=f2e2015]: 9 days ago
+                          - button "Open user actions" [ref=f2e2021]
+                        - generic [ref=f2e2027]:
+                          - heading [level=2] [ref=f2e2028]:
+                            - link "I keep hearing Health IT is saturated. Feeling hopeless about my HIMT degree." [ref=f2e2029]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uzqi80/i_keep_hearing_health_it_is_saturated_feeling/
+                          - generic [ref=f2e2030]:
+                            - generic:
+                              - 'link "Seems like all the threads I see about Health IT is negative news. I returned to get my bachelors last year and have about a year left, only to find out it’s going to be useless. Running out of juice to keep returning to school. I’m in my mid 20’s, nursing and masters is out of the picture and too time consuming😅 Note: I have two years of clinical experience. I just want to make at least $28/hour. ‼️Hopefully someone can share their experience on how they are navigating this.‼️‼️"':
+                                - /url: /r/healthIT/comments/1uzqi80/i_keep_hearing_health_it_is_saturated_feeling/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Seems like all the threads I see about Health IT is negative news. I returned to get my bachelors last year and have about a year left, only to find out it’s going to be useless.
+                                    - paragraph: Running out of juice to keep returning to school. I’m in my mid 20’s, nursing and masters is out of the picture and too time consuming😅
+                                    - paragraph: "Note: I have two years of clinical experience. I just want to make at least $28/hour."
+                                    - paragraph:
+                                      - text: ‼
+                                      - strong: ️Hopefully someone can share their experience on how they are navigating this
+                                      - text: .‼️‼️
+                        - generic "Actions available for this post" [ref=f2e2032]:
+                          - generic [ref=f2e2035]:
+                            - button [ref=f2e2036]
+                            - generic [ref=f2e2041]: "25"
+                            - button [ref=f2e2043]
+                          - link "59 Go to comments" [ref=f2e2048]:
+                            - /url: /r/healthIT/comments/1uzqi80/i_keep_hearing_health_it_is_saturated_feeling/
+                            - generic [ref=f2e2049]: "59"
+                            - generic [ref=f2e2055]: Go to comments
+                          - button "Share" [ref=f2e2059]
+                    - separator [ref=f2e2066]
+                    - article [ref=f2e2067]:
+                      - generic [ref=f2e2068] [cursor=pointer]:
+                        - link [ref=f2e2069]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uzeg52/any_michigan_healthcare_it_professionals_looking/
+                        - generic [ref=f2e2071]:
+                          - generic [ref=f2e2072]:
+                            - 'link "Author: u/CamBam1994" [ref=f2e2077]':
+                              - /url: https://www.reddit.com/user/CamBam1994/
+                              - generic [ref=f2e2078]:
+                                - img "u/CamBam1994 avatar" [ref=f2e2081]
+                                - generic [ref=f2e2082]: u/CamBam1994
+                            - generic [ref=f2e2083]: •
+                            - time [ref=f2e2085]: 10 days ago
+                          - button "Open user actions" [ref=f2e2091]
+                        - generic [ref=f2e2097]:
+                          - heading [level=2] [ref=f2e2098]:
+                            - link "Any Michigan Healthcare IT Professionals? Looking for Cert Advice (32F Career Change)" [ref=f2e2099]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uzeg52/any_michigan_healthcare_it_professionals_looking/
+                          - 'link "Flair: Careers" [ref=f2e2102]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Careers%22
+                            - 'generic "Flair: Careers" [ref=f2e2104]': Careers
+                          - generic [ref=f2e2105]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1uzeg52/any_michigan_healthcare_it_professionals_looking/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hi everyone! 😊
+                                    - paragraph:
+                                      - text: I'm a 32-year-old woman from Michigan starting the Cybersecurity program at Washtenaw Community College this fall. My goal is to transition from telecommunications into
+                                      - strong: Healthcare IT
+                                      - text: ", preferably in networking or network security."
+                                    - paragraph:
+                                      - text: I'm especially hoping to hear from anyone working at
+                                      - strong: Henry Ford Health, Corewell Health, DMC, or Michigan Medicine
+                                      - text: ", since those are my dream employers."
+                                    - paragraph:
+                                      - text: I worked at
+                                      - strong: T-Mobile
+                                      - text: for several years in technical support, where I handled troubleshooting, password resets, ticketing, device issues, and network-related problems (coverage, towers, LTE/5G, etc.). I'm hoping those skills will transfer into Healthcare IT.
+                                    - paragraph: "My current certification plan is:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Linux+
+                                      - listitem:
+                                        - paragraph: Network+
+                                      - listitem:
+                                        - paragraph: Security+
+                                      - listitem:
+                                        - paragraph: CCNA
+                                      - listitem:
+                                        - paragraph: CySA+ (later)
+                                    - paragraph: "For those already working in Healthcare IT:"
+                                    - list:
+                                      - listitem:
+                                        - paragraph: Would you change this certification path?
+                                      - listitem:
+                                        - paragraph: What certs helped you the most?
+                                      - listitem:
+                                        - paragraph: If you were hiring an entry-level candidate, what would make them stand out?
+                                    - paragraph: I'd really appreciate any advice. Thanks so much!
+                        - generic "Actions available for this post" [ref=f2e2107]:
+                          - generic [ref=f2e2110]:
+                            - button [ref=f2e2111]
+                            - generic [ref=f2e2116]: "2"
+                            - button [ref=f2e2118]
+                          - link "22 Go to comments" [ref=f2e2123]:
+                            - /url: /r/healthIT/comments/1uzeg52/any_michigan_healthcare_it_professionals_looking/
+                            - generic [ref=f2e2124]: "22"
+                            - generic [ref=f2e2130]: Go to comments
+                          - button "Share" [ref=f2e2134]
+                    - separator [ref=f2e2141]
+                    - generic [ref=f2e2142]:
+                      - link [ref=f2e2144] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                      - generic [ref=f2e2146]:
+                        - generic [ref=f2e2147]:
+                          - link "u/WarnerBros-DE" [ref=f2e2150] [cursor=pointer]:
+                            - /url: /user/WarnerBros-DE/
+                            - img "u/WarnerBros-DE avatar" [ref=f2e2153]
+                          - generic [ref=f2e2155]: •
+                          - link "Promoted" [ref=f2e2157] [cursor=pointer]:
+                            - /url: /user/WarnerBros-DE/
+                          - link [ref=f2e2160] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                        - button "Open user actions" [ref=f2e2166] [cursor=pointer]
+                      - heading [level=2] [ref=f2e2173]:
+                        - link "Der Sommer endet in der Oak Street! THE END OF OAK STREET – ab 13. August nur im Kino." [ref=f2e2176] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                      - generic [ref=f2e2177]:
+                        - button "Play" [ref=f2e2184] [cursor=pointer]
+                        - separator [ref=f2e2187]
+                        - generic [ref=f2e2188]:
+                          - link [ref=f2e2190] [cursor=pointer]:
+                            - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                          - generic [ref=f2e2191]:
+                            - link "warnerbros.de" [ref=f2e2194] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                            - link [ref=f2e2196] [cursor=pointer]:
+                              - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                      - generic "Actions available for this post" [ref=f2e2200]:
+                        - generic [ref=f2e2203]:
+                          - button [ref=f2e2204] [cursor=pointer]
+                          - text: Vote
+                          - button [ref=f2e2209] [cursor=pointer]
+                        - link "0 Go to comments" [ref=f2e2214] [cursor=pointer]:
+                          - /url: /user/WarnerBros-DE/comments/1v494cv/der_sommer_endet_in_der_oak_street_the_end_of_oak/?p=1&impressionid=5316472422847889435&ad_label_eligible=1
+                          - generic [ref=f2e2215]: "0"
+                          - generic [ref=f2e2221]: Go to comments
+                        - button "Share" [ref=f2e2225] [cursor=pointer]
+                        - link [ref=f2e2233] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=9q-Wbjh1RLVZUhv7P9o9XPqOROVl8Lu2NLpXqG9Tn0TapTijMzFWb6A3WekN4fiZv0vbjgr0k_XPWkKmPiZujMrLBG5GU6voKeQtaI-KYLayoc6lQqdxWPXll7ymyXn4rcNGDvZhKjJjkj7n3GuT-bfxkfiaRHw4SH6NmxOrks9B-t1WNwT8T6z84VYGS685j8DQcAnavpGGakrq-0JqDjyjE6wNVNMTUjdZ2DnGjg4v7HAD45GbSgcDa_8D4pVgERx6afZ7Gy55hDgjCA-0Jj9EaFm5BcF4eWYmQqv84v9Bj4Tm5F3n6462v11i3bHUZAJMDauzcxfV_EvtjBCrxoIg1lcmWTS5IDgE7a5bxfPg2PWxHR7yrP6vnf3CIw8Et4362nYCByWBNCbIU9Ic4dMtUd7IOQ6UoQdGH79HYRHvGcAvtBoQ_OgDF2_KTE9Pzl1L2tEZAXWLjitxF3U_AIT3oOs0zkUT3hczVr7HaDVJGqOY9SEG3r7KmiTaJqMrlNRwaSJ6PKHb9GXKMblthQH6K8Z8n8j1NbPGHfZuL-qlyBI61uGGWhtQ7w8-YeE9OFNUcnVzG4Wcs60YGyhCy6icExPFfX7RHeLJ1BwlNIPr0ayqi5g80dxm8LfNnh-heq9BUqN7zy7C4-XUz8itJHpWkptB_0fOo_e7qctn3_-CmWkB2faxoT7JIY4G_q0PmtMu-xzP6s04Uu0Pv2Z0QsyXT2M01ZHVu5-YfdkJbEgnJEc&zp=XW_JPF_0lsJTDfGa-1vZMzHe-13AKgZEYdjlSluQBy6wINDY1-t499Pr9RTugE73ngk0dqsk0YPuZHqYO1ddNA-m-naByi5Kksw6xESV8nyTaoPzK9K2d_Jw-JmyG2bBMIaEjIsd7aDY1ZmMBtnCkyAo34EGXG42wSQ7Aq_aarajkH5iEsKZmXPyXAftuLEF30R1bbRtBpkWwi6-qFi7t5JAaQ3aaVV747lsMdpNgawpGsPi61HHvZE8ha4g7nuvpP5mc-2NEl1VU2TGJSfD_WSMQUXylCO5zpZQfvEN9095rTlU2WwFsphD
+                    - separator [ref=f2e2234]
+                    - article [ref=f2e2235]:
+                      - generic [ref=f2e2236] [cursor=pointer]:
+                        - link [ref=f2e2237]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uzdshv/start_up_idea_to_help_elderly/
+                        - generic [ref=f2e2239]:
+                          - generic [ref=f2e2240]:
+                            - 'link "Author: u/Queen0flif3" [ref=f2e2245]':
+                              - /url: https://www.reddit.com/user/Queen0flif3/
+                              - generic [ref=f2e2246]: u/Queen0flif3
+                            - generic [ref=f2e2260]: •
+                            - time [ref=f2e2262]: 10 days ago
+                          - button "Open user actions" [ref=f2e2268]
+                        - generic [ref=f2e2274]:
+                          - heading [level=2] [ref=f2e2275]:
+                            - link "Start up idea to help elderly" [ref=f2e2276]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uzdshv/start_up_idea_to_help_elderly/
+                          - 'link "Flair: Advice" [ref=f2e2279]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                            - 'generic "Flair: Advice" [ref=f2e2281]': Advice
+                          - generic [ref=f2e2282]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1uzdshv/start_up_idea_to_help_elderly/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hi everyone, I am looking for advice from founders or operators who have built businesses serving older adults or caregivers.
+                                    - paragraph: Ever since childhood, I’ve felt drawn to helping the elderly. I volunteered in nursing homes, worked as a medical scribe, spent time calling seniors for virtual companionship during COVID, and now I work in remote patient monitoring (RPM), where I help healthcare organizations scale programs that primarily serve Medicare patients. The more experience I gain, the more I realize something seems to be missing.
+                                    - paragraph: Healthcare has gotten better at collecting data (blood pressure, glucose, weight, etc.), but many older adults are still isolated, overwhelmed, or simply don’t have someone consistently checking in on them as a person. Adult children are busy. Care teams are stretched thin. There seems to be a gap between clinical care and human connection.
+                                    - paragraph: I’ve been thinking about starting something that focuses on regular companion calls, care navigation, helping seniors stay connected to their care plans, identifying non-medical needs, and escalating concerns to family or care teams when appropriate.
+                                    - paragraph: Here’s where I’m stuck:I have experience in healthcare operations and client success, but I have zero startup experience. I don’t know how to build an app, validate an idea, find a technical co-founder, or even determine whether this should be a business, nonprofit, or something in between.
+                                    - paragraph: For those of you who have built companies in aging, caregiving, digital health, or healthcare services:What would you do first if you were starting from scratch?Is an app even the right place to begin, or should this start as a manual service?
+                                    - paragraph: "Edit: US based, PA."
+                        - generic "Actions available for this post" [ref=f2e2284]:
+                          - generic [ref=f2e2287]:
+                            - button [ref=f2e2288]
+                            - generic [ref=f2e2293]: "1"
+                            - button [ref=f2e2295]
+                          - link "1 Go to comments" [ref=f2e2300]:
+                            - /url: /r/healthIT/comments/1uzdshv/start_up_idea_to_help_elderly/
+                            - generic [ref=f2e2301]: "1"
+                            - generic [ref=f2e2307]: Go to comments
+                          - button "Share" [ref=f2e2311]
+                    - separator [ref=f2e2318]
+                    - article [ref=f2e2319]:
+                      - generic [ref=f2e2320] [cursor=pointer]:
+                        - link [ref=f2e2321]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uz74gz/how_are_you_guys_handling_all_the_phone_calls/
+                        - generic [ref=f2e2323]:
+                          - generic [ref=f2e2324]:
+                            - 'link "Author: u/Used_Hat2928" [ref=f2e2329]':
+                              - /url: https://www.reddit.com/user/Used_Hat2928/
+                              - generic [ref=f2e2330]: u/Used_Hat2928
+                            - generic [ref=f2e2338]: •
+                            - time [ref=f2e2340]: 10 days ago
+                          - button "Open user actions" [ref=f2e2346]
+                        - generic [ref=f2e2352]:
+                          - heading [level=2] [ref=f2e2353]:
+                            - link "How are you guys handling all the phone calls?" [ref=f2e2354]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uz74gz/how_are_you_guys_handling_all_the_phone_calls/
+                          - 'link "Flair: Advice" [ref=f2e2357]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                            - 'generic "Flair: Advice" [ref=f2e2359]': Advice
+                          - generic [ref=f2e2360]:
+                            - generic:
+                              - link "We run a small orthopedic clinic with 4 front desk staff and it feels like the phone calls have gotten out of hand. Every call matters, but a big chunk are people just asking about office hours, checking appointments or asking for directions. It gets to the point where someone barely finishes one call before the next one comes in. We could hire another receptionist, but before we do that I wanted to see how other practices have handled this, there has to be a smarter way than just throwing bodies at it every time call volume goes up.":
+                                - /url: /r/healthIT/comments/1uz74gz/how_are_you_guys_handling_all_the_phone_calls/
+                                - generic:
+                                  - generic:
+                                    - paragraph: We run a small orthopedic clinic with 4 front desk staff and it feels like the phone calls have gotten out of hand. Every call matters, but a big chunk are people just asking about office hours, checking appointments or asking for directions. It gets to the point where someone barely finishes one call before the next one comes in. We could hire another receptionist, but before we do that I wanted to see how other practices have handled this, there has to be a smarter way than just throwing bodies at it every time call volume goes up.
+                        - generic "Actions available for this post" [ref=f2e2362]:
+                          - generic [ref=f2e2365]:
+                            - button [ref=f2e2366]
+                            - generic [ref=f2e2371]: "17"
+                            - button [ref=f2e2373]
+                          - link "31 Go to comments" [ref=f2e2378]:
+                            - /url: /r/healthIT/comments/1uz74gz/how_are_you_guys_handling_all_the_phone_calls/
+                            - generic [ref=f2e2379]: "31"
+                            - generic [ref=f2e2385]: Go to comments
+                          - button "Share" [ref=f2e2389]
+                    - separator [ref=f2e2396]
+                    - article [ref=f2e2397]:
+                      - generic [ref=f2e2398] [cursor=pointer]:
+                        - link [ref=f2e2399]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uz3v8t/career_change_after_ongoing_covid_coplications/
+                        - generic [ref=f2e2401]:
+                          - generic [ref=f2e2402]:
+                            - 'link "Author: u/MattAttack6288" [ref=f2e2407]':
+                              - /url: https://www.reddit.com/user/MattAttack6288/
+                              - generic [ref=f2e2408]: u/MattAttack6288
+                            - generic [ref=f2e2422]: •
+                            - time [ref=f2e2424]: 10 days ago
+                          - button "Open user actions" [ref=f2e2430]
+                        - generic [ref=f2e2436]:
+                          - heading [level=2] [ref=f2e2437]:
+                            - link "Career change after ongoing COVID coplications" [ref=f2e2438]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uz3v8t/career_change_after_ongoing_covid_coplications/
+                          - 'link "Flair: Careers" [ref=f2e2441]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Careers%22
+                            - 'generic "Flair: Careers" [ref=f2e2443]': Careers
+                          - generic [ref=f2e2444]:
+                            - generic:
+                              - link:
+                                - /url: /r/healthIT/comments/1uz3v8t/career_change_after_ongoing_covid_coplications/
+                                - generic:
+                                  - generic:
+                                    - paragraph: Hello all,
+                                    - paragraph: I live in Ontario, Canada as this may affect any suggestions.
+                                    - paragraph: Currently I am on workers compensation due to complications after COVID in 2020 (COVID induced hemiplegic migraines) that have left me home bound. I am trying re-learn how to learn/comprehension/focus/etc. due to ongoing neurological issues, brain fog and medication changes that have my baseline health bouncing all over the place.
+                                    - paragraph: At this point in my compensation claim I have to look for a program that would allow me back into the workforce. According to all those involved in my care, and my current limitations of file with workers comp, it would have to be 100% remote.
+                                    - paragraph: I am a Licensed Pharmacy Technician that has spent almost 20 years working in hospitals in acute care, outpatient care and long term care facilities in two provinces with acute care being the majority of my career. I was slowly working on transitioning to more of a health IT/informatics role but that all went sideways after being off work for almost 6 years. At this point so much has changed with the move to Physician order entry and most support roles being in person.
+                                    - paragraph: I am trying to build off of my background but I am open to anything that would be remote.
+                                    - paragraph: I have been tasked with finding online training programs/courses/certificates/etc. that I could work on to make transitioning to remote work possible. The big issue is finding programs that would satisfy what workers comp wants and finding a program that is less than 2 years.
+                                    - paragraph: Any ideas of careers or experiences for those that have had to pivot to other careers that can accommodate their disabilities would be greatly appreciated so I can research programs, skills, etc. that I can work towards.
+                                    - paragraph: Thanks for reading my long rambling post...it is really appreciated.
+                        - generic "Actions available for this post" [ref=f2e2446]:
+                          - generic [ref=f2e2449]:
+                            - button [ref=f2e2450]
+                            - generic [ref=f2e2455]: "6"
+                            - button [ref=f2e2457]
+                          - link "1 Go to comments" [ref=f2e2462]:
+                            - /url: /r/healthIT/comments/1uz3v8t/career_change_after_ongoing_covid_coplications/
+                            - generic [ref=f2e2463]: "1"
+                            - generic [ref=f2e2469]: Go to comments
+                          - button "Share" [ref=f2e2473]
+                    - separator [ref=f2e2480]
+                    - article [ref=f2e2481]:
+                      - generic [ref=f2e2482] [cursor=pointer]:
+                        - link [ref=f2e2483]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uy90op/who_designs_ehrs_for_school_nursing/
+                        - generic [ref=f2e2485]:
+                          - generic [ref=f2e2486]:
+                            - 'link "Author: u/leaveredditalone" [ref=f2e2491]':
+                              - /url: https://www.reddit.com/user/leaveredditalone/
+                              - generic [ref=f2e2492]: u/leaveredditalone
+                            - generic [ref=f2e2506]: •
+                            - time [ref=f2e2508]: 11 days ago
+                          - button "Open user actions" [ref=f2e2514]
+                        - generic [ref=f2e2520]:
+                          - heading [level=2] [ref=f2e2521]:
+                            - link "Who designs EHRs for school nursing?" [ref=f2e2522]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uy90op/who_designs_ehrs_for_school_nursing/
+                          - generic [ref=f2e2523]:
+                            - generic:
+                              - link "I’m an LPN who spent 15 years as a school nurse before moving into ambulatory care/care management. I’ve always felt that school nursing EHRs are often designed by people who don’t fully understand school nursing workflows or documentation needs. Does anyone here work on K-12 school health EHRs? Do vendors use school nurses as subject matter experts or consultants when designing these systems? I feel like I could offer valuable insight into documentation, medication administration, immunizations, screenings, parent communication, and the day to day workflow. I’m curious if roles like this exist.":
+                                - /url: /r/healthIT/comments/1uy90op/who_designs_ehrs_for_school_nursing/
+                                - generic:
+                                  - generic:
+                                    - paragraph: I’m an LPN who spent 15 years as a school nurse before moving into ambulatory care/care management. I’ve always felt that school nursing EHRs are often designed by people who don’t fully understand school nursing workflows or documentation needs.Does anyone here work on K-12 school health EHRs? Do vendors use school nurses as subject matter experts or consultants when designing these systems?I feel like I could offer valuable insight into documentation, medication administration, immunizations, screenings, parent communication, and the day to day workflow. I’m curious if roles like this exist.
+                        - generic "Actions available for this post" [ref=f2e2525]:
+                          - generic [ref=f2e2528]:
+                            - button [ref=f2e2529]
+                            - generic [ref=f2e2534]: "7"
+                            - button [ref=f2e2536]
+                          - link "12 Go to comments" [ref=f2e2541]:
+                            - /url: /r/healthIT/comments/1uy90op/who_designs_ehrs_for_school_nursing/
+                            - generic [ref=f2e2542]: "12"
+                            - generic [ref=f2e2548]: Go to comments
+                          - button "Share" [ref=f2e2552]
+                    - separator [ref=f2e2559]
+                    - article [ref=f2e2560]:
+                      - generic [ref=f2e2561] [cursor=pointer]:
+                        - link [ref=f2e2562]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uxfiub/proposed_security_rule_faxing/
+                        - generic [ref=f2e2564]:
+                          - generic [ref=f2e2565]:
+                            - 'link "Author: u/sputnik4life" [ref=f2e2570]':
+                              - /url: https://www.reddit.com/user/sputnik4life/
+                              - generic [ref=f2e2571]: u/sputnik4life
+                            - generic [ref=f2e2585]: •
+                            - time [ref=f2e2587]: 12 days ago
+                          - button "Open user actions" [ref=f2e2593]
+                        - heading [level=2] [ref=f2e2600]:
+                          - link "Proposed Security Rule - Faxing" [ref=f2e2601]:
+                            - /url: https://www.reddit.com/r/healthIT/comments/1uxfiub/proposed_security_rule_faxing/
+                        - generic [ref=f2e2602]:
+                          - link [ref=f2e2603]:
+                            - /url: /r/hipaa/comments/1uxfik8/proposed_security_rule_faxing/
+                          - generic [ref=f2e2605]:
+                            - generic [ref=f2e2606]:
+                              - link "r/hipaa" [ref=f2e2607]:
+                                - /url: /r/hipaa/
+                              - generic [ref=f2e2608]: •
+                              - time [ref=f2e2610]: 12 days ago
+                            - link "Proposed Security Rule - Faxing" [ref=f2e2612]:
+                              - /url: /r/hipaa/comments/1uxfik8/proposed_security_rule_faxing/
+                          - generic [ref=f2e2614]:
+                            - paragraph [ref=f2e2615]: Since the OCR has pushed back the final ruling of the proposed Security Rule till next year, my plan is to work through it and implement/make plans to implement the required changes.
+                            - paragraph [ref=f2e2616]:
+                              - text: In the proposed rule, encryption at rest and in transit is a must.
+                              - link "https://www.federalregister.gov/d/2024-30983/p-585" [ref=f2e2617]:
+                                - /url: https://www.federalregister.gov/d/2024-30983/p-585
+                              - text: Phones and faxing are no longer excluded.
+                            - paragraph [ref=f2e2618]: How are you going to be handling this change?
+                            - paragraph [ref=f2e2619]: My thought is that faxing will be discontinued. Faxing doesn't have a way to encrypt in transit. Sure, your telcom/fax provider could encapsulate and encrypt your voip packets, but that is only guaranteed to your telcom's edge. I don't think there would be a way for your telcom to guarantee encryption across each hop to it's destination. Going this route, I don't see a way that voice communication would work either, to be honest.
+                          - generic [ref=f2e2622]:
+                            - generic [ref=f2e2623]: "2"
+                            - text: upvotes ·
+                            - link "9 comments" [ref=f2e2625]:
+                              - /url: /r/hipaa/comments/1uxfik8/proposed_security_rule_faxing/
+                              - generic [ref=f2e2626]: "9"
+                              - text: comments
+                        - generic "Actions available for this post" [ref=f2e2628]:
+                          - generic [ref=f2e2631]:
+                            - button [ref=f2e2632]
+                            - generic [ref=f2e2637]: "1"
+                            - button [ref=f2e2639]
+                          - link "0 Go to comments" [ref=f2e2644]:
+                            - /url: /r/healthIT/comments/1uxfiub/proposed_security_rule_faxing/
+                            - generic [ref=f2e2645]: "0"
+                            - generic [ref=f2e2651]: Go to comments
+                          - button "Share" [ref=f2e2655]
+                    - separator [ref=f2e2662]
+                    - article [ref=f2e2663]:
+                      - generic [ref=f2e2664] [cursor=pointer]:
+                        - link [ref=f2e2665]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1uxajwl/epic/
+                        - generic [ref=f2e2667]:
+                          - generic [ref=f2e2668]:
+                            - 'link "Author: u/StudentofLife__" [ref=f2e2673]':
+                              - /url: https://www.reddit.com/user/StudentofLife__/
+                              - generic [ref=f2e2674]: u/StudentofLife__
+                            - generic [ref=f2e2682]: •
+                            - time [ref=f2e2684]: 12 days ago
+                          - button "Open user actions" [ref=f2e2690]
+                        - generic [ref=f2e2696]:
+                          - heading [level=2] [ref=f2e2697]:
+                            - link "Epic" [ref=f2e2698]:
+                              - /url: https://www.reddit.com/r/healthIT/comments/1uxajwl/epic/
+                          - 'link "Flair: Advice" [ref=f2e2701]':
+                            - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                            - 'generic "Flair: Advice" [ref=f2e2703]': Advice
+                          - generic [ref=f2e2704]:
+                            - generic:
+                              - link "For those of you that are currently in an Epic role, what are some certification paths you recommend?":
+                                - /url: /r/healthIT/comments/1uxajwl/epic/
+                                - generic:
+                                  - generic:
+                                    - paragraph: For those of you that are currently in an Epic role, what are some certification paths you recommend?
+                        - generic "Actions available for this post" [ref=f2e2706]:
+                          - generic [ref=f2e2709]:
+                            - button [ref=f2e2710]
+                            - generic [ref=f2e2715]: "0"
+                            - button [ref=f2e2717]
+                          - link "12 Go to comments" [ref=f2e2722]:
+                            - /url: /r/healthIT/comments/1uxajwl/epic/
+                            - generic [ref=f2e2723]: "12"
+                            - generic [ref=f2e2729]: Go to comments
+                          - button "Share" [ref=f2e2733]
+                    - separator [ref=f2e2740]
+      - dialog "Data Protection Consent" [ref=f2e2760]:
+        - generic [ref=f2e2761]:
+          - generic [ref=f2e2763]:
+            - generic:
+              - button "Close" [ref=f2e2767] [cursor=pointer]
+              - generic [ref=f2e2772]:
+                - generic [ref=f2e2773]: Let us know your cookie preferences
+                - generic [ref=f2e2776]:
+                  - paragraph [ref=f2e2777]: "Reddit uses cookies and similar technologies to:"
+                  - list [ref=f2e2778]:
+                    - listitem [ref=f2e2779]: Keep the website operational and running properly
+                    - listitem [ref=f2e2780]: Prevent fraud and abuse
+                    - listitem [ref=f2e2781]: Monitor site usage and performance metrics
+                  - paragraph [ref=f2e2782]: "If you choose “Accept All” we’ll also use cookies to:"
+                  - list [ref=f2e2783]:
+                    - listitem [ref=f2e2784]: Personalize your recommendations and ads
+                    - listitem [ref=f2e2785]: Measure the performance of ads
+                    - listitem [ref=f2e2786]: Develop and improve new features and services
+                  - paragraph [ref=f2e2787]: If you choose “Reject Optional Cookies” we won’t use cookies for these additional uses. You can update your cookie preference from your settings.
+                  - paragraph [ref=f2e2788]:
+                    - text: Learn more about
+                    - link "how Reddit uses cookies" [ref=f2e2789] [cursor=pointer]:
+                      - /url: /en-us/policies/cookies
+                    - text: .
+          - generic [ref=f2e2791]:
+            - button "Reject Optional Cookies" [ref=f2e2792] [cursor=pointer]
+            - button "Accept All" [ref=f2e2795] [cursor=pointer]

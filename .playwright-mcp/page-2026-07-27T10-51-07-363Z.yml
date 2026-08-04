@@ -1,0 +1,254 @@
+- generic [active] [ref=f18e1]:
+  - link "Skip to main content" [ref=f18e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f18e6]:
+    - generic:
+      - generic: Health Information Technology
+      - banner [ref=f18e10]:
+        - navigation [ref=f18e11]:
+          - generic [ref=f18e12]:
+            - button [ref=f18e16] [cursor=pointer]
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - link "Home":
+                        - /url: https://www.reddit.com/
+          - search [ref=f18e31]:
+            - generic [ref=f18e33]:
+              - generic "Remove r/healthIT filter and expand search to all of Reddit" [ref=f18e39] [cursor=pointer]:
+                - button [pressed] [ref=f18e40]:
+                  - generic [ref=f18e44]: r/healthIT
+              - textbox "Remove r/healthIT filter and expand search to all of Reddit" [ref=f18e51]:
+                - /placeholder: Search in ⁨r/healthIT⁩
+          - generic [ref=f18e52]:
+            - link "Log In" [ref=f18e56] [cursor=pointer]:
+              - /url: https://www.reddit.com/login/
+            - button [ref=f18e63] [cursor=pointer]
+      - generic [ref=f18e70]:
+        - region "Community actions" [ref=f18e74]:
+          - generic [ref=f18e75]:
+            - heading "r/healthIT" [level=1] [ref=f18e83]
+            - generic [ref=f18e84]:
+              - button "Create Post" [ref=f18e88] [cursor=pointer]
+              - button "Join" [ref=f18e98] [cursor=pointer]
+        - main [ref=f18e101]:
+          - generic [ref=f18e102]:
+            - generic [ref=f18e104]:
+              - tab "Feed" [selected] [ref=f18e105] [cursor=pointer]
+              - tab "About" [ref=f18e109] [cursor=pointer]
+            - generic [ref=f18e114]:
+              - generic "Sort by" [ref=f18e118]:
+                - 'button "Sort by: New" [ref=f18e120] [cursor=pointer]':
+                  - generic [ref=f18e121]: New
+              - generic "View" [ref=f18e128]:
+                - 'button "View: Card" [ref=f18e130] [cursor=pointer]'
+          - generic [ref=f18e136]:
+            - button "collapse/expand community highlights" [ref=f18e137] [cursor=pointer]:
+              - heading "Community highlights" [level=3] [ref=f18e138]
+              - button "collapse/expand community highlights" [ref=f18e143]
+            - list [ref=f18e150]:
+              - listitem [ref=f18e151]:
+                - link "\"I want to be an Epic analyst\" FAQ 395 votes • 95 comments" [ref=f18e152] [cursor=pointer]:
+                  - /url: /r/healthIT/comments/1hlot86/i_want_to_be_an_epic_analyst_faq/
+                  - generic [ref=f18e158]:
+                    - heading "\"I want to be an Epic analyst\" FAQ" [level=2] [ref=f18e160]
+                    - generic [ref=f18e163]:
+                      - generic [ref=f18e164]: "395"
+                      - text: votes •
+                      - generic [ref=f18e165]: "95"
+                      - text: comments
+          - generic [ref=f18e177]:
+            - generic "Health Information Technology"
+            - separator [ref=f18e178]
+            - generic [ref=f18e179]:
+              - heading "Feed" [level=1] [ref=f18e181]
+              - generic:
+                - article [ref=f18e182]:
+                  - generic [ref=f18e183] [cursor=pointer]:
+                    - link [ref=f18e184]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                    - generic [ref=f18e186]:
+                      - generic [ref=f18e187]:
+                        - 'link "Author: u/AcceptableMonk1670" [ref=f18e192]':
+                          - /url: https://www.reddit.com/user/AcceptableMonk1670/
+                          - generic [ref=f18e193]:
+                            - img "u/AcceptableMonk1670 avatar" [ref=f18e196]
+                            - generic [ref=f18e197]: u/AcceptableMonk1670
+                        - generic [ref=f18e198]: •
+                        - time [ref=f18e200]: 3 days ago
+                      - button "Open user actions" [ref=f18e206]
+                    - generic [ref=f18e212]:
+                      - heading [level=2] [ref=f18e213]:
+                        - link "vendor fatigue for front desk texting + review collection (3 locations)" [ref=f18e214]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                      - 'link "Flair: Advice" [ref=f18e217]':
+                        - /url: /r/healthIT/?f=flair_name%3A%22Advice%22
+                        - 'generic "Flair: Advice" [ref=f18e219]': Advice
+                      - generic [ref=f18e220]:
+                        - generic:
+                          - 'link "Our clinical side runs on eClinicalWorks, but our front desk staff has been using a sloppy mix of Podium for reviews, paper intake, and an old VoIP line for calls. Management wants me to consolidate this whole setup under one platform with a BAA signed by a Q3. I need something that handles 2-way SMS, missed call text-backs, and web forms without breaking our eCW sync every week. On my shortlist to evaluate this week I put down Weave, PatientGain, and Klara to compare costs and API stability. Anyone managing a similar setup? Curious what software isn''t causing constant sync failures or front desk complaints. Edit: Thanks for the input. Decided to go with PatientGain for this roll-out. Setting up the SMS triggers and web intake this week, so I’ll update this thread in a month or two with how the eCW sync holds up under daily use."':
+                            - /url: /r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                            - generic:
+                              - generic:
+                                - paragraph: Our clinical side runs on eClinicalWorks, but our front desk staff has been using a sloppy mix of Podium for reviews, paper intake, and an old VoIP line for calls. Management wants me to consolidate this whole setup under one platform with a BAA signed by a Q3.
+                                - paragraph: I need something that handles 2-way SMS, missed call text-backs, and web forms without breaking our eCW sync every week. On my shortlist to evaluate this week I put down Weave, PatientGain, and Klara to compare costs and API stability.
+                                - paragraph: Anyone managing a similar setup? Curious what software isn't causing constant sync failures or front desk complaints.
+                                - paragraph: "Edit: Thanks for the input. Decided to go with PatientGain for this roll-out. Setting up the SMS triggers and web intake this week, so I’ll update this thread in a month or two with how the eCW sync holds up under daily use."
+                    - generic "Actions available for this post" [ref=f18e222]:
+                      - generic [ref=f18e225]:
+                        - button [ref=f18e226]
+                        - generic [ref=f18e231]: "1"
+                        - button [ref=f18e233]
+                      - link "5 Go to comments" [ref=f18e238]:
+                        - /url: /r/healthIT/comments/1v5o3y9/vendor_fatigue_for_front_desk_texting_review/
+                        - generic [ref=f18e239]: "5"
+                        - generic [ref=f18e245]: Go to comments
+                      - button "Share" [ref=f18e249]
+                - separator [ref=f18e256]
+                - generic [ref=f18e257]:
+                  - link [ref=f18e259] [cursor=pointer]:
+                    - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                  - generic [ref=f18e261]:
+                    - generic [ref=f18e262]:
+                      - link "u/check24" [ref=f18e265] [cursor=pointer]:
+                        - /url: /user/check24/
+                        - img "u/check24 avatar" [ref=f18e268]
+                      - generic [ref=f18e270]: •
+                      - link "Promoted" [ref=f18e272] [cursor=pointer]:
+                        - /url: /user/check24/
+                      - link [ref=f18e275] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                    - button "Open user actions" [ref=f18e281] [cursor=pointer]
+                  - heading [level=2] [ref=f18e288]:
+                    - 'link "Steuererklärung gratis beim Testsieger ist king 🤌 CHECK24 Steuer: Note 1,0 bei Stiftung Warentest." [ref=f18e291] [cursor=pointer]':
+                      - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                  - generic [ref=f18e292]:
+                    - link [ref=f18e296] [cursor=pointer]:
+                      - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                      - 'img "Steuererklärung gratis beim Testsieger ist king 🤌 CHECK24 Steuer: Note 1,0 bei Stiftung Warentest." [ref=f18e298]'
+                    - separator [ref=f18e299]
+                    - generic [ref=f18e300]:
+                      - link [ref=f18e302] [cursor=pointer]:
+                        - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                      - generic [ref=f18e303]:
+                        - link "steuer.check24.de" [ref=f18e306] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                        - link [ref=f18e308] [cursor=pointer]:
+                          - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                  - generic "Actions available for this post" [ref=f18e312]:
+                    - generic [ref=f18e315]:
+                      - button [ref=f18e316] [cursor=pointer]
+                      - text: Vote
+                      - button [ref=f18e321] [cursor=pointer]
+                    - link "0 Go to comments" [ref=f18e326] [cursor=pointer]:
+                      - /url: /user/check24/comments/1v1olhy/steuererkl%C3%A4rung_gratis_beim_testsieger_ist_king/?p=1&impressionid=5663641306262423820&ad_label_eligible=1
+                      - generic [ref=f18e327]: "0"
+                      - generic [ref=f18e333]: Go to comments
+                    - button "Share" [ref=f18e337] [cursor=pointer]
+                    - link [ref=f18e345] [cursor=pointer]:
+                      - /url: https://alb.reddit.com/cr?za=8sWjHFbKeHgRVOABBW-c9ZV0senkSlkouemSEqU74fxrPyeThrbCa8KvOJwvaKuAVHIYeIAPq-TB7GQd8zL-j2abHTEshVelGLxnP5LltYDcnpJOpz8X13w42cTCLkL4bQZmAj_opBSRDcKLYBPIRCgqvUe29QpTBjMtlJVJtunP5eW92vleKxHlvgEYvKjGDpCmiC6-aLj0LlWx5lw32iXVRHzP1dRmbHRhS4cpo-O-dML2_ZuLC2d3FOFkMhQWPHQInagLDZAbNz78V56vYTBz5UEtwuMqNkt1wDd8g1CHr0vd4WmR0IGzjCcK_ZRRqEritN11nCZN0NIsA63swX3mcJrr44WTfbW0dETAxxswLVhKfcOkMcovL3avyO5-ono_JBmkHi3ReRw9lMsJFwlZVUm2jqE6-NTki85oqDabhoozHAz7tBPcDpFcrwY2lszu-npnzwl9K2ygWJRRPJoHpIh6kPjbqhqOOp6nkmuN36aKI2yW5snWsJ6FKpICa7YWidSRWroAtbM0dAg28Oy_7iWJbclwSBL1AmicaCMWIAZCV1euk5hb3QGdF07KNa3685uMvOoRUmJZDU1lfAPuuITGLQrCQ7nsGeXZH49BvWDqhstNPia8SuEnbkTfjRPU5kkuHkWuOpnuKB2UHq00ifhe5Dnty8hRod-_YQ&zp=Uv5Bg08OVUdtAZilKm88UXp9Kt69PaIg--iL_fCzwRTPEr6nqDTh6HPifiKSCWrw08scyyUkJXSxNqHY7U93Vzm05JuyDuuAqd7aHNJ0eCDk7Yh00RsDrrPIJeB19So-nZCGLuLHmTumCDg13YZpINctRUmVNcKV3WR4bEWz4jt0yIl5-nuN8mOX-5D7tNa4VQuvm4lwi4bIILNIovTCEL-xSQ2_K0kAKCZHgi48C8FYIpG2pXG9QdBk5CX-qHtSg-NqQ3bZS8Q_LbOowwiw2LpGkCzBHLZHcrEMDRApioovIn5Vsl-fkVbBDAMHD5wTJ50
+                - separator [ref=f18e346]
+                - article [ref=f18e347]:
+                  - generic [ref=f18e348] [cursor=pointer]:
+                    - link [ref=f18e349]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                    - generic [ref=f18e351]:
+                      - generic [ref=f18e352]:
+                        - 'link "Author: u/baby-bellamushrooms" [ref=f18e357]':
+                          - /url: https://www.reddit.com/user/baby-bellamushrooms/
+                          - generic [ref=f18e358]:
+                            - img "u/baby-bellamushrooms avatar" [ref=f18e361]
+                            - generic [ref=f18e362]: u/baby-bellamushrooms
+                        - generic [ref=f18e363]: •
+                        - time [ref=f18e365]: 3 days ago
+                      - button "Open user actions" [ref=f18e371]
+                    - generic [ref=f18e377]:
+                      - heading [level=2] [ref=f18e378]:
+                        - link "Trying to get a job as an Epic Analyst from RN; my company denied approval for self-proficiency?" [ref=f18e379]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                      - generic [ref=f18e380]:
+                        - generic:
+                          - link "So I'm an RN for a big hospital system and I am trying to become an Epic Analyst. I've connected with some people and they said to do self-proficiencies because my hospital doesn't look at anyone's application that doesn't have at least a proficiency. I requested approval and it was denied due to approvals being for informatics, analysts, etc. It seems impossible to transition into the role and I've been applying for months within my company/ Any advice? I've been an end-user of Epic for 3-4 years.":
+                            - /url: /r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                            - generic:
+                              - generic:
+                                - paragraph: So I'm an RN for a big hospital system and I am trying to become an Epic Analyst. I've connected with some people and they said to do self-proficiencies because my hospital doesn't look at anyone's application that doesn't have at least a proficiency. I requested approval and it was denied due to approvals being for informatics, analysts, etc. It seems impossible to transition into the role and I've been applying for months within my company/ Any advice? I've been an end-user of Epic for 3-4 years.
+                    - generic "Actions available for this post" [ref=f18e382]:
+                      - generic [ref=f18e385]:
+                        - button [ref=f18e386]
+                        - generic [ref=f18e391]: "7"
+                        - button [ref=f18e393]
+                      - link "26 Go to comments" [ref=f18e398]:
+                        - /url: /r/healthIT/comments/1v5k53j/trying_to_get_a_job_as_an_epic_analyst_from_rn_my/
+                        - generic [ref=f18e399]: "26"
+                        - generic [ref=f18e405]: Go to comments
+                      - button "Share" [ref=f18e409]
+                - separator [ref=f18e416]
+                - article [ref=f18e417]:
+                  - generic [ref=f18e418] [cursor=pointer]:
+                    - link [ref=f18e419]:
+                      - /url: https://www.reddit.com/r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                    - generic [ref=f18e421]:
+                      - generic [ref=f18e422]:
+                        - 'link "Author: u/theultimatethought" [ref=f18e427]':
+                          - /url: https://www.reddit.com/user/theultimatethought/
+                          - generic [ref=f18e428]:
+                            - img "u/theultimatethought avatar" [ref=f18e431]
+                            - generic [ref=f18e432]: u/theultimatethought
+                        - generic [ref=f18e433]: •
+                        - time [ref=f18e435]: 3 days ago
+                      - button "Open user actions" [ref=f18e441]
+                    - generic [ref=f18e447]:
+                      - heading [level=2] [ref=f18e448]:
+                        - link "RN now New Epic Analayst, I am LOST" [ref=f18e449]:
+                          - /url: https://www.reddit.com/r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                      - generic [ref=f18e450]:
+                        - generic:
+                          - link:
+                            - /url: /r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                            - generic:
+                              - generic:
+                                - paragraph: 15+ yr RN very thankful to get an Epic Analyst position at my organization, but will you all tell me, will I always feel this lost?!!!
+                                - paragraph: Knowing the clinical workflow for the application I worked in is one thing but my gosh I was not prepared for the onslaught of learning I take in everyday. Most days I’m more lost, frustrated that it takes me an hour or so to digest problems. Building on top of existing build mixes, requests are getting bigger, I still don’t have half the knowledge others do. Galaxy is a good guide, but you still have to navigate through build, which is not my strength
+                                - paragraph: Don’t sugar coat it, does it get better? I keep hearing 2 years to feel comfortable, that the learning is lifelong, but can someone at least build a solid foundation in a timely manner….?
+                                - paragraph: 3 months into this. I’m at the point where I go home, take a deep breath, and for a few seconds reconsider going back to bedside.
+                    - generic "Actions available for this post" [ref=f18e452]:
+                      - generic [ref=f18e455]:
+                        - button [ref=f18e456]
+                        - generic [ref=f18e461]: "86"
+                        - button [ref=f18e463]
+                      - link "81 Go to comments" [ref=f18e468]:
+                        - /url: /r/healthIT/comments/1v4xdas/rn_now_new_epic_analayst_i_am_lost/
+                        - generic [ref=f18e469]: "81"
+                        - generic [ref=f18e475]: Go to comments
+                      - button "Share" [ref=f18e479]
+                - separator [ref=f18e486]
+      - dialog "Data Protection Consent" [ref=f18e506]:
+        - generic [ref=f18e507]:
+          - generic [ref=f18e509]:
+            - generic:
+              - button "Close" [ref=f18e513] [cursor=pointer]
+              - generic [ref=f18e518]:
+                - generic [ref=f18e519]: Let us know your cookie preferences
+                - generic [ref=f18e522]:
+                  - paragraph [ref=f18e523]: "Reddit uses cookies and similar technologies to:"
+                  - list [ref=f18e524]:
+                    - listitem [ref=f18e525]: Keep the website operational and running properly
+                    - listitem [ref=f18e526]: Prevent fraud and abuse
+                    - listitem [ref=f18e527]: Monitor site usage and performance metrics
+                  - paragraph [ref=f18e528]: "If you choose “Accept All” we’ll also use cookies to:"
+                  - list [ref=f18e529]:
+                    - listitem [ref=f18e530]: Personalize your recommendations and ads
+                    - listitem [ref=f18e531]: Measure the performance of ads
+                    - listitem [ref=f18e532]: Develop and improve new features and services
+                  - paragraph [ref=f18e533]: If you choose “Reject Optional Cookies” we won’t use cookies for these additional uses. You can update your cookie preference from your settings.
+                  - paragraph [ref=f18e534]:
+                    - text: Learn more about
+                    - link "how Reddit uses cookies" [ref=f18e535] [cursor=pointer]:
+                      - /url: /en-us/policies/cookies
+                    - text: .
+          - generic [ref=f18e537]:
+            - button "Reject Optional Cookies" [ref=f18e538] [cursor=pointer]
+            - button "Accept All" [ref=f18e541] [cursor=pointer]
