@@ -299,3 +299,47 @@ func TestReplayPreservesStatusAndContentType(t *testing.T) {
 		t.Errorf("recorded content type should be replayed, got %q", ct)
 	}
 }
+
+func TestWriteJARSettings_ExemptsExactURLIncludingPort(t *testing.T) {
+	path, cleanup, err := WriteJARSettings("http://127.0.0.1:35119")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	data, err := os.ReadFile(path) //nolint:gosec // path returned by the function under test
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got jarSettings
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("settings file is not valid JSON: %v\n%s", err, data)
+	}
+	if len(got.Servers) != 1 {
+		t.Fatalf("expected one server entry, got %d", len(got.Servers))
+	}
+	s := got.Servers[0]
+	// The port has to be in there: prefix matching was tightened for
+	// CVE-2026-34361, so a host-only entry no longer covers a port-bearing URL.
+	if s.URL != "http://127.0.0.1:35119" {
+		t.Errorf("url = %q, want the full loopback URL with its port", s.URL)
+	}
+	if !s.AllowHTTP {
+		t.Error("allowHttp must be set, or validator 6.10.0+ refuses the plain-HTTP endpoint")
+	}
+	if !s.AllowPrivateNetwork {
+		t.Error("allowPrivateNetwork must be set for a loopback destination")
+	}
+}
+
+func TestWriteJARSettings_CleanupRemovesTheFile(t *testing.T) {
+	path, cleanup, err := WriteJARSettings("http://127.0.0.1:1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleanup()
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("settings file should be gone after cleanup, stat gave %v", err)
+	}
+}

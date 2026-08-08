@@ -45,11 +45,18 @@ type Interaction struct {
 }
 
 // Manifest describes a recording directory.
+//
+// ValidatorVersion matters more than it looks: which terminology requests get
+// made is a property of the validator, not just of the resources. 6.10.0
+// changed how code systems are resolved, so a recording made with one version
+// can miss under another. Recording it turns an unexplained replay miss into a
+// warning that names the cause.
 type Manifest struct {
-	Upstream    string `json:"upstream"`
-	FHIRVersion string `json:"fhirVersion,omitempty"`
-	Recorded    string `json:"recorded"`
-	Entries     int    `json:"entries"`
+	Upstream         string `json:"upstream"`
+	FHIRVersion      string `json:"fhirVersion,omitempty"`
+	ValidatorVersion string `json:"validatorVersion,omitempty"`
+	Recorded         string `json:"recorded"`
+	Entries          int    `json:"entries"`
 }
 
 // Key identifies an interaction by what the validator asked for. Query

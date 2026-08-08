@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -104,5 +105,40 @@ func TestConfigFile_TxOfflineFromConfig(t *testing.T) {
 	}
 	if got := viper.GetString("tx-dir"); got != "recordings" {
 		t.Errorf("tx-dir = %q, want %q", got, "recordings")
+	}
+}
+
+func TestEnsureNoUserFHIRSettings(t *testing.T) {
+	if err := ensureNoUserFHIRSettings([]string{"-tx-routing", "-show-times"}); err != nil {
+		t.Errorf("unrelated passthrough args should be fine, got %v", err)
+	}
+	for _, arg := range []string{"-fhir-settings", "--fhir-settings", "-fhir-settings=/tmp/x.json"} {
+		if err := ensureNoUserFHIRSettings([]string{arg}); err == nil {
+			t.Errorf("%q should be rejected: --tx-offline needs to supply its own", arg)
+		}
+	}
+}
+
+func TestWarnValidatorVersionDrift(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *txreplay.Manifest
+		current  string
+		wantWarn bool
+	}{
+		{"versions differ", &txreplay.Manifest{ValidatorVersion: "6.10.1"}, "6.9.12", true},
+		{"versions match", &txreplay.Manifest{ValidatorVersion: "6.10.1"}, "6.10.1", false},
+		{"older recording without the field", &txreplay.Manifest{}, "6.10.1", false},
+		{"no manifest at all", nil, "6.10.1", false},
+		{"current version unknown", &txreplay.Manifest{ValidatorVersion: "6.10.1"}, "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			warnValidatorVersionDrift(&buf, tt.manifest, tt.current)
+			if got := buf.Len() > 0; got != tt.wantWarn {
+				t.Errorf("warned = %v, want %v (output: %q)", got, tt.wantWarn, buf.String())
+			}
+		})
 	}
 }

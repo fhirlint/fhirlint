@@ -85,6 +85,7 @@ type Options struct {
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
 	ValidatorVersion         string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
 	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
+	FHIRSettings             string        // path to a fhir-settings.json for the JAR (-fhir-settings)
 	Proxy                    ProxyConfig   // http/https proxy for the JAR's terminology calls (-proxy/-https-proxy/-auth)
 	ValidationTimeout        time.Duration // stop validating after this long, returning partial results (-validation-timeout); 0 = unbounded
 	MaxMessages              int           // stop after this many validation messages, returning partial results (-max-validation-messages); 0 = unbounded
@@ -148,6 +149,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.TxCache != "" {
 		args = append(args, "-txCache", opts.TxCache)
+	}
+	if opts.FHIRSettings != "" {
+		args = append(args, "-fhir-settings", opts.FHIRSettings)
 	}
 	if opts.Locale != "" {
 		args = append(args, "-locale", opts.Locale)

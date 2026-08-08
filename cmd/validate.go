@@ -589,12 +589,24 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		if store.Len() == 0 {
 			return fmt.Errorf("no terminology recording in %s/ — record one first with: fhirlint tx warm %s", dir, arg)
 		}
+		if err := ensureNoUserFHIRSettings(flagValidatorArg); err != nil {
+			return err
+		}
 		txPlayer = txreplay.NewPlayer(store)
 		baseURL, perr := txPlayer.Start()
 		if perr != nil {
 			return perr
 		}
 		defer func() { _ = txPlayer.Stop() }()
+		// Validator 6.10.0+ refuses plain-HTTP destinations. Exempt only our own
+		// loopback replay server; disabling SSRF protection for the whole run
+		// would be a far bigger hammer than the problem.
+		settingsPath, cleanupSettings, serr := txreplay.WriteJARSettings(baseURL)
+		if serr != nil {
+			return serr
+		}
+		defer cleanupSettings()
+		opts.FHIRSettings = settingsPath
 		opts.TerminologyServer = baseURL
 		// Loopback HTTP to our own process; the insecure-transport warning is
 		// about sending data unencrypted to a remote server.
@@ -604,6 +616,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		// incomplete recording — green here, failing on a clean CI runner.
 		opts.TxCache = "n/a"
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
+		warnValidatorVersionDrift(os.Stderr, store.ReadManifest(), validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
@@ -1459,6 +1472,37 @@ func looksLikeFHIR(filePath string) bool {
 // that is badly out of date can miss on hundreds of codes, and a wall of them
 // helps nobody decide what to do.
 const maxReportedMisses = 10
+
+// ensureNoUserFHIRSettings rejects a passthrough -fhir-settings while replaying.
+//
+// --tx-offline has to generate its own settings file to exempt the loopback
+// replay server from the validator's SSRF protection, and the JAR takes a single
+// -fhir-settings. Silently overriding the user's file would be worse than
+// saying so.
+func ensureNoUserFHIRSettings(extra []string) error {
+	for _, a := range extra {
+		name := a
+		if i := strings.IndexByte(name, '='); i >= 0 {
+			name = name[:i]
+		}
+		if strings.EqualFold(strings.TrimLeft(name, "-"), "fhir-settings") {
+			return fmt.Errorf("--tx-offline generates its own -fhir-settings to reach the local replay server, so it cannot be combined with --validator-arg %q", a)
+		}
+	}
+	return nil
+}
+
+// warnValidatorVersionDrift points out that a recording was made with a
+// different validator. Which terminology requests get made is a property of the
+// validator — 6.10.0 changed how code systems are resolved — so a mismatch is
+// the likeliest explanation for misses that otherwise look inexplicable.
+func warnValidatorVersionDrift(w io.Writer, m *txreplay.Manifest, current string) {
+	if m == nil || m.ValidatorVersion == "" || current == "" || m.ValidatorVersion == current {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "warn: recording was made with validator %s, this run uses %s — re-record if requests come up missing\n",
+		m.ValidatorVersion, current)
+}
 
 // txMissError turns unreplayable terminology requests into an actionable error.
 // It returns nil when there were none.

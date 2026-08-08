@@ -12,6 +12,16 @@ The validator JAR has a terminology cache of its own (`--tx-cache`, `-txCache`).
 
 So making a run hermetic means standing in for the terminology server, not caching behind it. That is what `fhirlint tx warm` and `--tx-offline` do.
 
+## Validator version requirements
+
+Validator **6.10.0** added SSRF protection that refuses plain-HTTP and private-network destinations. The replay server is both — loopback, over HTTP — so fhirlint writes a `fhir-settings.json` per run that exempts exactly that one URL, and passes it with `-fhir-settings`. Nothing else is exempted, and SSRF protection stays on for every other request the run makes.
+
+The exemption names the loopback URL including its port, because the validator's prefix matching was tightened when CVE-2026-34361 was fixed. That is why the file is generated per run rather than shipped.
+
+This is handled automatically and works on 6.9.x as well. If you see `Refusing to fetch from non-https URL`, you are on a fhirlint older than the fix.
+
+`--tx-offline` therefore cannot be combined with your own `-fhir-settings` via `--validator-arg`; the validator takes only one, and fhirlint says so rather than silently overriding yours.
+
 ## Recording
 
 ```bash
@@ -64,7 +74,15 @@ One pretty-printed JSON file per interaction, plus a `manifest.json` recording w
   1a4f…json
 ```
 
-Each file holds the request (method, path, query, canonicalised body) and the response (status, content type, body). Files are named by a hash of the request, so the same logical request maps to the same file across runs regardless of JSON key ordering.
+`manifest.json` also records the **validator version** the recording was made with. Which terminology requests get made is a property of the validator, not only of the resources — 6.10.0 changed how code systems are resolved — so replaying against a different version warns:
+
+```
+warn: recording was made with validator 6.10.1, this run uses 6.9.12 — re-record if requests come up missing
+```
+
+It is a warning, not an error: a version change does not necessarily invalidate a recording. It turns an otherwise inexplicable miss into one with an obvious first suspect.
+
+Each interaction file holds the request (method, path, query, canonicalised body) and the response (status, content type, body). Files are named by a hash of the request, so the same logical request maps to the same file across runs regardless of JSON key ordering.
 
 Recordings are meant to be reviewed: pretty-printed JSON diffs cleanly, so a change in what a terminology server answers is visible in a pull request.
 
