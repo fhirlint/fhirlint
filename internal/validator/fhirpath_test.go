@@ -132,3 +132,65 @@ func TestRunFHIRPath_InvalidVersion(t *testing.T) {
 		t.Errorf("error = %v, want unknown-version error", err)
 	}
 }
+
+// Validator 6.10.0 bumped jansi and now colours stdout even when it is not a
+// terminal. Every marker the parser matches on is line-anchored, and TrimSpace
+// does not remove an escape sequence, so unstripped output defeats all of them.
+const ansiPrefix = "\x1b[0;39m\x1b[39m"
+
+func TestParseFHIRPathOutput_ANSIColouredOutput(t *testing.T) {
+	stdout := " ...evaluating Patient.active\n" +
+		ansiPrefix + "true\n" +
+		ansiPrefix + "Done. Times: Loading: 00:17.672. Max Memory = 966Mb\n" +
+		"\x1b[0;39m"
+
+	got, err := parseFHIRPathOutput(stdout, "Patient.active", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 || got.Items[0] != "true" {
+		t.Errorf("items = %q, want [true] — the timing line must not leak in and values must be uncoloured", got.Items)
+	}
+}
+
+func TestParseFHIRPathOutput_ANSIEmptyResult(t *testing.T) {
+	stdout := " ...evaluating Patient.deceased\n" +
+		ansiPrefix + "\n" +
+		ansiPrefix + "Done. Times: Loading: 00:15.0. Max Memory = 966Mb\n"
+
+	got, err := parseFHIRPathOutput(stdout, "Patient.deceased", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Empty() {
+		t.Errorf("expected an empty result, got %q", got.Items)
+	}
+}
+
+func TestParseFHIRPathOutput_ANSIMalformedExpression(t *testing.T) {
+	stdout := " ...evaluating Patient..active\n" +
+		ansiPrefix + "Error evaluating FHIRPath expression.\n" +
+		ansiPrefix + "org.hl7.fhir.exceptions.FHIRException: Error parsing Patient..active\n"
+
+	_, err := parseFHIRPathOutput(stdout, "Patient..active", nil)
+	if err == nil {
+		t.Fatal("a malformed expression must still be reported as an error when the output is coloured")
+	}
+	if strings.Contains(err.Error(), "\x1b") {
+		t.Errorf("error message still carries escape codes: %q", err.Error())
+	}
+}
+
+func TestStripANSI(t *testing.T) {
+	cases := map[string]string{
+		"\x1b[0;39mtrue\x1b[0m": "true",
+		"plain":                 "plain",
+		"":                      "",
+		"\x1b[39m\x1b[0;39mDone. Times: 1": "Done. Times: 1",
+	}
+	for in, want := range cases {
+		if got := stripANSI(in); got != want {
+			t.Errorf("stripANSI(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

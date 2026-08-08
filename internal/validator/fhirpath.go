@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -25,6 +26,19 @@ type FHIRPathResult struct {
 
 // Empty reports whether the expression produced no result items.
 func (r *FHIRPathResult) Empty() bool { return len(r.Items) == 0 }
+
+// ansiEscape matches the SGR colour sequences the validator writes to stdout.
+//
+// 6.10.0 bumped jansi and the JAR now colours its output even when stdout is
+// not a terminal. Every marker this file matches on — the "Done." terminator,
+// the error banner, the argument-error prefixes — is anchored at the start of a
+// line, and TrimSpace does not remove an escape sequence, so unstripped output
+// silently defeats all of them.
+var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// stripANSI removes terminal colour codes so line matching works regardless of
+// whether the JAR decided to colour its output.
+func stripANSI(s string) string { return ansiEscape.ReplaceAllString(s, "") }
 
 // fhirpathMarker precedes the result on the JAR's stdout: " ...evaluating <expr>".
 const fhirpathMarker = "...evaluating"
@@ -85,6 +99,7 @@ func RunFHIRPath(expr, inputPath string, opts FHIRPathOptions) (*FHIRPathResult,
 // rather than read wholesale. runErr is the process exit error, used as a
 // fallback signal when the markers are absent.
 func parseFHIRPathOutput(stdout, expr string, runErr error) (*FHIRPathResult, error) {
+	stdout = stripANSI(stdout)
 	lines := strings.Split(stdout, "\n")
 
 	start, end := -1, -1
