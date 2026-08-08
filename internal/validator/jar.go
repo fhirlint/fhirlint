@@ -172,6 +172,18 @@ func ValidatorVersion() string {
 	return "unknown"
 }
 
+// EffectiveValidatorVersion reports the version a run will actually use: the
+// pin when --validator-version is set, otherwise whatever is cached.
+//
+// ValidatorVersion alone is not enough for that question — it reports the
+// cached JAR, which is not the one a pinned run executes.
+func EffectiveValidatorVersion(pinned string) string {
+	if pinned != "" {
+		return pinned
+	}
+	return ValidatorVersion()
+}
+
 // versionFromJARManifest extracts the validator version from the JAR's
 // MANIFEST.MF class-path, which contains entries like
 // "org.hl7.fhir.validation/6.9.7/org.hl7.fhir.validation-6.9.7.jar".

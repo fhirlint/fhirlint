@@ -29,6 +29,7 @@ type ServerConfig struct {
 	NoTerminologyServer bool
 	TerminologyServer   string
 	TxCache             string
+	FHIRSettings        string // path to a fhir-settings.json for the JAR (-fhir-settings)
 	JARPath             string
 	Proxy               ProxyConfig
 	ValidatorVersion    string
@@ -52,6 +53,9 @@ func serverArgs(jarPath string, cfg ServerConfig) []string {
 	}
 	if cfg.TxCache != "" {
 		args = append(args, "-txCache", cfg.TxCache)
+	}
+	if cfg.FHIRSettings != "" {
+		args = append(args, "-fhir-settings", cfg.FHIRSettings)
 	}
 	for _, ig := range cfg.IGs {
 		args = append(args, "-ig", ig)

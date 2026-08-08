@@ -96,6 +96,14 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	}
 	defer func() { _ = rec.Stop() }()
 
+	// Validator 6.10.0+ refuses plain-HTTP destinations; exempt just our own
+	// loopback recorder rather than turning SSRF protection off for the run.
+	settingsPath, cleanupSettings, err := txreplay.WriteJARSettings(baseURL)
+	if err != nil {
+		return err
+	}
+	defer cleanupSettings()
+
 	resolvedProfiles := make([]string, 0, len(flagTxWarmProfile))
 	for _, prof := range flagTxWarmProfile {
 		resolvedProfiles = append(resolvedProfiles, profiles.Resolve(prof))
@@ -112,7 +120,8 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		// Disable the JAR's own terminology cache while recording. Otherwise it
 		// answers from ~/.fhir and those requests never reach the recorder, so
 		// the recording would be complete only on the machine that made it.
-		TxCache: "n/a",
+		TxCache:      "n/a",
+		FHIRSettings: settingsPath,
 		// The proxy is loopback HTTP by design; the warning is about sending
 		// data unencrypted to a remote server, which is not what happens here.
 		AllowInsecureTx:  true,
@@ -126,9 +135,10 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	}
 
 	if err := store.WriteManifest(txreplay.Manifest{
-		Upstream:    upstream,
-		FHIRVersion: flagTxWarmFHIRVersion,
-		Recorded:    time.Now().UTC().Format(time.RFC3339),
+		Upstream:         upstream,
+		FHIRVersion:      flagTxWarmFHIRVersion,
+		ValidatorVersion: validator.EffectiveValidatorVersion(viper.GetString("validator-version")),
+		Recorded:         time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
 		return err
 	}

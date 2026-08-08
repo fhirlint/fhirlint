@@ -77,6 +77,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	var txPlayer *txreplay.Server
 	txServer := flagServeTerminologyServer
 	txCache := flagServeTxCache
+	txSettings := ""
 	if flagServeTxOffline {
 		switch {
 		case flagServeNoTerminologyServer:
@@ -98,6 +99,14 @@ func runServe(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		defer func() { _ = txPlayer.Stop() }()
+		// Validator 6.10.0+ refuses plain-HTTP destinations; exempt only this
+		// loopback replay server.
+		settingsPath, cleanupSettings, serr := txreplay.WriteJARSettings(baseURL)
+		if serr != nil {
+			return serr
+		}
+		defer cleanupSettings()
+		txSettings = settingsPath
 		txServer = baseURL
 		// Every request has to reach the replay server, or an incomplete
 		// recording stays invisible behind the JAR's own cache.
@@ -112,6 +121,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		NoTerminologyServer: flagServeNoTerminologyServer,
 		TerminologyServer:   txServer,
 		TxCache:             txCache,
+		FHIRSettings:        txSettings,
 		JARPath:             viper.GetString("jar"),
 		Proxy:               validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 		ValidatorVersion:    viper.GetString("validator-version"),
