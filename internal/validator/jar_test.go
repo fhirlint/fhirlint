@@ -154,28 +154,77 @@ var zipMagic = []byte{0x50, 0x4B, 0x03, 0x04}
 
 func TestIsValidJAR_ValidZIP(t *testing.T) {
 	path := writeJAR(t, append(zipMagic, []byte("rest of jar")...))
-	if !isValidJAR(path) {
+	valid, err := isValidJAR(path)
+	if err != nil {
+		t.Fatalf("unexpected read error: %v", err)
+	}
+	if !valid {
 		t.Error("expected true for file with ZIP magic bytes")
 	}
 }
 
 func TestIsValidJAR_EmptyFile(t *testing.T) {
 	path := writeJAR(t, []byte{})
-	if isValidJAR(path) {
+	valid, err := isValidJAR(path)
+	// Empty is readable and simply not a JAR — not a read failure.
+	if err != nil {
+		t.Errorf("expected no read error for an empty file, got: %v", err)
+	}
+	if valid {
 		t.Error("expected false for empty file")
+	}
+}
+
+func TestIsValidJAR_Truncated(t *testing.T) {
+	path := writeJAR(t, []byte{0x50, 0x4B})
+	valid, err := isValidJAR(path)
+	if err != nil {
+		t.Errorf("expected no read error for a truncated file, got: %v", err)
+	}
+	if valid {
+		t.Error("expected false for a file shorter than the magic bytes")
 	}
 }
 
 func TestIsValidJAR_WrongBytes(t *testing.T) {
 	path := writeJAR(t, []byte{0x00, 0x01, 0x02, 0x03})
-	if isValidJAR(path) {
+	valid, err := isValidJAR(path)
+	if err != nil {
+		t.Errorf("expected no read error, got: %v", err)
+	}
+	if valid {
 		t.Error("expected false for file with wrong magic bytes")
 	}
 }
 
 func TestIsValidJAR_NonExistent(t *testing.T) {
-	if isValidJAR("/nonexistent/file.jar") {
+	valid, err := isValidJAR("/nonexistent/file.jar")
+	if err == nil {
+		t.Error("expected a read error for a file that is not there")
+	}
+	if valid {
 		t.Error("expected false for non-existent file")
+	}
+}
+
+// A JAR that cannot be opened must be reported as unreadable, not as corrupt:
+// the bytes may be fine and the fix is a permission, not a re-download (#316).
+func TestIsValidJAR_Unreadable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: file modes do not deny access")
+	}
+	path := writeJAR(t, append(zipMagic, []byte("rest of jar")...))
+	if err := os.Chmod(path, 0000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0600) })
+
+	valid, err := isValidJAR(path)
+	if err == nil {
+		t.Fatal("expected a read error for an unreadable file")
+	}
+	if valid {
+		t.Error("expected false for an unreadable file")
 	}
 }
 
@@ -446,5 +495,53 @@ func TestJARURLForVersion_PinnedTargetsThatRelease(t *testing.T) {
 	// URL, since that is what the checksum lookup keys on.
 	if m := versionFromURL.FindStringSubmatch(got); len(m) != 2 || m[1] != "6.9.12" {
 		t.Errorf("versionFromURL could not recover the version from %q", got)
+	}
+}
+
+// EnsureJAR used to return the cached path with a nil error when the cache
+// directory could not be searched at all, so the failure surfaced much later as
+// "validator produced no output" — the validator blamed for a permission
+// problem on fhirlint's own cache (#316).
+func TestEnsureJAR_UnreadableCacheDir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: directory modes do not deny access")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "validator_cli.jar"), zipMagic, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0700) }) //nolint:gosec // restoring a temp *directory*, which needs the execute bit
+	t.Setenv(cache.DirEnvVar, dir)
+
+	path, err := EnsureJAR("", "")
+	if err == nil {
+		t.Fatalf("expected an error for an unreadable cache dir, got path %q", path)
+	}
+	for _, want := range []string{"cannot access", cache.DirEnvVar} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should mention %q, got: %v", want, err)
+		}
+	}
+}
+
+func TestEnsureJAR_Override_UnreadableFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: file modes do not deny access")
+	}
+	path := writeJAR(t, zipMagic)
+	if err := os.Chmod(path, 0000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0600) })
+
+	_, err := EnsureJAR(path, "")
+	if err == nil {
+		t.Fatal("expected an error for an unreadable --jar file")
+	}
+	if !strings.Contains(err.Error(), "cannot be read") {
+		t.Errorf("error should say the file cannot be read, not that it is corrupt: %v", err)
 	}
 }

@@ -47,7 +47,11 @@ func EnsureJAR(override, version string) (string, error) {
 		if _, err := os.Stat(override); err != nil {
 			return "", fmt.Errorf("JAR not found at %q (set via --jar or FHIRLINT_JAR): %w", override, err)
 		}
-		if !isValidJAR(override) {
+		valid, readErr := isValidJAR(override)
+		if readErr != nil {
+			return "", fmt.Errorf("JAR at %q cannot be read (set via --jar or FHIRLINT_JAR): %w", override, readErr)
+		}
+		if !valid {
 			return "", fmt.Errorf("JAR at %q appears to be corrupted or is not a valid JAR file", override)
 		}
 		// An explicit JAR path wins over a pin: the user is pointing at a
@@ -71,9 +75,31 @@ func EnsureJAR(override, version string) (string, error) {
 	_, statErr := os.Stat(jarPath)
 	needsDownload := os.IsNotExist(statErr)
 
-	if statErr == nil && !isValidJAR(jarPath) {
-		fmt.Fprintln(os.Stderr, "validator JAR appears to be corrupted — re-downloading...")
-		needsDownload = true
+	// A stat that fails for any other reason — no permission on the cache
+	// directory, a broken mount — is fatal here. Carrying on would return a path
+	// we already know we cannot reach, and the run would fail several steps later
+	// as "validator produced no output", blaming the validator for a problem with
+	// our own cache (#316).
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return "", fmt.Errorf(
+			"cannot access the cached validator JAR at %s: %w"+
+				" — check the permissions on the cache directory, or set %s to a readable location",
+			jarPath, statErr, cache.DirEnvVar)
+	}
+
+	if statErr == nil {
+		valid, readErr := isValidJAR(jarPath)
+		switch {
+		case readErr != nil:
+			// Not "corrupted": the bytes may be perfectly fine, we just cannot
+			// read them. Re-downloading still repairs it, because the replacement
+			// is written as a fresh file.
+			fmt.Fprintf(os.Stderr, "cached validator JAR cannot be read (%v) — re-downloading...\n", readErr)
+			needsDownload = true
+		case !valid:
+			fmt.Fprintln(os.Stderr, "validator JAR appears to be corrupted — re-downloading...")
+			needsDownload = true
+		}
 	}
 
 	// A pin that does not match what is cached means fetching the pinned release.
@@ -113,19 +139,33 @@ func EnsureJAR(override, version string) (string, error) {
 }
 
 // isValidJAR checks that the file starts with the ZIP magic bytes (PK\x03\x04).
-// JAR files are ZIP archives; a missing or wrong header indicates a corrupt/incomplete download.
-func isValidJAR(path string) bool {
+// JAR files are ZIP archives; a missing or wrong header indicates a corrupt or
+// incomplete download.
+//
+// The second return separates "could not read the file at all" from "read it,
+// and it is not a JAR". They call for different messages and, for the cached
+// JAR, they are different problems: one is a permission or mount fault, the
+// other a bad download (#316).
+func isValidJAR(path string) (bool, error) {
 	f, err := os.Open(path) //nolint:gosec // path is our own cache file or user-supplied --jar
 	if err != nil {
-		return false
+		return false, err
 	}
 	defer func() { _ = f.Close() }()
 	magic := make([]byte, 4)
 	n, err := f.Read(magic)
-	if err != nil || n < 4 {
-		return false
+	if err != nil && n < 4 {
+		// A truncated file reads short without being unreadable, so only a real
+		// read failure counts as one; anything else is simply not a JAR.
+		if n == 0 && !errors.Is(err, io.EOF) {
+			return false, err
+		}
+		return false, nil
 	}
-	return magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04
+	if n < 4 {
+		return false, nil
+	}
+	return magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04, nil
 }
 
 // UpdateJAR re-downloads the validator JAR. An empty version fetches the latest
