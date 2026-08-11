@@ -500,9 +500,34 @@ fhirlint validate patient.json --severity error     # errors only
 # Suppress output for valid files (only show files with issues)
 fhirlint validate ./fhir/ --quiet
 
+# Group repeated findings instead of printing every occurrence
+fhirlint validate ./fhir/ --group
+
 # Disable ANSI colors (useful for CI environments without color support)
 fhirlint validate patient.json --no-color
 ```
+
+### Grouping repeated findings
+
+Validating a directory prints every finding of every file, so one `dom-6` across 500 resources is 500 blocks of output. `--group` collapses identical findings into one block each:
+
+```
+  ⚠ WARN   dom-6  ·  483 files
+           A resource should have narrative for robust management
+           fhir/Patient-001.json, fhir/Patient-002.json, fhir/Patient-003.json  … and 480 more
+
+  ✗ ERROR  Rule_bdl_1  ·  2 files
+           Bundle entry missing fullUrl
+           fhir/bundle-a.json:14, fhir/bundle-b.json:9
+```
+
+Findings group by severity, message ID and message text, so two messages naming different codes stay separate — the repetition worth collapsing is the same problem in many places, not different problems that look alike. Groups are ordered most severe first, then most frequent, which is roughly the order you would work through them.
+
+Where a file has the same finding more than once — a Bundle failing one constraint in several entries — the header says so: `12 occurrences in 4 files`. Occurrence counts, and therefore the summary line and the exit code, are identical with grouping on or off. This is presentation only, and only for the terminal: JSON, SARIF, JUnit, CodeClimate and `github` stay exhaustive, because machine consumers need every occurrence.
+
+It is opt-in rather than automatic above some threshold, so nothing scraping terminal output changes shape on the day a dataset grows past the limit.
+
+With `--show-source`, one snippet is printed per group, from the first occurrence. With `--show-suppressed`, suppressed findings are grouped the same way. `--quiet` has no additional effect: grouped output never lists clean files in the first place.
 
 ### Showing the offending line
 
@@ -1528,6 +1553,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--cache-dir` | — | Directory for result cache (default: `~/.fhirlint/result-cache/`) |
 | `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |
 | `--quiet`, `-q` | `false` | Suppress per-file output for valid files (terminal format only) |
+| `--group` | `false` | Group repeated findings into one block each with a count (terminal format only) |
 | `--no-color` | `false` | Disable ANSI color output |
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
 | `--watch-interval` | — | Polling interval for `--watch` in milliseconds |
@@ -1578,6 +1604,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `cache` | bool | `--cache` |
 | `cache-dir` | string | `--cache-dir` |
 | `quiet` | bool | `--quiet` |
+| `group` | bool | `--group` |
 | `no-color` | bool | `--no-color` |
 | `watch` | string | `--watch` |
 | `watch-interval` | int | `--watch-interval` |

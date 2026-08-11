@@ -771,3 +771,18 @@ func TestSeverityOverride_DrivesExitCode(t *testing.T) {
 		t.Error("the downgraded finding is now a warning and should breach --max-warnings 0")
 	}
 }
+
+func TestConfigFile_GroupFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "group: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if !viper.GetBool("group") {
+		t.Error("group = false, want true from config")
+	}
+}

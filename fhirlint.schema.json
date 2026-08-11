@@ -107,6 +107,9 @@
       },
       "type": "array"
     },
+    "group": {
+      "type": "boolean"
+    },
     "https-proxy": {
       "type": [
         "string",
