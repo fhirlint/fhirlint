@@ -397,3 +397,82 @@ func TestCheck_SuppressExpiresIsValidated(t *testing.T) {
 		})
 	}
 }
+
+// --- severity-override (#311) ---
+
+func TestCheck_ValidSeverityOverrides(t *testing.T) {
+	path := writeConfig(t, `
+severity-override:
+  - messageId: Rule_bdl_1
+    severity: warning
+    reason: "upstream profile defect"
+    expires: 2026-12-31
+  - constraint: dom-6
+    severity: information
+  - pattern: "Unknown extension.*"
+    severity: error
+`)
+	issues, _ := configcheck.Check(path)
+	if len(issues) != 0 {
+		t.Errorf("expected no issues for valid severity-override rules, got: %v", issues)
+	}
+}
+
+func TestCheck_SeverityOverride_Rejects(t *testing.T) {
+	cases := []struct {
+		name, yaml, want string
+	}{
+		{
+			"missing severity",
+			"severity-override:\n  - messageId: x\n",
+			"must have a severity",
+		},
+		{
+			"missing selector",
+			"severity-override:\n  - severity: warning\n",
+			"messageId",
+		},
+		{
+			"unknown severity",
+			"severity-override:\n  - messageId: x\n    severity: critical\n",
+			"invalid value",
+		},
+		{
+			"unknown key",
+			"severity-override:\n  - messageId: x\n    severity: warning\n    why: nope\n",
+			"unknown severity-override key",
+		},
+		{
+			"string shorthand",
+			"severity-override:\n  - \"messageId:x\"\n",
+			"must be a map",
+		},
+		{
+			"not a list",
+			"severity-override:\n  messageId: x\n",
+			"must be a list",
+		},
+		{
+			"malformed expires",
+			"severity-override:\n  - messageId: x\n    severity: warning\n    expires: 31.12.2026\n",
+			"YYYY-MM-DD",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			issues, _ := configcheck.Check(writeConfig(t, tc.yaml))
+			if len(issues) == 0 {
+				t.Fatalf("expected an issue for %s", tc.name)
+			}
+			var found bool
+			for _, iss := range issues {
+				if strings.Contains(iss.Message, tc.want) {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("expected a message containing %q, got: %v", tc.want, issues)
+			}
+		})
+	}
+}

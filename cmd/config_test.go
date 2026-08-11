@@ -646,3 +646,128 @@ func TestConfigFile_MaxMessagesFromConfig(t *testing.T) {
 		t.Errorf("max-messages = %d, want %d", got, 500)
 	}
 }
+
+// --- severity-override (#311) ---
+
+func TestBuildSeverityOverrides_FromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, `severity-override:
+  - messageId: Rule_bdl_1
+    severity: warning
+    reason: "upstream profile defect"
+    expires: 2026-12-31
+`)
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	rules, err := buildSeverityOverrides()
+	if err != nil {
+		t.Fatalf("buildSeverityOverrides: %v", err)
+	}
+	if len(rules) != 1 {
+		t.Fatalf("got %d rules, want 1", len(rules))
+	}
+	if rules[0].Type != "messageId" || rules[0].Value != "Rule_bdl_1" {
+		t.Errorf("selector = %s:%s", rules[0].Type, rules[0].Value)
+	}
+	if rules[0].To != "warning" {
+		t.Errorf("To = %q, want warning", rules[0].To)
+	}
+	if rules[0].Expires.Format("2006-01-02") != "2026-12-31" {
+		t.Errorf("Expires = %v", rules[0].Expires)
+	}
+}
+
+func TestBuildSeverityOverrides_Unset(t *testing.T) {
+	resetViper(t)
+	rules, err := buildSeverityOverrides()
+	if err != nil {
+		t.Fatalf("buildSeverityOverrides: %v", err)
+	}
+	if rules != nil {
+		t.Errorf("got %v, want nil when the key is absent", rules)
+	}
+}
+
+func TestBuildSeverityOverrides_Rejects(t *testing.T) {
+	cases := []struct {
+		name string
+		yaml string
+	}{
+		{"not a list", "severity-override:\n  messageId: x\n"},
+		{"string shorthand", "severity-override:\n  - \"messageId:x\"\n"},
+		{"no selector", "severity-override:\n  - severity: warning\n"},
+		{"no severity", "severity-override:\n  - messageId: x\n"},
+		{"unknown severity", "severity-override:\n  - messageId: x\n    severity: critical\n"},
+		{"malformed expires", "severity-override:\n  - messageId: x\n    severity: warning\n    expires: 31.12.2026\n"},
+		{"invalid pattern", "severity-override:\n  - pattern: \"[unclosed\"\n    severity: warning\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetViper(t)
+			dir := t.TempDir()
+			writeConfigFile(t, dir, tc.yaml)
+			viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+			_ = viper.ReadInConfig()
+
+			if _, err := buildSeverityOverrides(); err == nil {
+				t.Error("expected an error, got nil")
+			}
+		})
+	}
+}
+
+func TestBuildSeverityOverrides_RequireReason(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "severity-override:\n  - messageId: x\n    severity: warning\n")
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	_ = viper.ReadInConfig()
+
+	flagRequireSuppressReason = true
+	t.Cleanup(func() { flagRequireSuppressReason = false })
+
+	if _, err := buildSeverityOverrides(); err == nil {
+		t.Error("expected require-suppress-reason to reject a rule with no reason")
+	}
+}
+
+// A downgraded error must actually stop failing the build — the exit code is
+// where a re-levelling either works or is cosmetic.
+func TestSeverityOverride_DrivesExitCode(t *testing.T) {
+	flagFailOn = "error"
+	results := []*validator.Result{{
+		Filename: "a.json",
+		Valid:    false,
+		Issues:   []validator.Issue{{Severity: "error", MessageID: "Rule_bdl_1"}},
+	}}
+
+	if err := checkExitCode(results, nil); err == nil {
+		t.Fatal("expected the error to fail the run before any override")
+	}
+
+	rule, err := suppress.ParseSeverityMap(map[string]interface{}{
+		"messageId": "Rule_bdl_1", "severity": "warning",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	suppress.ApplySeverity(results, []suppress.SeverityRule{rule})
+
+	if err := checkExitCode(results, nil); err != nil {
+		t.Errorf("downgraded finding should not fail the run, got: %v", err)
+	}
+	if err := checkMaxWarnings(results, nil); err != nil {
+		t.Errorf("unexpected max-warnings failure: %v", err)
+	}
+
+	// …and the other direction: an upgrade must start failing it.
+	flagMaxWarnings = 0
+	t.Cleanup(func() { flagMaxWarnings = -1 })
+	if err := checkMaxWarnings(results, nil); err == nil {
+		t.Error("the downgraded finding is now a warning and should breach --max-warnings 0")
+	}
+}

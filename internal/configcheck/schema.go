@@ -62,6 +62,15 @@ func schemaForKind(spec keySpec) map[string]any {
 		}
 	case kindSuppressList:
 		return objectListSchema(sortedKeys(suppressKeys))
+	case kindSeverityOverrideList:
+		// Same keys as a suppression, minus the string shorthand and with
+		// `severity` required — it is the level to apply, so a rule without one
+		// says nothing.
+		s := objectListSchema(sortedKeys(suppressKeys))
+		if items, ok := s["items"].(map[string]any); ok {
+			items["required"] = []string{"severity"}
+		}
+		return s
 	case kindRuleList:
 		return objectListSchema(sortedKeys(ruleKeys))
 	case kindOverrideList:

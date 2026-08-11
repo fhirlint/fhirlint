@@ -125,3 +125,17 @@ func TestBuildMarkdownReport_FatalCountsAsError(t *testing.T) {
 		t.Errorf("fatal severity label expected\n---\n%s", out)
 	}
 }
+
+func TestBuildMarkdownReport_NamesTheReportedSeverity(t *testing.T) {
+	downgraded := validator.Issue{
+		Severity: "warning", OriginalSeverity: "error",
+		Message: "bundle entry has no fullUrl", Location: "Bundle.entry[0]",
+	}
+	out := buildMarkdownReport([]*validator.Result{
+		{Filename: "b.json", Label: "b.json", Issues: []validator.Issue{downgraded}},
+	}, "information")
+
+	if !strings.Contains(out, "WARNING (reported as ERROR)") {
+		t.Errorf("expected the reported severity alongside the effective one, got:\n%s", out)
+	}
+}

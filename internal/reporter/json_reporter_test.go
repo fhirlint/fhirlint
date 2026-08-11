@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
@@ -141,5 +142,25 @@ func TestJSON_OutputIsValidJSON(t *testing.T) {
 	var parsed JSONReport
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Errorf("output is not valid JSON: %v", err)
+	}
+}
+
+// The JSON report carries both levels so a reader without the config can still
+// tell what the validator actually said (#311).
+func TestBuildJSONReport_CarriesOriginalSeverity(t *testing.T) {
+	downgraded := issue("warning", "bundle entry has no fullUrl", "Bundle.entry[0]")
+	downgraded.OriginalSeverity = "error"
+	report := buildJSONReport([]*validator.Result{makeResult(true, downgraded)}, "information")
+
+	data, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"originalSeverity":"error"`) {
+		t.Errorf("expected originalSeverity in output, got: %s", data)
+	}
+	// It counts as its effective severity, not its original one.
+	if report.Summary.Warnings != 1 || report.Summary.Errors != 0 {
+		t.Errorf("summary = %+v, want 1 warning and 0 errors", report.Summary)
 	}
 }

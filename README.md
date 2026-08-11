@@ -650,7 +650,7 @@ Error: require-suppress-reason is set, but 1 suppress rule(s) have no reason: "c
 
 It is opt-in, since turning it on by default would break every config with a bare suppression. There is a `--require-suppress-reason` flag for enabling it from the command line, e.g. to enforce the policy in CI without changing the committed config.
 
-The check covers **every** place a suppression can be written — `--suppress` on the command line, the global `suppress:` block, and `suppress:` nested under `overrides:`. A policy that only covered one of them could be sidestepped by moving the rule somewhere else. Whitespace does not count as a reason.
+The check covers **every** place a suppression can be written — `--suppress` on the command line, the global `suppress:` block, `suppress:` nested under `overrides:`, and the `severity-override:` rules described below. A policy that only covered one of them could be sidestepped by moving the rule somewhere else. Whitespace does not count as a reason.
 
 Suppressed issues are:
 - Excluded from the exit-code calculation (won't trigger `--fail-on error`)
@@ -668,6 +668,41 @@ suppress:
   - expression: Patient.text
     severity: warning   # only suppress warnings on this field
 ```
+
+### Re-levelling instead of hiding
+
+Suppression is all-or-nothing. Some findings deserve the middle option: an error caused by a defect in someone else's published profile will not be fixed on your schedule, must not fail CI, and must not disappear either — silently dropping it means nobody notices when the profile is eventually corrected.
+
+`severity-override:` changes what a finding *is*, using the same selectors as `suppress`:
+
+```yaml
+severity-override:
+  - messageId: Rule_bdl_1
+    severity: warning     # the level to apply — required
+    reason: "constraint is wrong in DAV-PR-ERP-AbgabedatenBundle 1.0.3"
+    expires: 2026-12-31
+
+  - pattern: "Unknown extension.*"
+    severity: error       # upgrades work too
+    reason: "extensions must be declared in our IG"
+```
+
+Note the difference in what `severity` means: under `suppress:` it narrows *which* findings a rule matches, while under `severity-override:` it is the level to apply. That is why it is mandatory here — a rule without one says nothing.
+
+The new level is the real one from that point on. It drives terminal output, `severity` filtering, `--fail-on`, `--max-warnings`, the baseline and the exit code, so a downgraded error genuinely stops failing the build instead of merely looking different. Rules run **before** suppression, so a `suppress` rule with a `severity` filter matches against the new level.
+
+Reports do not lose the original. Terminal output marks a re-levelled finding, and JSON and SARIF carry both levels, so a report cannot mislead a reader who does not have the config to hand:
+
+```
+  ⚠ WARN   Rule bdl-1: A Bundle entry must have a fullUrl
+           ↕ reported as error
+```
+
+```json
+{ "severity": "warning", "originalSeverity": "error", "messageId": "Rule_bdl_1", ... }
+```
+
+`reason` and `expires` behave exactly as they do for suppressions, including the warning when a rule lapses or matches nothing, and `require-suppress-reason` covers these rules too — a downgrade stops a finding failing the build just as effectively as hiding it does. Config only: a re-levelling carries a reason and usually a date, which is not something to retype on every invocation.
 
 ---
 

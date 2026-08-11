@@ -8,6 +8,7 @@ FHIR validation is strict by design — but real projects sometimes make deliber
 - [Selector types](#selector-types)
 - [CLI usage](#cli-usage)
 - [Committing rules to fhirlint.yml](#committing-rules-to-fhirlintymll)
+- [Re-levelling instead of suppressing](#re-levelling-instead-of-suppressing)
 - [--show-suppressed: making decisions visible](#--show-suppressed-making-decisions-visible)
 - [Stale rule warnings](#stale-rule-warnings)
 - [Suppression in JSON output](#suppression-in-json-output)
@@ -29,6 +30,7 @@ Suppression is the wrong tool when:
 - **You just want to make the build pass** — suppressing unknown errors to silence CI is technical debt in disguise
 - **The issue points to a real data quality problem** — a missing required field is usually a bug, not a policy decision
 - **You want to silence a whole category of issues** — use `--best-practice ignore` for best-practice constraints or `--severity warning` to raise the display threshold instead
+- **You want the finding to stay visible, just not fatal** — that is [re-levelling](#re-levelling-instead-of-suppressing), not suppression
 
 ---
 
@@ -136,6 +138,59 @@ suppress:
 ```
 
 Adding a comment above each rule — with a rationale and ideally a tracking link — turns suppression from a black box into a living decision log.
+
+---
+
+## Re-levelling instead of suppressing
+
+Suppression answers one question: should this finding be visible? Sometimes the honest answer is "yes, but it must not fail the build". The classic case is an error caused by a defect in a profile someone else publishes — `DAV-PR-ERP-AbgabedatenBundle|1.0.3` shipping mutually inconsistent constraints, for instance. You cannot fix it, you cannot wait for it, and if you suppress it you will never notice when it is finally corrected.
+
+`severity-override:` re-levels the finding instead:
+
+```yaml
+# fhirlint.yml
+severity-override:
+  - messageId: Rule_bdl_1
+    severity: warning
+    reason: "constraint is wrong in DAV-PR-ERP-AbgabedatenBundle 1.0.3"
+    expires: 2026-12-31
+```
+
+The selectors are the ones above — `messageId`, `constraint`, `expression`, `pattern` — but `severity` means the opposite of what it means under `suppress:`. There it narrows which findings a rule matches; here it is the level to apply, and it is required.
+
+| | `suppress:` | `severity-override:` |
+|---|---|---|
+| Effect | hides the finding | changes its level |
+| `severity:` key | which findings to match | the level to apply (required) |
+| Appears in output | only with `--show-suppressed` | always, at its new level |
+| CLI equivalent | `--suppress` | none — config only |
+| Counts toward exit code | no | yes, at the new level |
+
+Upgrades work the same way, for the finding your project treats as more serious than the spec does:
+
+```yaml
+severity-override:
+  - pattern: "Unknown extension.*"
+    severity: error
+    reason: "extensions must be declared in our IG"
+```
+
+The new level is the real one everywhere downstream: terminal output, `--severity` filtering, `--fail-on`, `--max-warnings`, the baseline and the exit code. Overrides are applied **before** suppression, so a `suppress:` rule with a severity filter matches against the new level, not the reported one.
+
+Nothing is lost in the process. The terminal marks a re-levelled finding, and JSON and SARIF carry both levels:
+
+```
+  ⚠ WARN   Rule bdl-1: A Bundle entry must have a fullUrl
+           ↕ reported as error
+```
+
+```json
+{ "severity": "warning", "originalSeverity": "error", "messageId": "Rule_bdl_1" }
+```
+
+In SARIF the original travels as `properties.originalSeverity` on the result, so a code-scanning dashboard can still tell the two apart.
+
+`reason` and `expires` behave exactly as they do for suppressions, including the stale-rule and expiry warnings below, and `require-suppress-reason` covers these rules too.
 
 ---
 

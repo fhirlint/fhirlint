@@ -812,6 +812,20 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		applyReferenceCheck(results, sinceExcluded)
 	}
 
+	// Re-level findings before anything reads their severity: suppression, the
+	// severity filter, baseline, --fail-on and the exit code all have to agree
+	// on what a finding is, and they only do if the override lands first (#311).
+	severityRules, oerr := buildSeverityOverrides()
+	if oerr != nil {
+		return oerr
+	}
+	if len(severityRules) > 0 {
+		for i, o := range suppress.ApplySeverity(results, severityRules) {
+			reportRuleOutcome(o, "severity-override", severityRules[i].Rule,
+				fmt.Sprintf("%s → %s", severityRules[i].Raw, severityRules[i].To))
+		}
+	}
+
 	// Apply suppression rules (CLI flags + config file).
 	suppressRules, serr := buildSuppressRules(cmd)
 	if serr != nil {
@@ -820,21 +834,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if len(suppressRules) > 0 {
 		outcomes := suppress.Apply(results, suppressRules)
 		for i, o := range outcomes {
-			rule := suppressRules[i]
-			switch {
-			case o.Expired:
-				// Say this loudly: findings this rule used to hide are back, and
-				// without the reason the build failing again looks arbitrary.
-				fmt.Fprintf(os.Stderr,
-					"warn: suppress rule %q expired on %s and no longer suppresses anything\n",
-					rule.Raw, rule.Expires.Format("2006-01-02"))
-			case o.Matches == 0:
-				fmt.Fprintf(os.Stderr, "warn: suppress rule %q matched 0 issues\n", rule.Raw)
-			}
-			if o.ExpiresSoon {
-				fmt.Fprintf(os.Stderr, "warn: suppress rule %q expires on %s\n",
-					rule.Raw, rule.Expires.Format("2006-01-02"))
-			}
+			reportRuleOutcome(o, "suppress", suppressRules[i], suppressRules[i].Raw)
 		}
 	}
 
@@ -2453,6 +2453,60 @@ func printUpdateNotice() {
 	if newer := validator.CheckForUpdate(); newer != "" {
 		fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
 	}
+}
+
+// reportRuleOutcome prints the warnings a selector rule earns: expired, unused,
+// or about to lapse. kind names the config section ("suppress",
+// "severity-override") and label is how the rule is shown to the user.
+func reportRuleOutcome(o suppress.Outcome, kind string, rule suppress.Rule, label string) {
+	verb := "suppresses"
+	if kind == "severity-override" {
+		verb = "changes"
+	}
+	switch {
+	case o.Expired:
+		// Say this loudly: findings this rule used to hold down are back at their
+		// reported severity, and without the reason a build failing again looks
+		// arbitrary.
+		fmt.Fprintf(os.Stderr, "warn: %s rule %q expired on %s and no longer %s anything\n",
+			kind, label, rule.Expires.Format("2006-01-02"), verb)
+	case o.Matches == 0:
+		fmt.Fprintf(os.Stderr, "warn: %s rule %q matched 0 issues\n", kind, label)
+	}
+	if o.ExpiresSoon {
+		fmt.Fprintf(os.Stderr, "warn: %s rule %q expires on %s\n",
+			kind, label, rule.Expires.Format("2006-01-02"))
+	}
+}
+
+// buildSeverityOverrides reads the `severity-override:` list from the config.
+// There is no CLI flag: a re-levelling carries a reason and usually an expiry,
+// which is config, not something you retype on every invocation.
+func buildSeverityOverrides() ([]suppress.SeverityRule, error) {
+	if !viper.IsSet("severity-override") {
+		return nil, nil
+	}
+	raw, ok := viper.Get("severity-override").([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("severity-override config must be a list")
+	}
+	var rules []suppress.SeverityRule
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf(
+				"severity-override rule must be a map with a selector and a severity, got %T", item)
+		}
+		r, err := suppress.ParseSeverityMap(m)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, r)
+	}
+	// Same policy as suppression, deliberately: a rule that stops an error
+	// failing the build needs a recorded why just as much when it downgrades the
+	// finding as when it hides it.
+	return rules, checkSuppressReasons(suppress.Selectors(rules), "severity-override")
 }
 
 // buildSuppressRules merges --suppress CLI flags with suppress rules from fhirlint.yml.
