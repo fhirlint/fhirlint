@@ -102,6 +102,7 @@ var (
 	flagValidatorArg             []string
 	flagRequireSuppressReason    bool
 	flagShowSource               bool
+	flagGroup                    bool
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -237,6 +238,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagShowSource, "show-source", false,
 		"Show the offending source line under each finding (terminal output only)")
 	_ = viper.BindPFlag("show-source", validateCmd.Flags().Lookup("show-source"))
+	validateCmd.Flags().BoolVar(&flagGroup, "group", false,
+		"Group repeated findings into one block each with a count (terminal output only)")
+	_ = viper.BindPFlag("group", validateCmd.Flags().Lookup("group"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -423,6 +427,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("show-source") && viper.IsSet("show-source") {
 		flagShowSource = viper.GetBool("show-source")
+	}
+	if !cmd.Flags().Changed("group") && viper.IsSet("group") {
+		flagGroup = viper.GetBool("group")
 	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
@@ -868,8 +875,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
 		case "terminal":
-			for _, r := range results {
-				reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet, flagShowSource)
+			// Grouped output replaces the per-file blocks rather than adding to
+			// them: printing both would be strictly more noise than today.
+			if flagGroup {
+				reporter.TerminalGrouped(results, flagSeverity, flagShowSuppressed, flagShowSource)
+			} else {
+				for _, r := range results {
+					reporter.Terminal(r, flagSeverity, flagShowSuppressed, flagQuiet, flagShowSource)
+				}
 			}
 			reporter.TerminalSummary(results, flagSeverity)
 		case "json":

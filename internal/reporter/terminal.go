@@ -47,22 +47,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 
 	hinted := map[string]bool{}
 	for _, issue := range filtered {
-		var prefix string
-		var style lipgloss.Style
-		switch issue.Severity {
-		case "fatal":
-			prefix = "  ✗ FATAL  "
-			style = fatalStyle
-		case "error":
-			prefix = "  ✗ ERROR  "
-			style = errorStyle
-		case "warning":
-			prefix = "  ⚠ WARN   "
-			style = warningStyle
-		default:
-			prefix = "  ℹ INFO   "
-			style = infoStyle
-		}
+		prefix, style := severityPrefix(issue.Severity)
 		fmt.Println(style.Render(prefix) + issue.Message)
 		// A finding shown as a warning that the validator called an error is
 		// confusing without this: the reader has no way to tell a re-levelled
