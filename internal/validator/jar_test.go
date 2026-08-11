@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -152,6 +153,19 @@ func writeJAR(t *testing.T, content []byte) string {
 
 var zipMagic = []byte{0x50, 0x4B, 0x03, 0x04}
 
+// requireEnforcedFileModes skips a test where the filesystem does not enforce
+// the modes it sets up. On Windows, Go's Chmod only toggles the read-only
+// attribute, so a 0000 file stays readable; as root, nothing is denied at all.
+func requireEnforcedFileModes(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows: Chmod does not deny read access")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: file modes do not deny access")
+	}
+}
+
 func TestIsValidJAR_ValidZIP(t *testing.T) {
 	path := writeJAR(t, append(zipMagic, []byte("rest of jar")...))
 	valid, err := isValidJAR(path)
@@ -210,9 +224,7 @@ func TestIsValidJAR_NonExistent(t *testing.T) {
 // A JAR that cannot be opened must be reported as unreadable, not as corrupt:
 // the bytes may be fine and the fix is a permission, not a re-download (#316).
 func TestIsValidJAR_Unreadable(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: file modes do not deny access")
-	}
+	requireEnforcedFileModes(t)
 	path := writeJAR(t, append(zipMagic, []byte("rest of jar")...))
 	if err := os.Chmod(path, 0000); err != nil {
 		t.Fatal(err)
@@ -503,9 +515,7 @@ func TestJARURLForVersion_PinnedTargetsThatRelease(t *testing.T) {
 // "validator produced no output" — the validator blamed for a permission
 // problem on fhirlint's own cache (#316).
 func TestEnsureJAR_UnreadableCacheDir(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: directory modes do not deny access")
-	}
+	requireEnforcedFileModes(t)
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "validator_cli.jar"), zipMagic, 0600); err != nil {
 		t.Fatal(err)
@@ -528,9 +538,7 @@ func TestEnsureJAR_UnreadableCacheDir(t *testing.T) {
 }
 
 func TestEnsureJAR_Override_UnreadableFile(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: file modes do not deny access")
-	}
+	requireEnforcedFileModes(t)
 	path := writeJAR(t, zipMagic)
 	if err := os.Chmod(path, 0000); err != nil {
 		t.Fatal(err)

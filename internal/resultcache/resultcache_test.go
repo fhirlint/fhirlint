@@ -3,6 +3,7 @@ package resultcache
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -181,6 +182,11 @@ func TestClear_NonExistentDir(t *testing.T) {
 // the successes produced "Removed 0 cached result(s)" over a directory that was
 // still full, which reads as success (#316).
 func TestClear_UnremovableEntryIsReported(t *testing.T) {
+	// Windows enforces neither: Chmod there only toggles the read-only
+	// attribute, and root is denied nothing.
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows: Chmod does not deny writes to a directory")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: directory modes do not deny access")
 	}
