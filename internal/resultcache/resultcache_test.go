@@ -3,6 +3,8 @@ package resultcache
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,5 +175,88 @@ func TestClear_NonExistentDir(t *testing.T) {
 	}
 	if n != 0 {
 		t.Errorf("Clear on non-existent dir should return 0")
+	}
+}
+
+// A cache entry that cannot be removed must be reported. Silently counting only
+// the successes produced "Removed 0 cached result(s)" over a directory that was
+// still full, which reads as success (#316).
+func TestClear_UnremovableEntryIsReported(t *testing.T) {
+	// Windows enforces neither: Chmod there only toggles the read-only
+	// attribute, and root is denied nothing.
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows: Chmod does not deny writes to a directory")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: directory modes do not deny access")
+	}
+	dir := t.TempDir()
+	entry := Entry{FhirlintVersion: "0.2.0", Result: validator.Result{}}
+	if err := Put(dir, "key1", entry); err != nil {
+		t.Fatal(err)
+	}
+	// Removal needs write permission on the directory, not on the file.
+	if err := os.Chmod(dir, 0500); err != nil { //nolint:gosec // a directory needs the execute bit; this is deliberately read-only, not writable
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0700) }) //nolint:gosec // restoring a temp directory, which needs the execute bit
+
+	n, err := Clear(dir)
+	if err == nil {
+		t.Fatal("expected an error when an entry cannot be removed")
+	}
+	if n != 0 {
+		t.Errorf("removed count = %d, want 0 — nothing was actually removed", n)
+	}
+	if !strings.Contains(err.Error(), "1 cache entry could not be removed") {
+		t.Errorf("error should say how many failed, got: %v", err)
+	}
+}
+
+// A directory whose name ends in .json is not a cache entry and must be left
+// alone, without stopping the real entries from being cleared.
+func TestClear_SkipsDirectoriesNamedLikeEntries(t *testing.T) {
+	dir := t.TempDir()
+	entry := Entry{FhirlintVersion: "0.2.0", Result: validator.Result{}}
+	for _, k := range []string{"key1", "key2"} {
+		if err := Put(dir, k, entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sub := filepath.Join(dir, "key3.json")
+	if err := os.Mkdir(sub, 0750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "blocker"), []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := Clear(dir)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("removed %d, want both real entries", n)
+	}
+	if _, statErr := os.Stat(sub); statErr != nil {
+		t.Error("a directory named like an entry must survive")
+	}
+}
+
+func TestClear_CountsOnlyWhatItRemoved(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	n, err := Clear(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("removed = %d, want 0 — non-entry files are left alone", n)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "notes.txt")); statErr != nil {
+		t.Error("Clear must not remove files that are not cache entries")
 	}
 }

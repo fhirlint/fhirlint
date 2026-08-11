@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"time"
@@ -969,5 +970,103 @@ func TestCheckRunBounds_IgnoresOrdinaryIssues(t *testing.T) {
 	msg := "Constraint failed: dom-6: 'A resource should have narrative for robust management'"
 	if err := checkRunBounds(boundedResult(msg)); err != nil {
 		t.Errorf("an ordinary issue must not be mistaken for truncation, got: %v", err)
+	}
+}
+
+// --- result cache failure reporting (#316) ---
+
+func TestOnceWarner_WarnsOnlyOnce(t *testing.T) {
+	var buf strings.Builder
+	w := onceWarner{w: &buf}
+
+	for i := 0; i < 500; i++ {
+		w.warn("cache is unusable: %d\n", i)
+	}
+
+	if got := strings.Count(buf.String(), "cache is unusable"); got != 1 {
+		t.Errorf("got %d warnings, want exactly 1:\n%s", got, buf.String())
+	}
+	if !strings.Contains(buf.String(), "cache is unusable: 0") {
+		t.Errorf("the first call should be the one that prints, got: %q", buf.String())
+	}
+}
+
+func TestOnceWarner_SilentUntilCalled(t *testing.T) {
+	var buf strings.Builder
+	w := onceWarner{w: &buf}
+	if buf.Len() != 0 {
+		t.Fatal("a warner should print nothing on its own")
+	}
+	w.warn("something\n")
+	if buf.Len() == 0 {
+		t.Error("expected the warning to be printed")
+	}
+}
+
+// An unwritable cache directory must produce one warning and still return
+// results — the run does not depend on the cache, but the user has to be told
+// the flag is doing nothing.
+func TestRunWithCache_UnwritableCacheIsReportedNotSilent(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: directory modes do not deny access")
+	}
+	dir := t.TempDir()
+	file := filepath.Join(dir, "patient.json")
+	if err := os.WriteFile(file, []byte(`{"resourceType":"Patient"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := filepath.Join(dir, "cache")
+	if err := os.Mkdir(cacheDir, 0500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(cacheDir, 0700) }) //nolint:gosec // restoring a temp *directory*, which needs the execute bit
+
+	key, err := resultcache.Key(file, resultcache.KeyOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := resultcache.Put(cacheDir, key, resultcache.Entry{}); err == nil {
+		t.Skip("cache directory turned out to be writable")
+	}
+
+	var buf strings.Builder
+	w := onceWarner{w: &buf}
+	if perr := resultcache.Put(cacheDir, key, resultcache.Entry{}); perr != nil {
+		w.warn("warn: --cache is set but results could not be written to %s (%v)\n", cacheDir, perr)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "--cache") || !strings.Contains(out, cacheDir) {
+		t.Errorf("warning should name the flag and the directory, got: %q", out)
+	}
+}
+
+// A cache miss is the normal case and must stay quiet, or every first run would
+// warn about a cache that is working perfectly well.
+func TestResultCacheMiss_IsNotAnError(t *testing.T) {
+	dir := t.TempDir()
+	_, err := resultcache.Get(dir, "0000000000000000000000000000000000000000000000000000000000000000")
+	if err == nil {
+		t.Fatal("expected an error for a missing entry")
+	}
+	if !os.IsNotExist(err) {
+		t.Errorf("a missing entry must be distinguishable from a broken cache, got: %v", err)
+	}
+}
+
+// A corrupt entry is not "not exist", so it does warn — a cache quietly serving
+// nothing because its contents are damaged is the failure being fixed.
+func TestResultCacheCorruptEntry_IsReportable(t *testing.T) {
+	dir := t.TempDir()
+	key := "1111111111111111111111111111111111111111111111111111111111111111"
+	if err := os.WriteFile(filepath.Join(dir, key+".json"), []byte("{not json"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := resultcache.Get(dir, key)
+	if err == nil {
+		t.Fatal("expected an error for a corrupt entry")
+	}
+	if os.IsNotExist(err) {
+		t.Error("a corrupt entry must not look like a missing one")
 	}
 }

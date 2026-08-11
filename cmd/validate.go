@@ -1788,6 +1788,24 @@ func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validat
 // timeNow is a variable so tests can override it.
 var timeNow = func() time.Time { return time.Now().UTC() }
 
+// onceWarner prints at most one warning, however many times it is called.
+//
+// A broken result cache fails identically for every file in the run, so
+// reporting each one would bury the validation output under hundreds of copies
+// of the same line — which is its own kind of unreadable.
+type onceWarner struct {
+	w    io.Writer
+	sent bool
+}
+
+func (o *onceWarner) warn(format string, args ...interface{}) {
+	if o.sent {
+		return
+	}
+	o.sent = true
+	_, _ = fmt.Fprintf(o.w, format, args...)
+}
+
 // runWithCache validates the given paths, consulting the result cache when --cache is enabled.
 // Cached results are used as-is; uncached paths are passed to the validator.
 // Fresh results are written back to the cache for future runs.
@@ -1796,10 +1814,18 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		return runValidation(paths, opts)
 	}
 
+	// --cache must never fail a run: it is an optimisation, and a validation
+	// result does not depend on it. It must not fail *quietly* either — a cache
+	// that cannot be written looks exactly like a cache that keeps missing, and
+	// the user goes on paying full validation cost for a flag they asked for
+	// (#316). One warning per run, not one per file.
+	warn := onceWarner{w: os.Stderr}
+
 	cacheDir := flagCacheDir
 	if cacheDir == "" {
 		dir, err := cache.ResultCacheDir()
 		if err != nil {
+			warn.warn("warn: --cache is set but the cache directory could not be resolved (%v) — running without it\n", err)
 			return runValidation(paths, opts)
 		}
 		cacheDir = dir
@@ -1831,6 +1857,11 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 			r.Cached = true
 			cachedResults[i] = &r
 		} else {
+			// A missing entry is the normal case and says nothing. Anything else
+			// — no permission, an unreadable directory — is worth one line.
+			if !os.IsNotExist(err) {
+				warn.warn("warn: --cache is set but the cache could not be read (%v) — validating without it\n", err)
+			}
 			uncachedPaths = append(uncachedPaths, p)
 			uncachedIdx = append(uncachedIdx, i)
 		}
@@ -1846,11 +1877,14 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		for j, r := range fresh {
 			i := uncachedIdx[j]
 			if keys[i] != "" {
-				_ = resultcache.Put(cacheDir, keys[i], resultcache.Entry{
+				if err := resultcache.Put(cacheDir, keys[i], resultcache.Entry{
 					CachedAt:        timeNow(),
 					FhirlintVersion: keyOpts.FhirlintVersion,
 					Result:          *r,
-				})
+				}); err != nil {
+					warn.warn("warn: --cache is set but results could not be written to %s (%v) — the next run will revalidate\n",
+						cacheDir, err)
+				}
 			}
 		}
 	}
