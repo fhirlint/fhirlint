@@ -25,9 +25,18 @@ go test ./...
 
 # Integration tests — downloads the validator JAR on first run (~250 MB), requires Java
 go test ./... -tags integration
+
+# …against a specific validator release instead of whatever is cached
+FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
 ```
 
 The integration tests live in `internal/validator/integration_test.go` and are skipped by default.
+
+CI runs them twice over: pushes to `main` test against the version pinned in
+`.github/workflows/integration-test.yml`, and a weekly scheduled job tests
+against the latest upstream release with no JAR cache, so an upstream
+regression surfaces within a week. Bump the pin once that canary has been green
+on the newer release.
 
 ## Linting
 
