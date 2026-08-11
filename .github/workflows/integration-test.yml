@@ -7,13 +7,76 @@ on:
     - cron: '0 6 * * 1'   # Weekly, Monday 06:00 UTC
   workflow_dispatch:
 
+# Two jobs, because this workflow answers two different questions:
+#
+#   integration — does *this commit* work against a known validator? Pinned, so
+#     a push never goes red because upstream shipped a release that morning.
+#   canary      — does the *latest* validator still work? Uncached, weekly, so
+#     upstream drift surfaces within a week instead of whenever an unrelated
+#     edit happened to bust the JAR cache (#310).
+
 jobs:
   integration:
     # The unit job runs with -short and never touches exec.Command("java"),
     # the JAR download or the temp IG bundling in internal/localig — that all
     # sits behind the integration tag. macOS is here because it is where those
     # paths differ and where the Homebrew cask installs.
-    name: Integration tests (real JAR, ${{ matrix.os }})
+    name: Integration tests (validator ${{ matrix.validator }}, ${{ matrix.os }})
+    if: github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # The pin. Moving it is a deliberate, reviewable commit; the cache key
+        # below tracks it, so a bump re-downloads instead of silently reusing
+        # the old JAR. In the job name so a failure names the version it ran
+        # against. Bump when the canary job below has been green on a newer
+        # release.
+        validator: ['6.10.1']
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module cache integrity
+        run: go mod verify
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache validator JAR
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.fhirlint
+          # Scoped by OS so the two runners cannot restore each other's cache,
+          # and by the pinned version so the cache can never serve a JAR the
+          # workflow is not asking for.
+          key: fhirlint-jar-${{ runner.os }}-${{ matrix.validator }}
+
+      - name: Run integration tests
+        env:
+          # Honoured by TestMain in internal/validator, which downloads this
+          # release before the first test runs.
+          FHIRLINT_VALIDATOR_VERSION: ${{ matrix.validator }}
+        # 20m, not 10m: on a cache miss — the first run after the pin moves —
+        # the ~250 MB download happens inside TestMain and so inside this
+        # timeout. The suite itself runs in a couple of minutes.
+        run: go test -v -tags integration -count=1 -timeout 20m ./internal/validator/...
+
+  canary:
+    name: Integration tests (latest validator, ${{ matrix.os }})
+    if: github.event_name != 'push'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -40,12 +103,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Cache validator JAR
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.fhirlint
-          # Scoped by OS so the two runners cannot restore each other's cache.
-          key: fhirlint-jar-${{ runner.os }}-${{ hashFiles('internal/validator/jar.go') }}
+      # No JAR cache here on purpose. Restoring one would test whichever
+      # validator was latest when the cache was written, which is exactly the
+      # blind spot this job exists to close — the point is the ~250 MB download.
+      - name: Run integration tests against the latest validator
+        # Always a download here, and it counts against this timeout.
+        run: go test -v -tags integration -count=1 -timeout 20m ./internal/validator/...
 
-      - name: Run integration tests
-        run: go test -v -tags integration -count=1 -timeout 10m ./internal/validator/...
+      - name: Report the validator version
+        if: always()
+        run: |
+          set -euo pipefail
+          version=$(cat ~/.fhirlint/validator_version.txt 2>/dev/null || echo unknown)
+          echo "\`$RUNNER_OS\`: ran against validator \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Validator version: $version"
