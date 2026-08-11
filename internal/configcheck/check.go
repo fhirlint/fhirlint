@@ -38,6 +38,7 @@ const (
 	kindStringList
 	kindEnumList
 	kindSuppressList
+	kindSeverityOverrideList
 	kindOverrideList
 	kindRuleList
 	kindLintMap
@@ -77,6 +78,7 @@ var topLevelKeys = map[string]keySpec{
 	"watch":                       {kind: kindEnum, values: []string{"single", "all"}},
 	"watch-interval":              {kind: kindInt},
 	"suppress":                    {kind: kindSuppressList},
+	"severity-override":           {kind: kindSeverityOverrideList},
 	"show-suppressed":             {kind: kindBool},
 	"cache":                       {kind: kindBool},
 	"cache-dir":                   {kind: kindString},
@@ -224,6 +226,9 @@ func validateValue(key string, line int, node *yaml.Node, spec keySpec) []Issue 
 	case kindSuppressList:
 		return checkSuppressList(key, line, node)
 
+	case kindSeverityOverrideList:
+		return checkSeverityOverrideList(key, line, node)
+
 	case kindOverrideList:
 		return checkOverrideList(key, line, node)
 
@@ -325,6 +330,66 @@ func checkSuppressMap(node *yaml.Node) []Issue {
 	}
 	if !hasType {
 		issues = append(issues, Issue{Line: node.Line, Message: "suppress rule must have one of: messageId, constraint, expression, pattern"})
+	}
+	return issues
+}
+
+// checkSeverityOverrideList validates `severity-override:`. It shares the
+// suppression selector keys, but `severity` means something different here —
+// the level to apply, not the level to match — so it is required, and the
+// string shorthand a suppression allows cannot express a rule at all.
+func checkSeverityOverrideList(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind != yaml.SequenceNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must be a list", key)}}
+	}
+	var issues []Issue
+	for _, item := range node.Content {
+		if item.Kind != yaml.MappingNode {
+			issues = append(issues, Issue{Line: item.Line, Key: key,
+				Message: "severity-override rule must be a map with a selector and a severity"})
+			continue
+		}
+		issues = append(issues, checkSeverityOverrideMap(item)...)
+	}
+	return issues
+}
+
+func checkSeverityOverrideMap(node *yaml.Node) []Issue {
+	var issues []Issue
+	hasType, hasSeverity := false, false
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		k := node.Content[i].Value
+		line := node.Content[i].Line
+		if _, ok := suppressKeys[k]; !ok {
+			issues = append(issues, Issue{Line: line, Key: k,
+				Message: fmt.Sprintf("unknown severity-override key %q", k)})
+			continue
+		}
+		switch k {
+		case "messageId", "messageid", "constraint", "expression", "pattern":
+			hasType = true
+		case "severity":
+			hasSeverity = true
+			allowed := suppress.SeverityLevels()
+			if !contains(allowed, node.Content[i+1].Value) {
+				issues = append(issues, Issue{Line: line, Key: k,
+					Message: fmt.Sprintf("invalid value %q for severity-override severity (allowed: %s)",
+						node.Content[i+1].Value, strings.Join(allowed, ", "))})
+			}
+		case "expires":
+			if _, err := suppress.ParseExpiry(node.Content[i+1].Value); err != nil {
+				issues = append(issues, Issue{Line: line, Key: k,
+					Message: fmt.Sprintf("invalid severity-override expires %q: use YYYY-MM-DD", node.Content[i+1].Value)})
+			}
+		}
+	}
+	if !hasType {
+		issues = append(issues, Issue{Line: node.Line,
+			Message: "severity-override rule must have one of: messageId, constraint, expression, pattern"})
+	}
+	if !hasSeverity {
+		issues = append(issues, Issue{Line: node.Line,
+			Message: "severity-override rule must have a severity: the level to apply"})
 	}
 	return issues
 }

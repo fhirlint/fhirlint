@@ -59,6 +59,7 @@ const htmlTmpl = `<!DOCTYPE html>
   {{ range .Issues }}
   <div class="issue">
     <span class="badge badge-{{ .Severity }}">{{ .Severity }}</span>{{ .Message }}
+    {{ if .OriginalSeverity }}<div class="location">↕ reported as {{ .OriginalSeverity }}</div>{{ end }}
     {{ if .Location }}<div class="location">@ {{ .Location }}</div>{{ end }}
   </div>
   {{ end }}

@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	sarifVersion    = "2.1.0"
-	sarifSchema     = "https://json.schemastore.org/sarif-2.1.0.json"
-	sarifInfoURI    = "https://github.com/fhirlint/fhirlint"
+	sarifVersion     = "2.1.0"
+	sarifSchema      = "https://json.schemastore.org/sarif-2.1.0.json"
+	sarifInfoURI     = "https://github.com/fhirlint/fhirlint"
 	sarifDefaultRule = "fhir-validation"
 )
 
@@ -49,10 +49,18 @@ type sarifRule struct {
 }
 
 type sarifResult struct {
-	RuleID    string          `json:"ruleId,omitempty"`
-	Level     string          `json:"level"`
-	Message   sarifMessage    `json:"message"`
-	Locations []sarifLocation `json:"locations,omitempty"`
+	RuleID     string           `json:"ruleId,omitempty"`
+	Level      string           `json:"level"`
+	Message    sarifMessage     `json:"message"`
+	Locations  []sarifLocation  `json:"locations,omitempty"`
+	Properties *sarifProperties `json:"properties,omitempty"`
+}
+
+// sarifProperties carries what SARIF has no field for. Level above is the
+// effective severity, so a re-levelled finding would otherwise look to a code
+// scanning dashboard exactly like one the validator reported at that level.
+type sarifProperties struct {
+	OriginalSeverity string `json:"originalSeverity,omitempty"`
 }
 
 type sarifMessage struct {
@@ -122,6 +130,10 @@ func buildSARIFReport(results []*validator.Result, minSeverity, fhirlintVersion 
 				RuleID:  ruleID,
 				Level:   sarifLevel(iss.Severity),
 				Message: sarifMessage{Text: iss.Message},
+			}
+
+			if iss.OriginalSeverity != "" {
+				sr.Properties = &sarifProperties{OriginalSeverity: iss.OriginalSeverity}
 			}
 
 			loc := buildSARIFLocation(r.Filename, iss.Location)

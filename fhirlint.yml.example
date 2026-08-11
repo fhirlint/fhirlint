@@ -140,9 +140,37 @@ ignore:
 # warning appears for the 14 days beforehand. Config only; --suppress on the
 # command line has no expiry.
 
+# Severity overrides — re-level a finding instead of hiding it
+# For the finding you do not want failing the build but do not want to lose
+# sight of either, typically an error caused by a defect in a published profile.
+# Same selectors as `suppress`, but `severity` here is the level to apply, not
+# the level to match, and it is required. Both directions work: downgrade an
+# error to a warning, or upgrade a warning your project treats as fatal.
+#
+# The new level is what everything downstream sees — display, `severity`
+# filtering, --fail-on, --max-warnings and the exit code. Machine-readable
+# reports (JSON, SARIF) also carry the level the validator reported, so a report
+# stays honest without the config next to it.
+# severity-override:
+#   - messageId: Rule_bdl_1
+#     severity: warning                           # required: the level to apply
+#     reason: "constraint is wrong in DAV-PR-ERP-AbgabedatenBundle 1.0.3"
+#     expires: 2026-12-31                         # optional: YYYY-MM-DD, inclusive
+#   - constraint: dom-6
+#     severity: information
+#     reason: "narrative is out of scope for this project"
+#   - pattern: "Unknown extension.*"
+#     severity: error                             # upgrade: we treat these as fatal
+#     reason: "extensions must be declared in our IG"
+#
+# Rules are applied before suppression, so a `suppress` rule with a `severity`
+# filter sees the new level. Config only — a re-levelling carries a reason and
+# usually a date, which is not something you retype on every invocation.
+
 # Require every suppression to carry a reason. Opt-in: without it, `reason` stays
-# optional. Applies to --suppress, the global suppress block, and suppress rules
-# nested under overrides, so the policy cannot be sidestepped.
+# optional. Applies to --suppress, the global suppress block, suppress rules
+# nested under overrides, and severity-override rules, so the policy cannot be
+# sidestepped.
 # require-suppress-reason: true
 
 # Custom lint rules — assert project-specific FHIRPath expressions on every

@@ -63,7 +63,7 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string) string
 		b.WriteString("| Severity | Location | Message |\n|---|---|---|\n")
 		for _, iss := range issues {
 			fmt.Fprintf(&b, "| %s | %s | %s |\n",
-				severityLabel(iss.Severity),
+				severityCell(iss),
 				mdEscape(iss.Location),
 				mdEscape(iss.Message),
 			)
@@ -98,6 +98,17 @@ func label(r *validator.Result) string {
 		return r.Label
 	}
 	return r.Filename
+}
+
+// severityCell renders the severity column, naming the reported level too when
+// a severity-override re-levelled the finding — a report read without the
+// config next to it would otherwise present the new level as the validator's.
+func severityCell(iss validator.Issue) string {
+	label := severityLabel(iss.Severity)
+	if iss.OriginalSeverity != "" {
+		label += fmt.Sprintf(" (reported as %s)", severityLabel(iss.OriginalSeverity))
+	}
+	return label
 }
 
 func severityLabel(severity string) string {

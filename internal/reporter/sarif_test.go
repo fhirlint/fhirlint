@@ -207,3 +207,40 @@ func TestBuildSARIFReport_ValidJSON(t *testing.T) {
 		t.Errorf("output is not valid JSON: %v", err)
 	}
 }
+
+// A re-levelled finding must not be indistinguishable from one the validator
+// reported at that level — SARIF has no field for it, so it travels in
+// properties (#311).
+func TestBuildSARIFReport_OriginalSeverityInProperties(t *testing.T) {
+	downgraded := issue("warning", "bundle entry has no fullUrl", "Bundle.entry[0]")
+	downgraded.OriginalSeverity = "error"
+	r := makeResult(true, downgraded, issue("warning", "plain warning", "Patient"))
+
+	report := buildSARIFReport([]*validator.Result{r}, "information", "1.0.0")
+	results := report.Runs[0].Results
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	if results[0].Level != "warning" {
+		t.Errorf("level = %q, want the effective severity (warning)", results[0].Level)
+	}
+	if results[0].Properties == nil || results[0].Properties.OriginalSeverity != "error" {
+		t.Errorf("properties = %+v, want originalSeverity=error", results[0].Properties)
+	}
+	if results[1].Properties != nil {
+		t.Errorf("untouched finding should carry no properties, got %+v", results[1].Properties)
+	}
+}
+
+func TestSARIF_OriginalSeverityOmittedWhenUnchanged(t *testing.T) {
+	report := buildSARIFReport(
+		[]*validator.Result{makeResult(false, issue("error", "msg", "Patient"))},
+		"information", "1.0.0")
+	data, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "originalSeverity") {
+		t.Errorf("unchanged findings must not emit originalSeverity: %s", data)
+	}
+}

@@ -77,6 +77,23 @@ func ParseCLI(s string) (Rule, error) {
 // ParseMap parses the YAML map format: {messageId|constraint|expression|pattern: value, severity?: sev}.
 // Viper lowercases all config keys, so we accept both camelCase ("messageId") and lowercase ("messageid").
 func ParseMap(m map[string]interface{}) (Rule, error) {
+	r, err := parseSelectorMap(m, "suppress")
+	if err != nil {
+		return Rule{}, err
+	}
+	// Here `severity` narrows what the rule matches. Severity overrides spell the
+	// same key differently — there it is the level to apply — which is why they
+	// parse through parseSelectorMap rather than through this function.
+	if sev, ok := m["severity"]; ok {
+		r.Severity = fmt.Sprintf("%v", sev)
+	}
+	return r, nil
+}
+
+// parseSelectorMap reads the parts every selector-based rule shares: the
+// selector itself, an optional reason and an optional expiry. kind names the
+// rule type in error messages ("suppress", "severity-override").
+func parseSelectorMap(m map[string]interface{}, kind string) (Rule, error) {
 	r := Rule{}
 	for _, typ := range []string{"messageId", "constraint", "expression", "pattern"} {
 		v, ok := m[typ]
@@ -91,17 +108,14 @@ func ParseMap(m map[string]interface{}) (Rule, error) {
 		}
 	}
 	if r.Type == "" {
-		return Rule{}, fmt.Errorf("suppress rule must have one of: messageId, constraint, expression, pattern")
+		return Rule{}, fmt.Errorf("%s rule must have one of: messageId, constraint, expression, pattern", kind)
 	}
 	if r.Type == "pattern" {
 		re, err := regexp.Compile(r.Value)
 		if err != nil {
-			return Rule{}, fmt.Errorf("invalid suppress pattern %q: %w", r.Value, err)
+			return Rule{}, fmt.Errorf("invalid %s pattern %q: %w", kind, r.Value, err)
 		}
 		r.Regexp = re
-	}
-	if sev, ok := m["severity"]; ok {
-		r.Severity = fmt.Sprintf("%v", sev)
 	}
 	if reason, ok := m["reason"]; ok {
 		r.Reason = strings.TrimSpace(fmt.Sprintf("%v", reason))

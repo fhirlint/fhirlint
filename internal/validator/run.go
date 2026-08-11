@@ -21,6 +21,12 @@ type Issue struct {
 	Location       string `json:"location"`
 	MessageID      string `json:"messageId"`
 	SuppressReason string `json:"suppressReason,omitempty"` // set when the issue is suppressed
+
+	// OriginalSeverity is what the validator reported before a severity-override
+	// re-levelled the issue; empty when nothing changed it. Severity above is
+	// always the effective level, so a report carries both and cannot mislead a
+	// reader who does not have the config to hand.
+	OriginalSeverity string `json:"originalSeverity,omitempty"`
 }
 
 // Result holds the outcome for one validated resource.

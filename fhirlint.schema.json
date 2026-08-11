@@ -308,6 +308,26 @@
       ],
       "type": "string"
     },
+    "severity-override": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "constraint": {},
+          "expires": {},
+          "expression": {},
+          "messageId": {},
+          "messageid": {},
+          "pattern": {},
+          "reason": {},
+          "severity": {}
+        },
+        "required": [
+          "severity"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "show-source": {
       "type": "boolean"
     },

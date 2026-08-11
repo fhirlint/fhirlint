@@ -18,10 +18,11 @@ var cliOnlyFlags = map[string]bool{
 
 // configOnlyKeys are fhirlint.yml keys that have no CLI flag equivalent.
 var configOnlyKeys = map[string]bool{
-	"profile-map": true,
-	"overrides":   true,
-	"rules":       true,
-	"lint":        true,
+	"profile-map":       true,
+	"overrides":         true,
+	"rules":             true,
+	"lint":              true,
+	"severity-override": true,
 }
 
 // TestAllValidateFlagsKnownToConfigCheck ensures every --validate flag (except

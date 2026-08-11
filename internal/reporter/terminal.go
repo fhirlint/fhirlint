@@ -64,6 +64,12 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 			style = infoStyle
 		}
 		fmt.Println(style.Render(prefix) + issue.Message)
+		// A finding shown as a warning that the validator called an error is
+		// confusing without this: the reader has no way to tell a re-levelled
+		// finding from one the validator reported that way.
+		if issue.OriginalSeverity != "" {
+			fmt.Println(dimStyle.Render("           ↕ reported as " + issue.OriginalSeverity))
+		}
 		if issue.Location != "" {
 			fmt.Println(dimStyle.Render("           @ " + issue.Location))
 		}
