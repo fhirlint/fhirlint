@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
 // PackageDir creates a temporary directory containing all provided FHIR resource
@@ -45,16 +47,14 @@ func PackageDir(paths []string, fhirVersion string) (dir string, cleanup func(),
 	return tmpDir, cleanup, nil
 }
 
-// corePackageName returns the hl7.fhir.rX.core package name for the given FHIR version.
+// corePackageName returns the hl7.fhir.rX.core package name for the given FHIR
+// version, falling back to R4 for a version fhirlint does not know — which is
+// what this has always answered for anything it did not recognise.
 func corePackageName(fhirVersion string) string {
-	switch fhirVersion {
-	case "4.3.0":
-		return "hl7.fhir.r4b.core"
-	case "5.0.0":
-		return "hl7.fhir.r5.core"
-	default:
-		return "hl7.fhir.r4.core"
+	if v, ok := validator.LookupFHIRVersion(fhirVersion); ok {
+		return v.CorePackage
 	}
+	return "hl7.fhir.r4.core"
 }
 
 func copyFile(src, dst string) error {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/configcheck"
+	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/pflag"
 )
 
@@ -74,4 +75,20 @@ func TestAllValidateFlagsDocumented(t *testing.T) {
 			t.Errorf("flag --%s not mentioned anywhere in README.md", f.Name)
 		}
 	})
+}
+
+// The README's --fhir-version row is the one place the version list is not
+// derived from validator.FHIRVersions, so it is the one that silently goes
+// stale when a release is added (#306).
+func TestFHIRVersionsDocumentedInREADME(t *testing.T) {
+	data, err := os.ReadFile("../README.md")
+	if err != nil {
+		t.Fatalf("could not read README.md: %v", err)
+	}
+	content := string(data)
+	for _, v := range validator.FHIRVersions {
+		if !strings.Contains(content, v.ID) {
+			t.Errorf("FHIR version %s (%s) is supported but not mentioned in README.md", v.ID, v.Name)
+		}
+	}
 }

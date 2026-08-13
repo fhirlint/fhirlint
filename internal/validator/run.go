@@ -197,17 +197,13 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	return args
 }
 
-// allowedFHIRVersions lists the FHIR versions the HL7 validator JAR accepts.
-var allowedFHIRVersions = []string{"4.0.1", "4.3.0", "5.0.0"}
-
-// validateFHIRVersion returns an error when version is not in allowedFHIRVersions.
+// validateFHIRVersion returns an error when version names no release in
+// FHIRVersions, which is the list the HL7 validator JAR accepts.
 func validateFHIRVersion(version string) error {
-	for _, v := range allowedFHIRVersions {
-		if version == v {
-			return nil
-		}
+	if _, ok := LookupFHIRVersion(version); ok {
+		return nil
 	}
-	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, strings.Join(allowedFHIRVersions, ", "))
+	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, FHIRVersionList())
 }
 
 // allowedBestPractice lists the values the HL7 validator JAR accepts for -best-practice.
@@ -377,11 +373,13 @@ const DefaultTerminologyServer = "https://tx.fhir.org"
 // Pointing the JAR at a local recorder therefore means reconstructing the path
 // it would otherwise have used, or every proxied request 404s.
 //
-// R4B maps to /r4, not /r4b — confirmed against the JAR, and tx.fhir.org serves
-// no /r4b endpoint.
+// The path per release comes from FHIRVersions, where R4B maps to /r4 rather
+// than the /r4b that tx.fhir.org does not serve. An unrecognised version — one
+// that never passed validateFHIRVersion — falls back to /r4, which is what this
+// function has always answered for anything it did not recognise.
 func DefaultTerminologyEndpoint(fhirVersion string) string {
-	if strings.HasPrefix(fhirVersion, "5") {
-		return DefaultTerminologyServer + "/r5"
+	if v, ok := LookupFHIRVersion(fhirVersion); ok {
+		return DefaultTerminologyServer + v.TxPath
 	}
 	return DefaultTerminologyServer + "/r4"
 }

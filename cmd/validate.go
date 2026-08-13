@@ -36,7 +36,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-const defaultFHIRVersion = "4.0.1"
+const defaultFHIRVersion = validator.DefaultFHIRVersion
 
 // errValidationFailed is returned by checkExitCode when issues exceed the
 // --fail-on threshold. Using a sentinel instead of os.Exit allows deferred
@@ -144,7 +144,7 @@ func init() {
 	validateCmd.Flags().StringVar(&flagCacheDir, "cache-dir", "",
 		"Directory for result cache (default: ~/.fhirlint/result-cache/)")
 	validateCmd.Flags().StringVar(&flagFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version ("+validator.FHIRVersionList()+")")
 	validateCmd.Flags().StringArrayVarP(&flagFormat, "format", "f", []string{"terminal"},
 		"Output format: terminal, json, html, junit, sarif, markdown, codeclimate, github (repeatable)")
 	validateCmd.Flags().StringVarP(&flagOutput, "output", "o", "",

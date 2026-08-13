@@ -51,8 +51,8 @@ func init() {
 
 	txWarmCmd.Flags().StringVar(&flagTxWarmDir, "tx-dir", "",
 		"Directory to record into (default: "+txreplay.DefaultDir+"/)")
-	txWarmCmd.Flags().StringVar(&flagTxWarmFHIRVersion, "fhir-version", "4.0.1",
-		"FHIR version: 4.0.1, 4.3.0, 5.0.0")
+	txWarmCmd.Flags().StringVar(&flagTxWarmFHIRVersion, "fhir-version", validator.DefaultFHIRVersion,
+		"FHIR version: "+validator.FHIRVersionList())
 	txWarmCmd.Flags().StringSliceVar(&flagTxWarmIG, "ig", nil,
 		"IG package, e.g. kbv.basis#1.5.0 (repeatable)")
 	txWarmCmd.Flags().StringSliceVarP(&flagTxWarmProfile, "profile", "p", nil,

@@ -21,9 +21,9 @@ var versionCmd = &cobra.Command{
 			validator.JARReleasesURL(),
 		)
 		if viper.IsSet("fhir-version") {
-			fmt.Printf("fhir:      %s\n", fhirVersionName(viper.GetString("fhir-version")))
+			fmt.Printf("fhir:      %s\n", validator.FHIRVersionName(viper.GetString("fhir-version")))
 		} else {
-			fmt.Printf("fhir:      %s (default)\n", fhirVersionName(defaultFHIRVersion))
+			fmt.Printf("fhir:      %s (default)\n", validator.FHIRVersionName(defaultFHIRVersion))
 		}
 		if newer := validator.CheckForUpdate(); newer != "" {
 			fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
@@ -43,19 +43,6 @@ func checksumSuffix() string {
 		return " (checksum verified)"
 	default:
 		return " (checksum NOT verified)"
-	}
-}
-
-func fhirVersionName(v string) string {
-	switch v {
-	case "4.0.1":
-		return "R4"
-	case "4.3.0":
-		return "R4B"
-	case "5.0.0":
-		return "R5"
-	default:
-		return v
 	}
 }
 

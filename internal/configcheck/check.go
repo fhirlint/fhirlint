@@ -11,6 +11,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/lint"
 	"github.com/fhirlint/fhirlint/internal/suppress"
+	"github.com/fhirlint/fhirlint/internal/validator"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -54,7 +55,7 @@ var topLevelKeys = map[string]keySpec{
 	"severity":                    {kind: kindEnum, values: []string{"information", "warning", "error"}},
 	"fail-on":                     {kind: kindEnum, values: []string{"error", "warning", "information", "never"}},
 	"max-warnings":                {kind: kindInt},
-	"fhir-version":                {kind: kindEnum, values: []string{"4.0.1", "4.3.0", "5.0.0"}},
+	"fhir-version":                {kind: kindEnum, values: validator.FHIRVersionIDs()},
 	"profile":                     {kind: kindStringList},
 	"profile-map":                 {kind: kindMap},
 	"ig":                          {kind: kindStringList},
