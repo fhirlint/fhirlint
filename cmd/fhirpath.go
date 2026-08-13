@@ -47,14 +47,14 @@ func init() {
 	fhirpathCmd.Flags().StringVarP(&flagFHIRPathFormat, "format", "f", "terminal",
 		"Output format: terminal, json")
 	fhirpathCmd.Flags().StringVar(&flagFHIRPathFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version context (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version context ("+validator.FHIRVersionList()+")")
 
 	noFile := cobra.ShellCompDirectiveNoFileComp
 	_ = fhirpathCmd.RegisterFlagCompletionFunc("format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"terminal", "json"}, noFile
 	})
 	_ = fhirpathCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"4.0.1", "4.3.0", "5.0.0"}, noFile
+		return validator.FHIRVersionIDs(), noFile
 	})
 }
 

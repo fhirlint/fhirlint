@@ -44,7 +44,7 @@ func init() {
 	statsCmd.Flags().BoolVar(&flagStatsNoValidate, "no-validate", false,
 		"Skip the validation summary (structural counts only, fully offline)")
 	statsCmd.Flags().StringVar(&flagStatsFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version for the validation summary (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version for the validation summary ("+validator.FHIRVersionList()+")")
 	statsCmd.Flags().StringArrayVar(&flagStatsExclude, "exclude", nil,
 		"Glob pattern to exclude (repeatable; also reads .fhirlintignore)")
 
@@ -53,7 +53,7 @@ func init() {
 		return []string{"terminal", "json"}, noFile
 	})
 	_ = statsCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"4.0.1", "4.3.0", "5.0.0"}, noFile
+		return validator.FHIRVersionIDs(), noFile
 	})
 }
 

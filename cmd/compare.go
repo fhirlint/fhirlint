@@ -73,7 +73,7 @@ func init() {
 	compareCmd.Flags().StringArrayVar(&flagCompareIG, "ig", nil,
 		"Additional IG package or file to load for resolution (repeatable)")
 	compareCmd.Flags().StringVar(&flagCompareFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version context (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version context ("+validator.FHIRVersionList()+")")
 	compareCmd.Flags().StringVarP(&flagCompareFormat, "format", "f", "terminal",
 		"Output format: terminal, json, html")
 	compareCmd.Flags().StringVarP(&flagCompareOutput, "output", "o", "",
@@ -84,7 +84,7 @@ func init() {
 		return []string{"terminal", "json", "html"}, noFile
 	})
 	_ = compareCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"4.0.1", "4.3.0", "5.0.0"}, noFile
+		return validator.FHIRVersionIDs(), noFile
 	})
 }
 

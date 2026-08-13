@@ -1,6 +1,9 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/fhirlint/fhirlint/internal/validator"
+	"github.com/spf13/cobra"
+)
 
 // registerFlagCompletions adds tab-completion functions for flag values so that
 // shells can offer valid choices when the user presses Tab after a flag.
@@ -17,7 +20,7 @@ func registerFlagCompletions(cmd *cobra.Command) {
 		})
 	}
 
-	complete("fhir-version", []string{"4.0.1", "4.3.0", "5.0.0"})
+	complete("fhir-version", validator.FHIRVersionIDs())
 	complete("fail-on", []string{"error", "warning", "information", "never"})
 	complete("best-practice", []string{"ignore", "hint", "warning", "error"})
 	complete("severity", []string{"information", "warning", "error"})

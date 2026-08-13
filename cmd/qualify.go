@@ -52,7 +52,7 @@ func init() {
 	qualifyCmd.Flags().StringVar(&flagQualifyTestSuite, "test-suite", "",
 		"Directory of additional test cases (each .json with a companion .expected.json)")
 	qualifyCmd.Flags().StringVar(&flagQualifyFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version to qualify against (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version to qualify against ("+validator.FHIRVersionList()+")")
 	qualifyCmd.Flags().StringVar(&flagQualifyTxServer, "terminology-server", "",
 		"Terminology server URL (default: offline, for reproducible results)")
 
@@ -61,7 +61,7 @@ func init() {
 		return []string{"terminal", "html", "json"}, noFile
 	})
 	_ = qualifyCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"4.0.1", "4.3.0", "5.0.0"}, noFile
+		return validator.FHIRVersionIDs(), noFile
 	})
 }
 

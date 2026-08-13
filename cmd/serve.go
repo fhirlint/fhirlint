@@ -55,7 +55,7 @@ Examples:
 func init() {
 	serveCmd.Flags().IntVar(&flagServePort, "port", 8080, "Port to listen on")
 	serveCmd.Flags().StringVar(&flagServeFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version to validate against (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version to validate against ("+validator.FHIRVersionList()+")")
 	serveCmd.Flags().StringArrayVar(&flagServeIG, "ig", nil, "IG package (or alias) to load, e.g. hl7.fhir.us.core#9.0.0 or us-core (repeatable)")
 	serveCmd.Flags().BoolVar(&flagServeNoTerminologyServer, "no-terminology-server", false, "Disable the terminology server (-tx n/a)")
 	serveCmd.Flags().StringVar(&flagServeTerminologyServer, "terminology-server", "", "Terminology server URL")
@@ -67,7 +67,7 @@ func init() {
 
 	noFile := cobra.ShellCompDirectiveNoFileComp
 	_ = serveCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"4.0.1", "4.3.0", "5.0.0"}, noFile
+		return validator.FHIRVersionIDs(), noFile
 	})
 }
 

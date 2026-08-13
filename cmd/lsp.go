@@ -49,7 +49,7 @@ func init() {
 	lspCmd.Flags().StringVar(&flagLSPServer, "server", "",
 		"Use an already-running validator server (e.g. http://localhost:8080) instead of starting one")
 	lspCmd.Flags().StringVar(&flagLSPFHIRVersion, "fhir-version", defaultFHIRVersion,
-		"FHIR version to validate against (4.0.1, 4.3.0, 5.0.0)")
+		"FHIR version to validate against ("+validator.FHIRVersionList()+")")
 	lspCmd.Flags().StringArrayVar(&flagLSPIG, "ig", nil,
 		"IG package (or alias) to load, e.g. hl7.fhir.us.core#9.0.0 (repeatable)")
 	lspCmd.Flags().StringArrayVarP(&flagLSPProfile, "profile", "p", nil,

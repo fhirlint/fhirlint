@@ -254,7 +254,7 @@ func ValidateURL(rawURL string, opts Options) (*Result, error) {
 func toInternalOpts(opts Options) validator.Options {
 	fhirVersion := opts.FHIRVersion
 	if fhirVersion == "" {
-		fhirVersion = "4.0.1"
+		fhirVersion = validator.DefaultFHIRVersion
 	}
 
 	resolvedProfiles := make([]string, 0, len(opts.Profiles))
