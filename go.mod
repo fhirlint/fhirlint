@@ -1,6 +1,6 @@
 module github.com/fhirlint/fhirlint
 
-go 1.25.12
+go 1.25.13
 
 require (
 	github.com/charmbracelet/lipgloss v1.1.0
