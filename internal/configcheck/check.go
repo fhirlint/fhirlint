@@ -100,6 +100,7 @@ var topLevelKeys = map[string]keySpec{
 	"validator-version":           {kind: kindString},
 	"require-suppress-reason":     {kind: kindBool},
 	"show-source":                 {kind: kindBool},
+	"redact":                      {kind: kindBool},
 	"check-references":            {kind: kindBool},
 	"since":                       {kind: kindString},
 	"tx-offline":                  {kind: kindBool},

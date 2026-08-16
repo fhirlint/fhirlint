@@ -1,6 +1,7 @@
 package fhirlint
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -188,5 +189,47 @@ func TestToInternalOpts_PassesRunBounds(t *testing.T) {
 	}
 	if got.MaxMessages != 500 {
 		t.Errorf("MaxMessages = %d, want 500", got.MaxMessages)
+	}
+}
+
+func TestApplyRedaction_StripsMessagesWhenEnabled(t *testing.T) {
+	r := &validator.Result{Issues: []validator.Issue{{
+		Severity:  "error",
+		Message:   "The value '1974-03-11' is not a valid date",
+		Location:  "Patient.birthDate",
+		MessageID: "Type_Specific_Checks_DT_Date_Valid",
+	}}}
+
+	applyRedaction(Options{Redact: true}, r)
+	got := toPublicResult(r)
+
+	if strings.Contains(got.Issues[0].Message, "1974-03-11") {
+		t.Errorf("message still carries the value: %q", got.Issues[0].Message)
+	}
+	if !got.Issues[0].Redacted {
+		t.Error("Redacted must reach the public Issue")
+	}
+	// The handles a caller acts on have to survive, or the option is useless
+	// rather than merely safe.
+	if got.Issues[0].MessageID != "Type_Specific_Checks_DT_Date_Valid" {
+		t.Errorf("messageID = %q", got.Issues[0].MessageID)
+	}
+	if got.Issues[0].Location != "Patient.birthDate" {
+		t.Errorf("location = %q", got.Issues[0].Location)
+	}
+}
+
+func TestApplyRedaction_LeavesResultsAloneByDefault(t *testing.T) {
+	msg := "The value '1974-03-11' is not a valid date"
+	r := &validator.Result{Issues: []validator.Issue{{Severity: "error", Message: msg}}}
+
+	applyRedaction(Options{}, r)
+	got := toPublicResult(r)
+
+	if got.Issues[0].Message != msg {
+		t.Errorf("message = %q, want it untouched", got.Issues[0].Message)
+	}
+	if got.Issues[0].Redacted {
+		t.Error("Redacted must stay false when the option is off")
 	}
 }

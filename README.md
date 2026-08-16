@@ -550,6 +550,40 @@ Two things worth knowing about the caret:
 
 Long lines — minified resources are often one enormous line — are truncated around the column, marked with `…`. Where the line cannot be shown faithfully (input read from a stream, a line past the end of the file), no snippet is printed rather than a wrong one.
 
+### PHI-safe reports
+
+Findings carry more of the resource than is obvious. The validator quotes the offending value into its message text, and `--show-source` renders the offending line verbatim. On real patient data both are PHI — and several output paths outlive the run:
+
+- `--format sarif` is meant for GitHub code scanning. An upload puts the finding text into the security tab and keeps it in its history.
+- `--format json`, `html` and `junit` are routinely archived as CI artifacts.
+
+`--redact` strips resource-derived content from every report:
+
+```bash
+fhirlint validate ./patients/ --format sarif --redact
+```
+
+```
+  ✗ ERROR  [redacted] Type_Specific_Checks_DT_Date_Valid
+           @ Patient.birthDate (line 5, col 28)
+```
+
+What is removed: the validator's message text, and source lines (which become unrenderable, not merely switched off — `--show-source` alongside `--redact` is not an error, it simply loses).
+
+What is kept: severity, the FHIRPath location, the message ID, the file path, and the reason on a suppressed finding — that one comes from your own config, not from the resource. Together that is enough to act on a finding via `fhirlint explain <messageId>`.
+
+Every finding is marked `"redacted": true` in the machine-readable formats, and a note goes to stderr after the reports are written, so a stripped report is never mistaken for a complete one.
+
+Set it in `fhirlint.yml` rather than per invocation if the whole project needs it — then a new CI job cannot forget the flag:
+
+```yaml
+redact: true
+```
+
+**On the guarantee.** Removal is total, not selective: message text goes entirely rather than being filtered for values. Filtering would mean recognising every shape in which the validator embeds a value, across a message catalogue that is large and changes between releases, and a redaction check that is wrong occasionally is worse than none — because it gets trusted. The cost is real: you lose "is not a valid date" along with the date. `fhirlint explain` and the location are what you work from instead.
+
+The same option exists in the Go library as `Options.Redact`, for callers forwarding findings to a log aggregator, an issue tracker or a third-party dashboard.
+
 
 ---
 
@@ -1557,6 +1591,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |
 | `--quiet`, `-q` | `false` | Suppress per-file output for valid files (terminal format only) |
 | `--group` | `false` | Group repeated findings into one block each with a count (terminal format only) |
+| `--redact` | `false` | Remove message text and source lines from all reports (see [PHI-safe reports](#phi-safe-reports)) |
 | `--no-color` | `false` | Disable ANSI color output |
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
 | `--watch-interval` | — | Polling interval for `--watch` in milliseconds |
@@ -1608,6 +1643,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `cache-dir` | string | `--cache-dir` |
 | `quiet` | bool | `--quiet` |
 | `group` | bool | `--group` |
+| `redact` | bool | `--redact` |
 | `no-color` | bool | `--no-color` |
 | `watch` | string | `--watch` |
 | `watch-interval` | int | `--watch-interval` |

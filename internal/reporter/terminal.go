@@ -24,6 +24,20 @@ var (
 	fileStyle    = lipgloss.NewStyle().Bold(true)
 )
 
+// issueHeadline is the text shown next to the severity marker.
+//
+// A redacted finding has had its message replaced by a placeholder, which on
+// its own leaves the line with nothing to act on. Its message ID takes over
+// that slot instead: it is the handle a reader searches, suppresses and runs
+// `fhirlint explain` by. The explain hint further down only appears for IDs
+// fhirlint can explain, so it cannot be relied on to surface the ID.
+func issueHeadline(issue validator.Issue) string {
+	if issue.Redacted && issue.MessageID != "" {
+		return issue.Message + " " + issue.MessageID
+	}
+	return issue.Message
+}
+
 func Terminal(result *validator.Result, minSeverity string, showSuppressed, quiet, showSource bool) {
 	filtered := filterIssues(result.Issues, minSeverity)
 
@@ -48,7 +62,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 	hinted := map[string]bool{}
 	for _, issue := range filtered {
 		prefix, style := severityPrefix(issue.Severity)
-		fmt.Println(style.Render(prefix) + issue.Message)
+		fmt.Println(style.Render(prefix) + issueHeadline(issue))
 		// A finding shown as a warning that the validator called an error is
 		// confusing without this: the reader has no way to tell a re-levelled
 		// finding from one the validator reported that way.
@@ -75,7 +89,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 
 	if showSuppressed {
 		for _, issue := range result.Suppressed {
-			fmt.Println(dimStyle.Render("  ↷ SUPP  ") + dimStyle.Render(issue.Message))
+			fmt.Println(dimStyle.Render("  ↷ SUPP  ") + dimStyle.Render(issueHeadline(issue)))
 			if issue.Location != "" {
 				fmt.Println(dimStyle.Render("           @ " + issue.Location))
 			}

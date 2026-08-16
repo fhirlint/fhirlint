@@ -288,6 +288,20 @@ ignore:
 # finding — handy locally, noisy in CI logs.
 # show-source: true
 
+# Remove resource-derived content from every report: the validator's message
+# text and the source lines. What is kept is severity, the FHIRPath location,
+# the message ID and the file path — enough to act on a finding via
+# `fhirlint explain <messageId>`.
+#
+# For reports that leave a trusted environment. A SARIF upload lands in GitHub
+# code scanning and stays in the security tab's history, and JSON/HTML/JUnit
+# reports are routinely archived as CI artifacts; on real patient data the
+# quoted values in message text are PHI. Set it here rather than per invocation
+# so a new CI job cannot forget the flag.
+#
+# Overrides show-source when both are set.
+# redact: true
+
 # Group repeated findings into one block each, with a count and a few example
 # files, instead of printing every occurrence. For the run over a directory
 # where the same finding repeats across hundreds of resources. Terminal output

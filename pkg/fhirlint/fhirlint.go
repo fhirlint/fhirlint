@@ -24,6 +24,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/redact"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -127,6 +128,17 @@ type Options struct {
 	// HTTPTimeout limits how long each HTTP fetch via ValidateURL may take.
 	// Zero uses the default of 30 seconds.
 	HTTPTimeout time.Duration
+
+	// Redact removes resource-derived content from the returned findings: the
+	// validator's message text is replaced by a placeholder and Redacted is set
+	// on every issue. Severity, Location and MessageID are kept, which is
+	// enough to act on a finding.
+	//
+	// For callers that forward findings somewhere the resource itself must not
+	// go — a log aggregator, an issue tracker, a third-party dashboard. The
+	// validator quotes offending values into its message text, so on real
+	// patient data that text is PHI.
+	Redact bool
 }
 
 // Result holds the validation outcome for one resource.
@@ -155,6 +167,11 @@ type Issue struct {
 
 	// MessageID is the HL7 message identifier for the finding (e.g. "dom-6").
 	MessageID string
+
+	// Redacted reports that Options.Redact removed this finding's message text.
+	// Carried through so a stripped finding can never be mistaken for one the
+	// validator described that tersely.
+	Redacted bool
 }
 
 // Validate validates a single FHIR resource from raw bytes (JSON or XML).
@@ -182,6 +199,7 @@ func Validate(content []byte, opts Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyRedaction(opts, r)
 	return toPublicResult(r), nil
 }
 
@@ -191,6 +209,7 @@ func ValidateFile(path string, opts Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyRedaction(opts, r)
 	result := toPublicResult(r)
 	result.Label = path
 	return result, nil
@@ -225,6 +244,7 @@ func ValidateDir(dir string, opts Options) ([]*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyRedaction(opts, internal...)
 
 	results := make([]*Result, len(internal))
 	for i, r := range internal {
@@ -246,6 +266,7 @@ func ValidateURL(rawURL string, opts Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	applyRedaction(opts, r)
 	result := toPublicResult(r)
 	result.Label = rawURL
 	return result, nil
@@ -291,6 +312,15 @@ func toInternalOpts(opts Options) validator.Options {
 	}
 }
 
+// applyRedaction strips resource-derived content from the internal results
+// before they are converted, so no public Result is ever built from data the
+// caller asked not to receive.
+func applyRedaction(opts Options, results ...*validator.Result) {
+	if opts.Redact {
+		redact.Apply(results)
+	}
+}
+
 func toPublicResult(r *validator.Result) *Result {
 	issues := make([]Issue, len(r.Issues))
 	for i, iss := range r.Issues {
@@ -299,6 +329,7 @@ func toPublicResult(r *validator.Result) *Result {
 			Message:   iss.Message,
 			Location:  iss.Location,
 			MessageID: iss.MessageID,
+			Redacted:  iss.Redacted,
 		}
 	}
 	return &Result{
