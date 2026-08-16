@@ -27,6 +27,11 @@ type Issue struct {
 	// always the effective level, so a report carries both and cannot mislead a
 	// reader who does not have the config to hand.
 	OriginalSeverity string `json:"originalSeverity,omitempty"`
+
+	// Redacted marks a finding whose message text was removed by --redact. It
+	// is carried into every report so that a stripped finding can never be read
+	// as one the validator described that tersely.
+	Redacted bool `json:"redacted,omitempty"`
 }
 
 // Result holds the outcome for one validated resource.

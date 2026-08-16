@@ -23,6 +23,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/ndjson"
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/redact"
 	"github.com/fhirlint/fhirlint/internal/refcheck"
 	"github.com/fhirlint/fhirlint/internal/reporter"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
@@ -102,6 +103,7 @@ var (
 	flagValidatorArg             []string
 	flagRequireSuppressReason    bool
 	flagShowSource               bool
+	flagRedact                   bool
 	flagGroup                    bool
 	flagQuiet                    bool
 	flagNoColor                  bool
@@ -238,6 +240,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagShowSource, "show-source", false,
 		"Show the offending source line under each finding (terminal output only)")
 	_ = viper.BindPFlag("show-source", validateCmd.Flags().Lookup("show-source"))
+	validateCmd.Flags().BoolVar(&flagRedact, "redact", false,
+		"Remove message text and source lines from all reports, keeping severity, location and message ID (for reports that leave a trusted environment)")
+	_ = viper.BindPFlag("redact", validateCmd.Flags().Lookup("redact"))
 	validateCmd.Flags().BoolVar(&flagGroup, "group", false,
 		"Group repeated findings into one block each with a count (terminal output only)")
 	_ = viper.BindPFlag("group", validateCmd.Flags().Lookup("group"))
@@ -427,6 +432,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("show-source") && viper.IsSet("show-source") {
 		flagShowSource = viper.GetBool("show-source")
+	}
+	if !cmd.Flags().Changed("redact") && viper.IsSet("redact") {
+		flagRedact = viper.GetBool("redact")
 	}
 	if !cmd.Flags().Changed("group") && viper.IsSet("group") {
 		flagGroup = viper.GetBool("group")
@@ -871,6 +879,17 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Baseline generated: %d entries written to %s\n", len(bf.Entries), flagGenerateBaseline)
 	}
 
+	// Strip resource-derived content before anything renders it. This sits
+	// after the baseline and cache stages on purpose: both work off the real
+	// findings, and only what leaves the process is redacted.
+	if flagRedact {
+		redact.Apply(results)
+		// --show-source is not an error alongside --redact, it simply loses.
+		// Failing here would turn a config that is merely over-specified into a
+		// broken pipeline, and the safe reading is never in doubt.
+		flagShowSource = false
+	}
+
 	// Render output(s)
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
@@ -924,6 +943,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		default:
 			return fmt.Errorf("unknown format %q — use: terminal, json, html, junit, sarif, markdown, codeclimate, github", format)
 		}
+	}
+
+	// Say it once, on stderr, after every format has been written. A reader who
+	// opens an archived report should never have to wonder whether the terse
+	// findings are all the validator had to say.
+	if flagRedact {
+		fmt.Fprintln(os.Stderr,
+			"note: --redact applied — message text and source lines were removed from all reports")
 	}
 
 	// Handle fhirlint.lock: verify existing lock, or write/update when --lock is set.

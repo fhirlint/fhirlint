@@ -280,6 +280,9 @@
     "quiet": {
       "type": "boolean"
     },
+    "redact": {
+      "type": "boolean"
+    },
     "require-suppress-reason": {
       "type": "boolean"
     },

@@ -786,3 +786,20 @@ func TestConfigFile_GroupFromConfig(t *testing.T) {
 		t.Error("group = false, want true from config")
 	}
 }
+
+func TestConfigFile_RedactFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "redact: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	// Setting it in the config rather than per invocation is the point: a new
+	// CI job cannot forget a flag it never has to pass.
+	if !viper.GetBool("redact") {
+		t.Error("redact = false, want true")
+	}
+}
