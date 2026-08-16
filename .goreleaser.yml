@@ -62,13 +62,19 @@ checksum:
 changelog:
   sort: asc
   filters:
+    # Conventional Commits allow an optional scope, and this repo uses one
+    # constantly to reference issues: "ci(#310): …" as much as "ci: …". A plain
+    # "^ci:" matches only the unscoped half, which is why v1.8.0 shipped with a
+    # ci() commit in its notes. The optional group covers both spellings.
+    #
+    # Single-quoted so the backslashes reach the regex engine as written.
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
+      - '^docs(\([^)]*\))?:'
+      - '^test(\([^)]*\))?:'
+      - '^ci(\([^)]*\))?:'
       # Housekeeping — version-reference bumps, removing files that were never
       # shipped. Release notes are read by people deciding whether to upgrade,
       # and none of it changes that decision.
-      - "^chore:"
+      - '^chore(\([^)]*\))?:'
       - "Merge pull request"
       - "Merge branch"
