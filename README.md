@@ -648,7 +648,13 @@ ISiKPatient  (Patient)
 61 resource(s) scanned, 52 not attributed to any profile
 ```
 
-Profiles come from IG packages in the local FHIR package cache (`~/.fhir/packages`). Validate against an IG once and it is there.
+Profiles come from IG packages in the local FHIR package cache (`~/.fhir/packages`). A package that is not cached yet is downloaded from the FHIR package registry and verified against the checksum the registry publishes for it. `--offline` forbids that and fails instead, for hermetic builds:
+
+```bash
+fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 --offline
+```
+
+The checksum is the registry's own `dist.shasum`. It catches a truncated or tampered transfer; it is not a defence against the registry itself, since the digest and the archive come from the same place. A mismatch fails the install. A checksum that cannot be fetched at all is a visible warning rather than a failure, matching how the validator JAR is handled — but it is never silent.
 
 ### How resources are attributed
 
@@ -671,6 +677,15 @@ Some slices cannot be decided this way. The common case is a slice identified on
 
 They count as neither covered nor uncovered. Counting them as misses would report a limit of the tool as a gap in your data.
 
+The other common cause is a slice that is perfectly well defined, just not in a package you have. German profiles delegate datatype constraints — a `HumanName` through `humanname-de-basis` — and the report names the profile that is missing so you can add it:
+
+```
+  not measurable: 12 element(s)
+      slice is defined in http://fhir.de/StructureDefinition/humanname-de-basis, which is not loaded — install the IG package that provides it
+```
+
+Adding `--ig de.basisprofil.r4#1.5.4` to that run takes it from 43 of 52 elements measured to all 64.
+
 The same principle applies to a profile whose base is not in the cache: the must-support list is then a lower bound, and the report says so rather than presenting it as complete.
 
 ### In CI
@@ -690,6 +705,7 @@ fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 -f json | jq '.profiles[] | {
 ### Limits
 
 - JSON and NDJSON input only. XML resources are reported as skipped rather than silently ignored.
+- Analysis is offline: no terminology server is contacted and no value set is expanded. Only fetching a package that is not cached touches the network, and `--offline` turns that off too.
 - `type`, `profile` and `exists` slice discriminators are not derived. Across every package examined they are fewer than 1 in 300; a choice element sliced by type is already resolved through the field name in the instance.
 - Coverage measures whether an element was ever populated by at least one resource, not how often. An element populated by one example out of thirty counts as covered.
 
