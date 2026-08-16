@@ -66,5 +66,9 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^ci:"
+      # Housekeeping — version-reference bumps, removing files that were never
+      # shipped. Release notes are read by people deciding whether to upgrade,
+      # and none of it changes that decision.
+      - "^chore:"
       - "Merge pull request"
       - "Merge branch"
