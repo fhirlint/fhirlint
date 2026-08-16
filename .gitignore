@@ -11,9 +11,13 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Code coverage profiles and other test artifacts
+# Code coverage profiles and other test artifacts.
+# Not "coverage.*": that also matches source files such as cmd/coverage.go, and
+# an ignore rule that silently drops source from a commit is the kind of thing
+# nobody notices until the build breaks somewhere else.
 *.out
-coverage.*
+coverage.html
+coverage.txt
 *.coverprofile
 profile.cov
 
