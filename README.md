@@ -25,6 +25,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Profiles & implementation guides](#profiles--implementation-guides)
 - [Output formats](#output-formats)
 - [Dataset statistics](#dataset-statistics)
+- [Profile coverage](#profile-coverage)
 - [Preprocessing](#preprocessing)
 - [Suppressing known issues](#suppressing-known-issues)
 - [Custom lint rules](#custom-lint-rules)
@@ -620,6 +621,77 @@ fhirlint stats ./fhir/ --format json --output stats.json
 ```
 
 `stats` is informational and always exits `0` on success (it never fails the build); use `validate` for CI gating. `--exclude` patterns and `.fhirlintignore` are respected, just like `validate`.
+
+---
+
+## Profile coverage
+
+`fhirlint coverage` measures how much of a profile a set of resources actually exercises, with an emphasis on the `mustSupport` elements.
+
+The validator cannot answer this. It sees one resource at a time and only checks what is present, so it has no way to notice that across your whole example set nobody has ever populated `Patient.identifier:VersichertenId-GKV`. An IG can ship thirty green examples and still leave half its must-support elements untouched.
+
+```bash
+fhirlint coverage ./examples/ --ig de.gematik.isik-basismodul#4.0.3 --profile ISiKPatient
+```
+
+```
+ISiKPatient  (Patient)
+  resources:      9  (1 matched by resource type, not by meta.profile)
+  must-support:   52/64  (81%)
+  never populated:
+    Patient.identifier:VersichertenId-GKV
+    Patient.identifier:VersichertenId-GKV.type
+    Patient.name:Geburtsname.family.extension:namenszusatz
+    Patient.gender.extension:Geschlecht-Administrativ
+    … and 8 more (use --verbose for the full list)
+
+61 resource(s) scanned, 52 not attributed to any profile
+```
+
+Profiles come from IG packages in the local FHIR package cache (`~/.fhir/packages`). Validate against an IG once and it is there.
+
+### How resources are attributed
+
+By `meta.profile`. A resource that declares the profile is measured against it.
+
+Naming profiles with `--profile` additionally allows resources of the matching resource type that declare *no* profile to be measured. Without `--profile`, that is deliberately off: attributing a bare `Patient` to all thirty Patient profiles in an IG produces noise, not information. Resources measured this way are counted separately in the output, because coverage established that way describes your dataset rather than conformance to the profile.
+
+A profile that no resource was attributed to is left out entirely rather than listed at 0%. Nothing was measured for it, and a row reading "0%" would be a verdict on data that does not exist.
+
+### What "not measurable" means
+
+Slices are how German profiles carry most of their must-support elements — 54 of 64 for ISiKPatient — so coverage resolves slice membership rather than skipping it. A slice is matched by the `pattern[x]` or `fixed[x]` its definition declares, by an extension's URL, or by a discriminator pointing at a child element that fixes a value. When the definition lives in another package — a `HumanName` constrained through `humanname-de-basis`, say — the lookup follows it there, which is why supporting packages in your cache are loaded alongside the ones you name.
+
+Some slices cannot be decided this way. The common case is a slice identified only by a value set binding: deciding membership would mean expanding the value set, which is terminology work, and coverage runs entirely offline. Those elements are reported as **not measurable** and excluded from the denominator:
+
+```
+  not measurable: 8 element(s)
+      slice is identified by a value set binding (http://hl7.org/fhir/ValueSet/organization-type), which coverage does not expand
+```
+
+They count as neither covered nor uncovered. Counting them as misses would report a limit of the tool as a gap in your data.
+
+The same principle applies to a profile whose base is not in the cache: the must-support list is then a lower bound, and the report says so rather than presenting it as complete.
+
+### In CI
+
+`--min-coverage` exits non-zero when any profile falls below a threshold, so a new must-support element without an example fails the build:
+
+```bash
+fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 --min-coverage 80
+```
+
+`--format json` gives the full per-element detail, including which elements were unresolved and why:
+
+```bash
+fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 -f json | jq '.profiles[] | {name, percent, missing: [.elements[] | select(.populated == false and .unresolved != true) | .id]}'
+```
+
+### Limits
+
+- JSON and NDJSON input only. XML resources are reported as skipped rather than silently ignored.
+- `type`, `profile` and `exists` slice discriminators are not derived. Across every package examined they are fewer than 1 in 300; a choice element sliced by type is already resolved through the field name in the instance.
+- Coverage measures whether an element was ever populated by at least one resource, not how often. An element populated by one example out of thirty counts as covered.
 
 ---
 

@@ -74,6 +74,7 @@ func init() {
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(qualifyCmd)
 	rootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(coverageCmd)
 	rootCmd.AddCommand(fhirpathCmd)
 	rootCmd.AddCommand(compareCmd)
 	rootCmd.AddCommand(serveCmd)
