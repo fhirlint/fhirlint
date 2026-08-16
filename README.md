@@ -47,6 +47,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Configuration reference](#configuration-reference)
 - [Built-in profile aliases](#built-in-profile-aliases)
 - [JAR management](#jar-management)
+- [Auditing the toolchain](#auditing-the-toolchain)
 - [Go library](#go-library)
 - [Guides](#guides)
 - [Contributing](#contributing)
@@ -306,7 +307,7 @@ Validate FHIR resources from inside an agentic [Claude Code](https://claude.com/
 This installs two skills:
 
 - **validate** — runs `fhirlint validate`, explains the issues, and proposes/applies fixes to your resources.
-- **audit** — runs `fhirlint audit` to check the validator JAR for updates and known security advisories.
+- **audit** — runs `fhirlint audit` to check the validator JAR and the IG packages pinned in `fhirlint.lock` for updates and known security advisories.
 
 Just ask Claude to "validate the FHIR resources in this project" and the skill activates.
 
@@ -1303,6 +1304,8 @@ fhirlint validate ./fhir/
 
 Commit `fhirlint.lock` to version control. This prevents silent package changes from affecting CI results.
 
+Pinning keeps a run reproducible, but it does not tell you whether the pins are still the right ones. [`fhirlint audit`](#auditing-the-toolchain) reads the lock file and reports which packages have moved on upstream.
+
 ### Pinning the validator
 
 The IG packages are only half the input. By default fhirlint downloads whatever HL7 published most recently, so a fresh CI runner can pick up a new validator and report different findings from the same sources and the same lock file.
@@ -1677,6 +1680,65 @@ export FHIRLINT_CACHE_DIR=/mnt/build-cache/fhirlint
 Useful for containers whose home directory is read-only, CI runners that cache a mounted volume between jobs, and working on two projects pinned to different validator versions without re-downloading on every switch.
 
 `--cache-dir` still overrides the result-cache location on its own, and takes precedence over `FHIRLINT_CACHE_DIR` for that one directory.
+
+---
+
+## Auditing the toolchain
+
+Two things decide what a validation run reports: the validator JAR and the IG packages. `fhirlint audit` checks both.
+
+```bash
+fhirlint audit
+```
+
+```
+Validator JAR
+  current:  6.10.1
+  latest:   6.10.2
+  ✗ outdated — run: fhirlint update
+
+Security advisories (hapifhir/org.hl7.fhir.core)
+  ✓ 15 advisory/advisories published, none affect your version (6.10.1)
+
+IG packages (fhirlint.lock)
+  ✓ de.gematik.isik-basismodul  4.0.3 — current
+  ✗ hl7.fhir.de.core            1.0.0 — not found in the registry
+  ✓ hl7.fhir.r4.core            4.0.1 — current
+  ✗ kbv.basis                   1.4.0 → 1.9.0 available
+  (2 of 4 package(s) need attention)
+```
+
+The JAR half checks the installed version against the latest release and against the published [security advisories](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories) for `org.hl7.fhir.core`.
+
+The IG half reads [`fhirlint.lock`](#ig-lock-file) and asks the FHIR package registry about each pinned package. There is nothing to configure: the lock file already knows which packages you use. Without a lock file the section is skipped with a hint, and the JAR check still runs.
+
+A package is reported as:
+
+| | meaning |
+|---|---|
+| `→ X available` | a newer version exists upstream |
+| `not found in the registry` | the pin no longer resolves and will fail on a cold cache |
+| `deprecated upstream` | the publisher marked this version deprecated |
+| `registry latest is X (versions not comparable)` | the versions differ but could not be ordered |
+| `ahead of registry latest` | you pinned a version newer than the registry's `latest`, e.g. a pre-release |
+
+The last two are worth explaining. FHIR IG versions are usually semver, but the registry does not enforce it, so fhirlint only calls a package *outdated* when it could actually establish that your pin is older. When a publisher switches versioning scheme, you are told the versions differ rather than being given a confident but invented direction.
+
+### Exit codes
+
+| code | meaning |
+|---|---|
+| `0` | nothing to report |
+| `1` | the JAR is outdated or missing, or an advisory affects the installed version |
+| `2` | only IG package findings |
+
+An outdated IG package is a maintenance signal and an advisory against the JAR is a security one, so they get separate codes. `1` keeps the meaning it always had, and a JAR problem takes precedence when both are present.
+
+`--format json` prints the whole report and always exits `0`, so a pipeline can decide for itself:
+
+```bash
+fhirlint audit --format json | jq '.igPackages[] | select(.outdated)'
+```
 
 ---
 
