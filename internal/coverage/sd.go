@@ -279,14 +279,13 @@ func DefaultCacheRoot() (string, error) {
 }
 
 // ErrPackageNotCached reports a package that is not in the local FHIR package
-// cache. Coverage runs entirely offline against that cache, so this is a
-// precondition rather than something to work around silently.
+// cache and could not be fetched, because downloading was switched off.
 type ErrPackageNotCached struct {
 	ID  string
 	Dir string
 }
 
 func (e *ErrPackageNotCached) Error() string {
-	return fmt.Sprintf("IG package %s is not in the local FHIR package cache (%s) — "+
-		"validate against it once to download it, e.g. fhirlint validate <resource> --ig %s", e.ID, e.Dir, e.ID)
+	return fmt.Sprintf("IG package %s is not in the local FHIR package cache (%s) and --offline forbids downloading it — "+
+		"drop --offline to fetch it from the package registry, or validate against it once to populate the cache", e.ID, e.Dir)
 }

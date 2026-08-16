@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fhirlint/fhirlint/internal/coverage"
 	"github.com/fhirlint/fhirlint/internal/iglock"
@@ -19,7 +21,12 @@ var (
 	flagCoverageMinCoverage float64
 	flagCoverageVerbose     bool
 	flagCoverageExclude     []string
+	flagCoverageOffline     bool
 )
+
+// coveragePackageTimeout bounds fetching one IG package, metadata and archive
+// together.
+const coveragePackageTimeout = 5 * time.Minute
 
 var coverageCmd = &cobra.Command{
 	Use:   "coverage [path]",
@@ -32,7 +39,9 @@ set, which parts of the profile has nobody ever populated? An IG can ship thirty
 green examples and still leave half its mustSupport elements untouched.
 
 Profiles are read from IG packages in the local FHIR package cache
-(~/.fhir/packages). Validate against an IG once to download it.
+(~/.fhir/packages). A package that is not there yet is downloaded from the FHIR
+package registry and verified against the checksum the registry publishes.
+Use --offline to forbid that and fail instead.
 
 Resources are attributed to a profile by their meta.profile. Naming profiles
 with --profile also allows resources of the right resource type that declare no
@@ -63,6 +72,8 @@ func init() {
 		"List every unpopulated element instead of the first few")
 	coverageCmd.Flags().StringArrayVar(&flagCoverageExclude, "exclude", nil,
 		"Glob pattern to exclude (repeatable)")
+	coverageCmd.Flags().BoolVar(&flagCoverageOffline, "offline", false,
+		"Never contact the package registry — fail if an IG package is not already cached")
 
 	_ = coverageCmd.RegisterFlagCompletionFunc("format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"terminal", "json"}, cobra.ShellCompDirectiveNoFileComp
@@ -142,7 +153,12 @@ func loadCoverageRegistry(igs []string) (*coverage.Registry, []string, error) {
 		label := name + "#" + version
 		dir := coverage.PackageDir(cacheRoot, name, version)
 		if _, err := os.Stat(dir); err != nil {
-			return nil, nil, &coverage.ErrPackageNotCached{ID: label, Dir: dir}
+			if flagCoverageOffline {
+				return nil, nil, &coverage.ErrPackageNotCached{ID: label, Dir: dir}
+			}
+			if err := downloadPackage(cacheRoot, name, version); err != nil {
+				return nil, nil, err
+			}
 		}
 		if _, err := reg.LoadPackage(dir, label); err != nil {
 			return nil, nil, fmt.Errorf("reading package %s: %w", ig, err)
@@ -163,6 +179,23 @@ func loadCoverageRegistry(igs []string) (*coverage.Registry, []string, error) {
 		_, _ = reg.LoadPackage(filepath.Join(cacheRoot, e.Name(), "package"), e.Name())
 	}
 	return reg, requested, nil
+}
+
+// downloadPackage fetches a package the cache does not hold yet.
+//
+// Progress goes to stderr rather than stdout: the report is what stdout is for,
+// and a pipeline redirecting it should not find a download notice in its JSON.
+func downloadPackage(cacheRoot, name, version string) error {
+	fmt.Fprintf(os.Stderr, "Downloading IG package %s#%s …\n", name, version)
+
+	ctx, cancel := context.WithTimeout(context.Background(), coveragePackageTimeout)
+	defer cancel()
+
+	warnings, err := coverage.NewDownloader().Fetch(ctx, cacheRoot, name, version)
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
+	return err
 }
 
 func writeCoverage(rep coverage.Report) error {
