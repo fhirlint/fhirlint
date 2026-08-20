@@ -278,10 +278,7 @@ func toInternalOpts(opts Options) validator.Options {
 		fhirVersion = validator.DefaultFHIRVersion
 	}
 
-	resolvedProfiles := make([]string, 0, len(opts.Profiles))
-	for _, p := range opts.Profiles {
-		resolvedProfiles = append(resolvedProfiles, profiles.Resolve(p))
-	}
+	resolvedProfiles := profiles.ResolveAll(opts.Profiles)
 
 	return validator.Options{
 		FHIRVersion:              fhirVersion,

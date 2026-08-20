@@ -178,9 +178,5 @@ func runServe(cmd *cobra.Command, _ []string) error {
 
 // resolveIGs resolves any alias-like IG values (aliases containing '#' pass through).
 func resolveIGs(in []string) []string {
-	out := make([]string, 0, len(in))
-	for _, ig := range in {
-		out = append(out, profiles.Resolve(ig))
-	}
-	return out
+	return profiles.ResolveAll(in)
 }

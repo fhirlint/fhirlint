@@ -104,10 +104,7 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	}
 	defer cleanupSettings()
 
-	resolvedProfiles := make([]string, 0, len(flagTxWarmProfile))
-	for _, prof := range flagTxWarmProfile {
-		resolvedProfiles = append(resolvedProfiles, profiles.Resolve(prof))
-	}
+	resolvedProfiles := profiles.ResolveAll(flagTxWarmProfile)
 
 	fmt.Fprintf(os.Stderr, "Recording terminology traffic from %s into %s/ (%d file(s))…\n",
 		upstream, dir, len(paths))

@@ -73,10 +73,7 @@ func runLSP(cmd *cobra.Command, _ []string) error {
 		flagLSPProfile = viper.GetStringSlice("profile")
 	}
 
-	resolvedProfiles := make([]string, 0, len(flagLSPProfile))
-	for _, p := range flagLSPProfile {
-		resolvedProfiles = append(resolvedProfiles, profiles.Resolve(p))
-	}
+	resolvedProfiles := profiles.ResolveAll(flagLSPProfile)
 	opts := validator.Options{Profiles: resolvedProfiles}
 
 	serverURL := flagLSPServer

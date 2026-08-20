@@ -26,7 +26,13 @@ fhirlint profiles
 |-------|-----------|--------|
 | `kbv-basis` | `kbv.basis#1.5.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
 | `kbv-patient` | `kbv.basis#1.5.0` | KBV Patient profile specifically |
-| `mii` | `de.medizininformatikinitiative.kerndatensatz#2024.0.0` | MII core dataset modules |
+| `mii` | all six modules below | MII core dataset, complete |
+| `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` | Patient, Practitioner, Organization |
+| `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` | Encounter |
+| `mii-diagnose` | `de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1` | Condition |
+| `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` | Procedure |
+| `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
+| `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
 | `diga` | `de.bfarm.diga#1.2.0` | DiGA framework profiles |
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
@@ -89,28 +95,44 @@ fhirlint validate patient.json \
 
 The MII defines a core dataset (`Kerndatensatz`) for clinical research data interoperability across German university hospitals.
 
-### Validate against MII core dataset
+The Kerndatensatz has no umbrella package: it is published module by module. The
+`mii` alias therefore stands for all six modules at once, and each module also
+has its own alias.
+
+### Validate against the MII core dataset
 
 ```bash
 fhirlint validate observation.json --profile mii
 
 # Equivalent
 fhirlint validate observation.json \
-  --ig de.medizininformatikinitiative.kerndatensatz#2024.0.0
+  --ig de.medizininformatikinitiative.kerndatensatz.person#2025.0.1 \
+  --ig de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1 \
+  --ig de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1 \
+  --ig de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1 \
+  --ig de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3 \
+  --ig de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1
 ```
+
+The modules are not released together: person, fall, diagnose and prozedur are
+on the 2025 train and depend on `kerndatensatz.meta` 2025.0.x, while
+laborbefund and medikation are on the 2026 train and depend on meta 2026.0.x.
+Loading `mii` therefore pulls both versions of the meta package. The validator
+accepts that, but if your project needs one coherent train, name the modules you
+need rather than using the aggregate.
 
 ### Validate a specific MII module
 
-The MII core dataset is split into modules. You can load individual module packages instead of the full core dataset:
-
 ```bash
 # MII Laboratory module
-fhirlint validate lab-observation.json \
-  --ig de.medizininformatikinitiative.kerndatensatz.laborbefund#2024.0.0
+fhirlint validate lab-observation.json --profile mii-laborbefund
 
 # MII Diagnose module
+fhirlint validate condition.json --profile mii-diagnose
+
+# Or by package reference, to pin a different version
 fhirlint validate condition.json \
-  --ig de.medizininformatikinitiative.kerndatensatz.diagnose#2024.0.0
+  --ig de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1
 ```
 
 ### MII + KBV combined
@@ -120,7 +142,7 @@ Some projects need to comply with both MII and KBV profiles — for example, a h
 ```bash
 fhirlint validate patient.json \
   --ig kbv.basis#1.5.0 \
-  --ig de.medizininformatikinitiative.kerndatensatz#2024.0.0
+  --ig de.medizininformatikinitiative.kerndatensatz.person#2025.0.1
 ```
 
 ---
@@ -159,7 +181,7 @@ A resource can be validated against multiple profiles simultaneously. fhirlint p
 ```bash
 fhirlint validate patient.json \
   --profile kbv-basis \
-  --ig de.medizininformatikinitiative.kerndatensatz#2024.0.0 \
+  --ig de.medizininformatikinitiative.kerndatensatz.person#2025.0.1 \
   --profile https://fhir.my-hospital.de/StructureDefinition/HospitalPatient
 ```
 
@@ -184,7 +206,7 @@ Pin the version in `fhirlint.yml` to ensure every team member and CI run uses th
 ```yaml
 ig:
   - kbv.basis#1.5.0
-  - de.medizininformatikinitiative.kerndatensatz#2024.0.0
+  - de.medizininformatikinitiative.kerndatensatz.person#2025.0.1
 ```
 
 ---

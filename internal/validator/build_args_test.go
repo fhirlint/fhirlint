@@ -101,11 +101,11 @@ func TestBuildArgs_MixedProfilesAndIGRefs(t *testing.T) {
 func TestBuildArgs_IGs(t *testing.T) {
 	args := buildArgs("jar", []string{"input"}, "out", Options{
 		FHIRVersion: "4.0.1",
-		IGs:         []string{"kbv.basis#1.5.0", "de.medizininformatikinitiative.kerndatensatz#2024.0.0"},
+		IGs:         []string{"kbv.basis#1.5.0", "de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"},
 	})
 
 	mustContainPair(t, args, "-ig", "kbv.basis#1.5.0")
-	mustContainPair(t, args, "-ig", "de.medizininformatikinitiative.kerndatensatz#2024.0.0")
+	mustContainPair(t, args, "-ig", "de.medizininformatikinitiative.kerndatensatz.person#2025.0.1")
 }
 
 func TestBuildArgs_FHIRVersions(t *testing.T) {
