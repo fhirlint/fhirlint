@@ -553,11 +553,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		flagIG = append(flagIG, igDir)
 	}
 
-	// Resolve profile aliases
-	resolvedProfiles := make([]string, 0, len(flagProfile))
-	for _, p := range flagProfile {
-		resolvedProfiles = append(resolvedProfiles, profiles.Resolve(p))
-	}
+	// Resolve profile aliases. An alias may stand for several packages, so the
+	// resolved list can be longer than what the user typed.
+	resolvedProfiles := profiles.ResolveAll(flagProfile)
 
 	opts := validator.Options{
 		FHIRVersion:              flagFHIRVersion,

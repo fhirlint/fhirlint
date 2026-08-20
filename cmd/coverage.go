@@ -146,24 +146,26 @@ func loadCoverageRegistry(igs []string) (*coverage.Registry, []string, error) {
 	reg := coverage.NewRegistry()
 	var requested []string
 	for _, ig := range igs {
-		name, version := iglock.ParseIGID(profiles.Resolve(ig))
-		if name == "" {
-			return nil, nil, fmt.Errorf("--ig %q must be name#version, e.g. kbv.basis#1.9.0", ig)
-		}
-		label := name + "#" + version
-		dir := coverage.PackageDir(cacheRoot, name, version)
-		if _, err := os.Stat(dir); err != nil {
-			if flagCoverageOffline {
-				return nil, nil, &coverage.ErrPackageNotCached{ID: label, Dir: dir}
+		for _, ref := range profiles.Resolve(ig) {
+			name, version := iglock.ParseIGID(ref)
+			if name == "" {
+				return nil, nil, fmt.Errorf("--ig %q must be name#version, e.g. kbv.basis#1.9.0", ig)
 			}
-			if err := downloadPackage(cacheRoot, name, version); err != nil {
-				return nil, nil, err
+			label := name + "#" + version
+			dir := coverage.PackageDir(cacheRoot, name, version)
+			if _, err := os.Stat(dir); err != nil {
+				if flagCoverageOffline {
+					return nil, nil, &coverage.ErrPackageNotCached{ID: label, Dir: dir}
+				}
+				if err := downloadPackage(cacheRoot, name, version); err != nil {
+					return nil, nil, err
+				}
 			}
+			if _, err := reg.LoadPackage(dir, label); err != nil {
+				return nil, nil, fmt.Errorf("reading package %s: %w", label, err)
+			}
+			requested = append(requested, label)
 		}
-		if _, err := reg.LoadPackage(dir, label); err != nil {
-			return nil, nil, fmt.Errorf("reading package %s: %w", ig, err)
-		}
-		requested = append(requested, label)
 	}
 
 	// Supporting packages, best effort: a missing one only means some slices

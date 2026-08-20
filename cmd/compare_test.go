@@ -64,6 +64,20 @@ func TestResolveCompareSide_PackageAliasResolves(t *testing.T) {
 	}
 }
 
+// An alias standing for several packages cannot name one profile to compare,
+// so it is rejected rather than silently reduced to its first package (#334).
+func TestResolveCompareSide_MultiPackageAliasRejected(t *testing.T) {
+	_, _, err := resolveCompareSide("mii", "MII_PR_Person_Patient", "left")
+	if err == nil {
+		t.Fatal("err = nil, want a rejection for a multi-package alias")
+	}
+	for _, want := range []string{"several packages", "kerndatensatz.person"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("err = %q, want it to mention %q", err, want)
+		}
+	}
+}
+
 func TestRunCompare_BadFormat(t *testing.T) {
 	flagCompareFormat = "pdf"
 	defer func() { flagCompareFormat = "terminal" }()

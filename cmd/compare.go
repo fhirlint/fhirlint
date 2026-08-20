@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/profiles"
@@ -161,7 +162,11 @@ func resolveCompareSide(value, profileFlag, side string) (ig, canonical string, 
 		return value, canonical, nil
 	}
 
-	resolved := profiles.Resolve(value)
+	if profiles.Expands(value) {
+		return "", "", fmt.Errorf("--%s is the alias %q, which stands for several packages (%s) — compare works on one package at a time, so name the one holding the profile",
+			side, value, strings.Join(profiles.Resolve(value), ", "))
+	}
+	resolved := profiles.Resolve(value)[0]
 	if profileFlag == "" {
 		return "", "", fmt.Errorf("--%s is the package %q — also pass --%s-profile with the profile's canonical URL or id", side, resolved, side)
 	}
