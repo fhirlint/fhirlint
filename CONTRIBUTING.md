@@ -29,9 +29,10 @@ go test ./... -tags integration
 # …against a specific validator release instead of whatever is cached
 FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
 
-# Registry check — verifies the built-in profile aliases still resolve against
-# packages.fhir.org. Run it when you touch a pin in internal/profiles/aliases.go
-go test -tags registry -v ./internal/profiles/
+# Registry checks — verify the built-in profile aliases and the FHIR version
+# table against packages.fhir.org and tx.fhir.org. Run them when you touch a pin
+# in internal/profiles/aliases.go or a row in internal/validator/fhirversion.go
+go test -tags registry -v ./internal/profiles/ ./internal/validator/
 ```
 
 The integration tests live in `internal/validator/` (the JAR itself) and `cmd/` (the CLI end to end); both are behind the `integration` tag and skipped by default. CI runs the two packages as separate steps, because `go test` runs packages in parallel and on a cold cache both would download the same JAR at once.

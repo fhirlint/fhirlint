@@ -1,4 +1,4 @@
-name: Alias Monitor
+name: Registry Monitor
 
 on:
   # Weekly, Monday 07:15 UTC — just after the JAR monitor, so a Monday morning
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   check-aliases:
-    name: Check the built-in aliases against the registry
+    name: Check the alias table and the FHIR version table against the registry
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,7 +39,12 @@ jobs:
           echo "resolve=$?" >> "$GITHUB_OUTPUT"
           go test -tags registry -count=1 -v -run TestAliasesUpToDate ./internal/profiles/ > uptodate.txt 2>&1
           echo "uptodate=$?" >> "$GITHUB_OUTPUT"
-          cat resolve.txt uptodate.txt
+          # The FHIR version table makes the same kind of claim about the
+          # outside world — a core package and a tx.fhir.org endpoint per row —
+          # and carries the R6 tripwire, which fires when R6 becomes addable.
+          go test -tags registry -count=1 -v -run 'TestFHIRVersionsResolve|TestR6NotYetAvailable' ./internal/validator/ > versions.txt 2>&1
+          echo "versions=$?" >> "$GITHUB_OUTPUT"
+          cat resolve.txt uptodate.txt versions.txt
 
       - name: File or resolve the alias issue
         env:
@@ -47,17 +52,20 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RESOLVE_STATUS: ${{ steps.audit.outputs.resolve }}
           UPTODATE_STATUS: ${{ steps.audit.outputs.uptodate }}
+          VERSIONS_STATUS: ${{ steps.audit.outputs.versions }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          title="Registry: built-in profile aliases need attention"
+          title="Registry: built-in aliases or the FHIR version table need attention"
 
           # The findings are the test's own failure lines. If none can be
           # parsed, the check did not fail on a finding at all — it failed to
           # run — and an empty code block would read as "nothing is wrong".
           findings() {
             local parsed
-            parsed=$(sed -n 's/^ *registry_test\.go:[0-9]*: //p' "$1")
+            # Any *_test.go, not just registry_test.go: the version-table
+            # checks live in fhirversion_registry_test.go.
+            parsed=$(sed -n 's/^ *[A-Za-z0-9_]*_test\.go:[0-9]*: //p' "$1")
             if [ -n "$parsed" ]; then
               printf '%s\n' "$parsed"
             else
@@ -68,10 +76,10 @@ jobs:
           existing=$(gh issue list --state open --limit 100 --json number,title \
             | jq -r --arg t "$title" '[.[] | select(.title == $t)] | .[0].number // ""')
 
-          if [ "$RESOLVE_STATUS" = "0" ] && [ "$UPTODATE_STATUS" = "0" ]; then
-            echo "Every alias resolves and is current."
+          if [ "$RESOLVE_STATUS" = "0" ] && [ "$UPTODATE_STATUS" = "0" ] && [ "$VERSIONS_STATUS" = "0" ]; then
+            echo "Every alias resolves and is current, and the FHIR version table still matches the registry."
             if [ -n "$existing" ]; then
-              gh issue comment "$existing" --body "Resolved automatically: every built-in alias resolves against the registry and is current. Closing."
+              gh issue comment "$existing" --body "Resolved automatically: every built-in alias resolves against the registry and is current, and the FHIR version table checks out. Closing."
               gh issue close "$existing"
             fi
             exit 0
@@ -100,10 +108,20 @@ jobs:
               echo '```'
               echo
             fi
+            if [ "$VERSIONS_STATUS" != "0" ]; then
+              echo "## FHIR version table"
+              echo
+              echo "Either a row in \`validator.FHIRVersions\` no longer matches the outside world, or R6 has become addable — see #306."
+              echo
+              echo '```'
+              findings versions.txt
+              echo '```'
+              echo
+            fi
             echo "**Reproduce locally:**"
             echo
             echo '```'
-            echo 'go test -tags registry -v ./internal/profiles/'
+            echo 'go test -tags registry -v ./internal/profiles/ ./internal/validator/'
             echo '```'
             echo
             echo "[Workflow run]($RUN_URL)"
