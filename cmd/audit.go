@@ -222,6 +222,9 @@ func printIGTerminal(r igaudit.Report, igErr error) int {
 			fmt.Fprintf(os.Stderr, "  ! %-*s  %s — could not check: %s\n", width, p.Name, p.Version, p.Error)
 		case p.NotFound:
 			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — not found in the registry\n", width, p.Name, p.Version)
+		case p.VersionMissing:
+			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — the package exists, but the registry has no such version\n",
+				width, p.Name, p.Version)
 		case p.Deprecated:
 			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — deprecated upstream%s\n", width, p.Name, p.Version,
 				deprecationSuffix(p.DeprecationNote))

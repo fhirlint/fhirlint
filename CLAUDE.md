@@ -38,6 +38,7 @@ testdata/      fixtures for unit tests
 
 - `go test ./...` — unit tests, no Java required
 - `go test ./... -tags integration` — integration tests, downloads JAR (~250 MB), requires Java 17+
+- `go test -tags registry ./internal/profiles/` — checks the built-in aliases against the package registry; needs network, run it when changing a pin
 - Skip long-running or subprocess tests with `testing.Short()` guard
 
 ### Linting

@@ -1,0 +1,116 @@
+name: Alias Monitor
+
+on:
+  # Weekly, Monday 07:15 UTC — just after the JAR monitor, so a Monday morning
+  # brings at most one round of housekeeping issues.
+  schedule:
+    - cron: '15 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-aliases:
+    name: Check the built-in aliases against the registry
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The two checks are separate runs because they mean different things: one
+      # says the alias cannot be used at all, the other says a newer release
+      # exists. Reporting them as one number would turn "kbv.basis is a minor
+      # behind" into the same alarm as "diga resolves to nothing".
+      - name: Audit the alias table against the registry
+        id: audit
+        run: |
+          set -uo pipefail
+          go test -tags registry -count=1 -v -run TestAliasesResolve ./internal/profiles/ > resolve.txt 2>&1
+          echo "resolve=$?" >> "$GITHUB_OUTPUT"
+          go test -tags registry -count=1 -v -run TestAliasesUpToDate ./internal/profiles/ > uptodate.txt 2>&1
+          echo "uptodate=$?" >> "$GITHUB_OUTPUT"
+          cat resolve.txt uptodate.txt
+
+      - name: File or resolve the alias issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RESOLVE_STATUS: ${{ steps.audit.outputs.resolve }}
+          UPTODATE_STATUS: ${{ steps.audit.outputs.uptodate }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Registry: built-in profile aliases need attention"
+
+          # The findings are the test's own failure lines. If none can be
+          # parsed, the check did not fail on a finding at all — it failed to
+          # run — and an empty code block would read as "nothing is wrong".
+          findings() {
+            local parsed
+            parsed=$(sed -n 's/^ *registry_test\.go:[0-9]*: //p' "$1")
+            if [ -n "$parsed" ]; then
+              printf '%s\n' "$parsed"
+            else
+              echo "(no findings parsed — the check failed to run, not on a finding; raw tail below)"
+              tail -n 20 "$1"
+            fi
+          }
+          existing=$(gh issue list --state open --limit 100 --json number,title \
+            | jq -r --arg t "$title" '[.[] | select(.title == $t)] | .[0].number // ""')
+
+          if [ "$RESOLVE_STATUS" = "0" ] && [ "$UPTODATE_STATUS" = "0" ]; then
+            echo "Every alias resolves and is current."
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "Resolved automatically: every built-in alias resolves against the registry and is current. Closing."
+              gh issue close "$existing"
+            fi
+            exit 0
+          fi
+
+          {
+            echo "The built-in profile aliases in \`internal/profiles/aliases.go\` no longer check out against the FHIR package registry."
+            echo
+            if [ "$RESOLVE_STATUS" != "0" ]; then
+              echo "## Cannot be resolved"
+              echo
+              echo "These aliases are broken for anyone with a cold package cache — the validator cannot fetch what they point at."
+              echo
+              echo '```'
+              findings resolve.txt
+              echo '```'
+              echo
+            fi
+            if [ "$UPTODATE_STATUS" != "0" ]; then
+              echo "## Newer version available"
+              echo
+              echo "Not urgent — an IG pin is a deliberate choice. Worth folding into the next bump."
+              echo
+              echo '```'
+              findings uptodate.txt
+              echo '```'
+              echo
+            fi
+            echo "**Reproduce locally:**"
+            echo
+            echo '```'
+            echo 'go test -tags registry -v ./internal/profiles/'
+            echo '```'
+            echo
+            echo "[Workflow run]($RUN_URL)"
+          } > body.md
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh issue create --title "$title" --label dependencies --body-file body.md
+          fi
