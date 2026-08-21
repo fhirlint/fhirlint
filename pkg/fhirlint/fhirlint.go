@@ -90,6 +90,12 @@ type Options struct {
 	// issues found so far. Zero is unbounded.
 	MaxMessages int
 
+	// Offline forbids network access for the run: the cached JAR is used and
+	// never downloaded, IG packages must already be in the local FHIR package
+	// cache, and the validator is told to block its own HTTP when nothing in
+	// the run needs a loopback server.
+	Offline bool
+
 	// CodeSystemSizeLimit caps how many codes the validator checks against a
 	// code system for one ValueSet include, ConceptMap group or CodeSystem
 	// supplement. Past the cap it checks none of them and issues a hint.
@@ -310,6 +316,7 @@ func toInternalOpts(opts Options) validator.Options {
 		ValidationTimeout:        opts.ValidationTimeout,
 		MaxMessages:              opts.MaxMessages,
 		CodeSystemSizeLimit:      opts.CodeSystemSizeLimit,
+		Offline:                  opts.Offline,
 		Proxy: validator.ProxyConfig{
 			Proxy:      opts.Proxy,
 			HTTPSProxy: opts.HTTPSProxy,

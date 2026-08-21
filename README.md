@@ -1276,6 +1276,33 @@ Expect a remote terminology server to be slow about it — one round trip per co
 
 `fhirlint explain VALUESET_INC_TOO_MANY_CODES` (also `CONCEPTMAP_VS_TOO_MANY_CODES`, `CODESYSTEM_CS_SUPP_TOO_MANY_CODES`) spells this out offline. The CodeSystem-supplement form is new in validator 6.10.2: a supplement that used to be checked can stop being checked after upgrading.
 
+### Air-gapped runs (`--offline`)
+
+`--tx-offline` covers terminology. `--offline` covers the rest of the run:
+
+```bash
+fhirlint validate ./fhir/ --offline
+```
+
+- the validator JAR is taken from the cache and never downloaded
+- the update check is skipped
+- IG packages must already be in `~/.fhir/packages`, and a missing one is named before the JAR starts rather than surfacing as a package-resolution error
+- terminology is skipped, unless a recording is replayed with `--tx-offline`
+- the validator is told to block its own HTTP with `-no-http-access`
+
+The last point is what makes it a guarantee rather than a promise about fhirlint's own code paths — the JAR refuses every request itself, including any URL that content asks it to follow.
+
+**One combination gets a weaker guarantee, and says so.** `--tx-offline` replays terminology from a local server on loopback, and the validator's block has no loopback exemption — it refuses `http://127.0.0.1` exactly as it refuses `https://tx.fhir.org`. So `--offline --tx-offline` cannot use the block:
+
+```
+--offline: terminology is replayed from a local server, so the validator's own
+network block cannot be used. fhirlint downloads nothing; the JAR could still
+follow a URL if content asks it to. For a hard block, drop --tx-offline or
+isolate the network.
+```
+
+`--offline` needs validator 6.10.0 or newer (where `-no-http-access` was added) and refuses to run against an older JAR rather than failing obscurely. `--offline` and `--terminology-server` are mutually exclusive.
+
 ### Offline terminology
 
 `--tx-offline` replays terminology responses recorded earlier, so a validation run needs no terminology server at all. This is what makes a run reproducible: same inputs, same recording, same result, no network.
@@ -1706,6 +1733,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--timeout` | `5m` | Timeout for the Java validator process |
 | `--validation-timeout` | — | Stop validating after this long and report partial results (e.g. `90s`, `2m`) |
 | `--max-messages` | `0` | Stop after this many validation messages and report partial results (`0` = unbounded) |
+| `--offline` | `false` | Forbid all network access: cached JAR, cached IG packages, and the validator's own HTTP blocked |
 | `--codesystem-size-limit` | `-1` | Max codes checked per ValueSet include, ConceptMap group or CodeSystem supplement (`0` = no limit, `-1` = the validator's own default of 1000) |
 | `--proxy` | `$HTTP_PROXY` | HTTP proxy for the validator's terminology calls, `host:port` |
 | `--https-proxy` | `$HTTPS_PROXY` | HTTPS proxy for the validator's terminology calls, `host:port` |

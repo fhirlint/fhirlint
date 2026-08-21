@@ -17,6 +17,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/cache"
+	"github.com/fhirlint/fhirlint/internal/coverage"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/lint"
@@ -95,6 +96,7 @@ var (
 	flagHTTPSProxy               string
 	flagMaxMessages              int
 	flagCodeSystemSizeLimit      int
+	flagOffline                  bool
 	flagURLTimeout               string
 	flagLock                     bool
 	flagGenerateBaseline         string
@@ -211,6 +213,9 @@ func init() {
 		validator.UnsetCodeSystemSizeLimit,
 		"Max codes checked per ValueSet include, ConceptMap group or CodeSystem supplement. "+
 			"0 = no limit; -1 leaves the validator's own default (1000) in place.")
+	validateCmd.Flags().BoolVar(&flagOffline, "offline", false,
+		"Forbid all network access: use the cached JAR and cached IG packages, and block the validator's own HTTP")
+	_ = viper.BindPFlag("offline", validateCmd.Flags().Lookup("offline"))
 	_ = viper.BindPFlag("codesystem-size-limit", validateCmd.Flags().Lookup("codesystem-size-limit"))
 	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
 	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
@@ -418,6 +423,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("codesystem-size-limit") && viper.IsSet("codesystem-size-limit") {
 		flagCodeSystemSizeLimit = viper.GetInt("codesystem-size-limit")
 	}
+	if !cmd.Flags().Changed("offline") && viper.IsSet("offline") {
+		flagOffline = viper.GetBool("offline")
+	}
 	if !cmd.Flags().Changed("proxy") && viper.IsSet("proxy") {
 		flagProxy = viper.GetString("proxy")
 	}
@@ -519,6 +527,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if flagMaxMessages < 0 {
 		return fmt.Errorf("--max-messages must be zero or positive, got %d", flagMaxMessages)
 	}
+	if flagOffline && cmd.Flags().Changed("terminology-server") {
+		return fmt.Errorf("--offline forbids network access, so it cannot be combined with --terminology-server — " +
+			"drop one, or replay a recording with --tx-offline")
+	}
 	if flagCodeSystemSizeLimit < validator.UnsetCodeSystemSizeLimit {
 		return fmt.Errorf("--codesystem-size-limit must be -1 (the validator's default), 0 (no limit) or positive, got %d",
 			flagCodeSystemSizeLimit)
@@ -591,6 +603,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		ValidationTimeout:        validationTimeout,
 		MaxMessages:              flagMaxMessages,
 		CodeSystemSizeLimit:      codeSystemSizeLimitOpt(flagCodeSystemSizeLimit),
+		Offline:                  flagOffline,
 		Proxy:                    validator.ProxyConfig{Proxy: flagProxy, HTTPSProxy: flagHTTPSProxy},
 		Timeout:                  validatorTimeout,
 	}
@@ -644,6 +657,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		opts.TxCache = "n/a"
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
 		warnValidatorVersionDrift(os.Stderr, store.ReadManifest(), validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
+	}
+
+	if flagOffline {
+		if err := applyOffline(&opts, os.Stderr); err != nil {
+			return err
+		}
 	}
 
 	// Watch mode: pass -watch-mode to the JAR and block until Ctrl-C.
@@ -2536,6 +2555,10 @@ func outputFile(ext string) string {
 }
 
 func printUpdateNotice() {
+	// The check is an HTTP call to the GitHub API. --offline said no.
+	if flagOffline {
+		return
+	}
 	if newer := validator.CheckForUpdate(); newer != "" {
 		fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
 	}
@@ -2944,4 +2967,54 @@ func codeSystemSizeLimitOpt(v int) *int {
 		return nil
 	}
 	return &v
+}
+
+// applyOffline settles what an offline run is allowed to do, and states the
+// guarantee it actually gets.
+//
+// Terminology is the part that cannot be handled silently. Left alone, the
+// validator would go to tx.fhir.org, so an offline run skips terminology unless
+// a recording is being replayed. And a replay means a loopback HTTP server,
+// which -no-http-access would block along with everything else — the JAR's
+// PROHIBITED policy has no loopback exemption. So the two modes come with
+// different guarantees, and the weaker one says so rather than implying a block
+// that is not in place.
+func applyOffline(opts *validator.Options, w io.Writer) error {
+	replaying := opts.TerminologyServer != ""
+
+	if !replaying && !opts.NoTerminologyServer {
+		opts.NoTerminologyServer = true
+		_, _ = fmt.Fprintln(w, "--offline: terminology checks are skipped (no reachable server). "+
+			"Record one with 'fhirlint tx warm' and replay it with --tx-offline to keep them.")
+	}
+	if replaying {
+		_, _ = fmt.Fprintln(w, "--offline: terminology is replayed from a local server, so the validator's own "+
+			"network block cannot be used. fhirlint downloads nothing; the JAR could still follow a URL "+
+			"if content asks it to. For a hard block, drop --tx-offline or isolate the network.")
+	}
+	return requireCachedIGs(opts.IGs, opts.Profiles)
+}
+
+// requireCachedIGs fails an offline run whose IG packages are not in the local
+// FHIR package cache. The JAR would otherwise reach for the registry and fail
+// with its own message about a package it could not resolve, which reads like
+// the package is wrong rather than like the cache is empty.
+func requireCachedIGs(igs, profiles []string) error {
+	cacheRoot, err := coverage.DefaultCacheRoot()
+	if err != nil {
+		return fmt.Errorf("--offline: cannot locate the FHIR package cache: %w", err)
+	}
+	for _, ref := range append(append([]string{}, igs...), profiles...) {
+		name, version := iglock.ParseIGID(ref)
+		if name == "" || version == "" {
+			// Not a package reference: a canonical profile URL, or a local
+			// file. Nothing to fetch, nothing to check.
+			continue
+		}
+		dir := coverage.PackageDir(cacheRoot, name, version)
+		if _, statErr := os.Stat(dir); statErr != nil {
+			return &coverage.ErrPackageNotCached{ID: name + "#" + version, Dir: dir}
+		}
+	}
+	return nil
 }

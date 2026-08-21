@@ -96,6 +96,7 @@ var topLevelKeys = map[string]keySpec{
 	"validation-timeout":          {kind: kindString},
 	"max-messages":                {kind: kindInt},
 	"codesystem-size-limit":       {kind: kindInt},
+	"offline":                     {kind: kindBool},
 	"proxy":                       {kind: kindString},
 	"https-proxy":                 {kind: kindString},
 	"validator-version":           {kind: kindString},
