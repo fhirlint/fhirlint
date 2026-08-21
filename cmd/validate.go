@@ -771,6 +771,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			}
 			results, err = validateDir(in.Path, opts, excludePatterns, profileMap, overrides)
 		} else if flagExtractEach != "" {
+			if err := requireParsable(in.Path, "--extract-each"); err != nil {
+				return err
+			}
 			// Apply --ignore to outer document before extracting elements
 			if len(flagIgnore) > 0 {
 				if err := preprocessJSON(in); err != nil {
@@ -793,6 +796,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		} else {
 			// Apply --extract and --ignore on JSON input
 			if flagExtract != "" || len(flagIgnore) > 0 {
+				flag := "--extract"
+				if flagExtract == "" {
+					flag = "--ignore"
+				}
+				if err := requireParsable(in.Path, flag); err != nil {
+					return err
+				}
 				if err := preprocessJSON(in); err != nil {
 					return err
 				}
@@ -1147,8 +1157,7 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 		if d.IsDir() {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(fpath))
-		if ext != ".json" && ext != ".xml" && ext != ".ndjson" {
+		if !input.IsFHIRFile(fpath) {
 			return nil
 		}
 		paths = append(paths, fpath)
@@ -1531,7 +1540,9 @@ func looksLikeFHIR(filePath string) bool {
 			}
 		}
 	default:
-		// NDJSON (a bulk export is FHIR by definition) and anything else.
+		// Line-delimited exports (FHIR by definition) and formats fhirlint
+		// cannot read, such as FHIR Mapping Language. Neither is something to
+		// second-guess from the first bytes of the file.
 		return true
 	}
 }
@@ -3048,4 +3059,18 @@ func requireCachedIGs(cacheRoot string, igs, profiles []string) error {
 		}
 	}
 	return nil
+}
+
+// requireParsable rejects a flag that rewrites the input against a format
+// fhirlint cannot read. The validator accepts FHIR Mapping Language; fhirlint
+// only passes the path along, so there is nothing here to extract from or
+// strip out of, and letting it reach the JSON parser would report the format
+// as malformed JSON (#341).
+func requireParsable(path, flag string) error {
+	if input.IsParsable(path) {
+		return nil
+	}
+	ft, _ := input.LookupFileType(path)
+	return fmt.Errorf("%s cannot be used with %s input (%s): fhirlint passes it to the validator unchanged",
+		flag, ft.Parser, ft.Ext)
 }

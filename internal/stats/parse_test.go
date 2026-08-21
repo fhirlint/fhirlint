@@ -75,3 +75,36 @@ func TestParseFile_GarbageJSONYieldsEmptyType(t *testing.T) {
 		t.Errorf("expected one resource with empty type, got %+v", rs)
 	}
 }
+
+// .jsonl is NDJSON under the name the surrounding data tooling produces, so it
+// must count per line. Before #340 it fell through to the JSON parser and
+// counted the whole file as one resource with no type.
+func TestParseFile_JSONL(t *testing.T) {
+	p := write(t, t.TempDir(), "bulk.jsonl",
+		"{\"resourceType\":\"Patient\"}\n{\"resourceType\":\"Medication\"}\n")
+	rs, err := ParseFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 2 {
+		t.Fatalf("expected 2 resources, got %d: %+v", len(rs), rs)
+	}
+	if rs[0].Type != "Patient" || rs[1].Type != "Medication" {
+		t.Errorf("unexpected types: %+v", rs)
+	}
+}
+
+// A FHIR Mapping Language file is valid input for the validator but not
+// something stats can read. It must count as nothing rather than as one
+// malformed resource (#341).
+func TestParseFile_ValidatorOnlyFormatCountsNothing(t *testing.T) {
+	p := write(t, t.TempDir(), "transform.fml",
+		"map \"http://example.org/StructureMap/Demo\" = \"Demo\"\n")
+	rs, err := ParseFile(p)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(rs) != 0 {
+		t.Errorf("got %d resources from a mapping file, want none: %+v", len(rs), rs)
+	}
+}

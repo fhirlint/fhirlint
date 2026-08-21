@@ -34,7 +34,11 @@ func TestIntegration_ReferenceCheckOnRealResults(t *testing.T) {
 		t.Fatalf("validator.Run(encounter): %v", err)
 	}
 
-	applyReferenceCheck([]*validator.Result{pRes, eRes})
+	// nil: no --index-only paths, so the index is built from the results
+	// themselves. The signature gained this parameter in #288 and this call was
+	// never updated — the file has not compiled since, because the integration
+	// job only builds ./internal/validator/... .
+	applyReferenceCheck([]*validator.Result{pRes, eRes}, nil)
 
 	if !hasIssueID(eRes, "ref:unresolved") {
 		t.Fatalf("expected unresolved reference on encounter, got %+v", eRes.Issues)

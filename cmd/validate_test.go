@@ -1070,3 +1070,56 @@ func TestResultCacheCorruptEntry_IsReportable(t *testing.T) {
 		t.Error("a corrupt entry must not look like a missing one")
 	}
 }
+
+// The walk filter is derived from input.FileTypes; anything it recognises has
+// to reach the validator. A .jsonl sitting unnoticed in a directory was the
+// original complaint (#340), and .fml the same shape of bug (#341).
+func TestCollectFHIRPaths_AllRecognisedExtensions(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.json", "b.xml", "c.ndjson", "d.jsonl", "e.fml", "f.map", "notes.txt", "README.md"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	in := &input.Input{Source: input.SourceDir, Path: dir}
+	paths, err := collectFHIRPaths(in, nil)
+	if err != nil {
+		t.Fatalf("collectFHIRPaths error: %v", err)
+	}
+
+	got := map[string]bool{}
+	for _, p := range paths {
+		got[filepath.Base(p)] = true
+	}
+	for _, want := range []string{"a.json", "b.xml", "c.ndjson", "d.jsonl", "e.fml", "f.map"} {
+		if !got[want] {
+			t.Errorf("%s was not collected: %v", want, paths)
+		}
+	}
+	for _, unwanted := range []string{"notes.txt", "README.md"} {
+		if got[unwanted] {
+			t.Errorf("%s was collected but is not a FHIR input: %v", unwanted, paths)
+		}
+	}
+}
+
+// A format fhirlint cannot read has nothing to extract from or strip out of.
+func TestRequireParsable(t *testing.T) {
+	if err := requireParsable("patient.json", "--extract"); err != nil {
+		t.Errorf("JSON input rejected: %v", err)
+	}
+	if err := requireParsable("export.jsonl", "--ignore"); err != nil {
+		t.Errorf("line-delimited input rejected: %v", err)
+	}
+
+	err := requireParsable("map.fml", "--extract")
+	if err == nil {
+		t.Fatal("err = nil for FHIR Mapping Language input, want a rejection")
+	}
+	for _, want := range []string{"--extract", "FHIR Mapping Language"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("err = %q, want it to mention %q", err, want)
+		}
+	}
+}

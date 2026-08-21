@@ -25,8 +25,12 @@ func TestIsNDJSON(t *testing.T) {
 	}{
 		{"export.ndjson", true},
 		{"export.NDJSON", true},
+		// Same format, the name the surrounding data tooling produces (#340).
+		{"export.jsonl", true},
+		{"export.JSONL", true},
 		{"patient.json", false},
 		{"bundle.xml", false},
+		{"map.fml", false},
 		{"export.ndjson.bak", false},
 	}
 	for _, tc := range cases {

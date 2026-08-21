@@ -12,9 +12,13 @@ import (
 	"github.com/fhirlint/fhirlint/internal/input"
 )
 
-// IsNDJSON reports whether path has the .ndjson extension.
+// IsNDJSON reports whether path holds one resource per line.
+//
+// The answer comes from input.FileTypes rather than from a literal here: the
+// same question is asked by the directory walk, stats and coverage, and the
+// four copies of the answer disagreed (#340).
 func IsNDJSON(path string) bool {
-	return strings.ToLower(filepath.Ext(path)) == ".ndjson"
+	return input.IsLineDelimited(path)
 }
 
 // Split reads an NDJSON file and writes each non-empty line to a separate temp

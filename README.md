@@ -368,7 +368,7 @@ fhirlint validate patient.json
 # Several files and/or directories
 fhirlint validate patient.json observation.json ./fhir/resources/
 
-# Directory — all .json, .xml, and .ndjson files, single JVM invocation
+# Directory — every recognised FHIR file, single JVM invocation
 fhirlint validate ./fhir/resources/
 
 # Stdin
@@ -381,8 +381,12 @@ fhirlint validate \
   --url https://my-api/fhir/Medication/abc \
   --url https://my-api/fhir/MedicationRequest/xyz
 
-# FHIR Bulk Data export (.ndjson) — each line validated as a separate resource
+# Line-delimited export (.ndjson or .jsonl) — each line validated separately
 fhirlint validate export-Patient.ndjson
+fhirlint validate patients.jsonl
+
+# FHIR Mapping Language — the validator builds the StructureMap and validates it
+fhirlint validate transform.fml
 
 # Extract each element of a JSON array and validate separately
 fhirlint validate api-response.json --extract-each "$.medications"
@@ -393,6 +397,26 @@ fhirlint validate ./fhir/ --bundle-entries
 ```
 
 When validating multiple resources (several paths, directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead. Overlapping paths are de-duplicated, so naming a file that a listed directory already covers validates it once.
+
+### Recognised file formats
+
+| Extension | Read as | fhirlint parses it |
+|---|---|---|
+| `.json` | one resource per file | yes |
+| `.xml` | one resource per file | yes |
+| `.ndjson`, `.jsonl` | one resource **per line** | yes |
+| `.fml`, `.map` | FHIR Mapping Language | no — passed to the validator unchanged |
+
+Anything else in a directory is ignored.
+
+`.jsonl` is the same format as `.ndjson` under the name most data tooling produces — DuckDB, Spark, `jq`, pandas — so a dataset assembled outside a FHIR server is handled like a Bulk Data export, with one result per line.
+
+The last column matters for the commands that read files themselves. `stats`, `coverage`, referential integrity, `--extract` and `--ignore` understand JSON and XML; a FHIR Mapping Language file is reported as skipped, with the reason, rather than counted as a broken resource. `--extract` and `--ignore` refuse it outright:
+
+```
+Error: --extract cannot be used with FHIR Mapping Language input (.fml):
+fhirlint passes it to the validator unchanged
+```
 
 ### Skipping non-FHIR files
 
@@ -410,7 +434,7 @@ fhirlint validate ./ --skip-non-fhir
 # Skipped 3 non-FHIR file(s) (--skip-non-fhir)
 ```
 
-A file is only dropped when it parses cleanly **and** demonstrably lacks the FHIR marker — a `resourceType` for JSON, the `http://hl7.org/fhir` namespace for XML. Anything malformed, truncated or unreadable is still validated and still fails, so a broken resource can never disappear from the report by mistake. The number of skipped files is always printed to stderr. NDJSON is never skipped.
+A file is only dropped when it parses cleanly **and** demonstrably lacks the FHIR marker — a `resourceType` for JSON, the `http://hl7.org/fhir` namespace for XML. Anything malformed, truncated or unreadable is still validated and still fails, so a broken resource can never disappear from the report by mistake. The number of skipped files is always printed to stderr. Line-delimited exports and mapping files are never skipped — a bulk export is FHIR by definition, and a mapping file is not something to second-guess from its first bytes.
 
 The flag is opt-in: without it, non-FHIR input is reported as before.
 
@@ -611,7 +635,7 @@ Validation summary
   Files  69   Valid  64 (93%)   Warnings  18   Errors  3
 ```
 
-Resource-type and profile counts are gathered **offline** by parsing each file (`.json`, `.ndjson`, `.xml`); each NDJSON line counts as a resource. The validation summary runs the validator — skip it for an instant, offline overview:
+Resource-type and profile counts are gathered **offline** by parsing each file (`.json`, `.jsonl`, `.ndjson`, `.xml`); each line of a line-delimited export counts as a resource. The validation summary runs the validator — skip it for an instant, offline overview:
 
 ```bash
 fhirlint stats ./fhir/ --no-validate

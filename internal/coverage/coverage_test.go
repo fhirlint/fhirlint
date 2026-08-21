@@ -409,3 +409,32 @@ func TestProfilesFromExcludesOtherPackages(t *testing.T) {
 		t.Error("the supporting profile should still be resolvable by URL")
 	}
 }
+
+// coverage reads files itself, so a format it cannot parse is reported as
+// skipped — the same treatment XML already gets. Counting a mapping file as an
+// unmeasured resource would understate coverage without saying why (#341).
+func TestLoadResources_UnreadableFormatsAreReported(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("patient.json", `{"resourceType":"Patient"}`)
+	write("bulk.jsonl", "{\"resourceType\":\"Observation\"}\n{\"resourceType\":\"Encounter\"}\n")
+	write("transform.fml", `map "http://example.org/StructureMap/Demo" = "Demo"`)
+
+	resources, skipped, err := coverage.LoadResources(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// .jsonl counts per line, exactly like .ndjson.
+	if len(resources) != 3 {
+		t.Errorf("got %d resources, want 3 (one JSON, two JSONL lines)", len(resources))
+	}
+	if len(skipped) != 1 || !strings.Contains(skipped[0].Reason, "FHIR Mapping Language") {
+		t.Errorf("skipped = %+v, want one entry naming the format", skipped)
+	}
+}

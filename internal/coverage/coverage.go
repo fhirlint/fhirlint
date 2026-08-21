@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/input"
 )
 
 // ElementReport is the outcome for one mustSupport element.
@@ -260,6 +262,20 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 		if isExcluded(path, exclude) {
 			return
 		}
+		if ft, known := input.LookupFileType(path); known && ft.Kind == input.KindValidatorOnly {
+			skipped = append(skipped, SkippedFile{Path: path,
+				Reason: ft.Parser + " input is not supported by coverage"})
+			return
+		}
+		if input.IsLineDelimited(path) {
+			rs, err := loadNDJSON(path)
+			if err != nil {
+				skipped = append(skipped, SkippedFile{Path: path, Reason: err.Error()})
+				return
+			}
+			resources = append(resources, rs...)
+			return
+		}
 		switch strings.ToLower(filepath.Ext(path)) {
 		case ".json":
 			res, err := loadJSON(path)
@@ -270,13 +286,6 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 			if res != nil {
 				resources = append(resources, *res)
 			}
-		case ".ndjson":
-			rs, err := loadNDJSON(path)
-			if err != nil {
-				skipped = append(skipped, SkippedFile{Path: path, Reason: err.Error()})
-				return
-			}
-			resources = append(resources, rs...)
 		case ".xml":
 			skipped = append(skipped, SkippedFile{Path: path, Reason: "XML input is not supported by coverage"})
 		}
