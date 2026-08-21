@@ -49,6 +49,9 @@
         "null"
       ]
     },
+    "codesystem-size-limit": {
+      "type": "integer"
+    },
     "display-issues-are-warnings": {
       "type": "boolean"
     },

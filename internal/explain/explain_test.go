@@ -73,8 +73,8 @@ func TestRulesWellFormed(t *testing.T) {
 		if key != strings.ToLower(key) {
 			t.Errorf("rule key %q must be lowercase", key)
 		}
-		if r.ID != key {
-			t.Errorf("rule %q: ID field %q must match its map key", key, r.ID)
+		if strings.ToLower(r.ID) != key {
+			t.Errorf("rule %q: ID field %q must match its map key once lowercased", key, r.ID)
 		}
 		if r.Title == "" || r.DefinedIn == "" || r.Description == "" || r.HowToFix == "" {
 			t.Errorf("rule %q has an empty field", key)

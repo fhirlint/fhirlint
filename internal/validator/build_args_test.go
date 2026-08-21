@@ -566,3 +566,29 @@ func TestDefaultTerminologyEndpoint(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildArgs_CodeSystemSizeLimit(t *testing.T) {
+	limit := 5000
+	args := buildArgs("jar", []string{"p.json"}, "out", Options{FHIRVersion: "4.0.1", CodeSystemSizeLimit: &limit})
+	mustContainPair(t, args, "-codesystem-validation-size-limit", "5000")
+}
+
+// Upstream reads 0 as "check every code", so it has to reach the JAR rather
+// than being folded into "unset" the way a zero-valued int flag would be.
+func TestBuildArgs_CodeSystemSizeLimitZeroMeansNoLimit(t *testing.T) {
+	limit := 0
+	args := buildArgs("jar", []string{"p.json"}, "out", Options{FHIRVersion: "4.0.1", CodeSystemSizeLimit: &limit})
+	mustContainPair(t, args, "-codesystem-validation-size-limit", "0")
+}
+
+// The zero value of Options must not request anything: every existing caller
+// builds Options without this field, and a validator older than 6.10.2 fails
+// outright on the unknown parameter.
+func TestBuildArgs_CodeSystemSizeLimitUnsetPassesNothing(t *testing.T) {
+	args := buildArgs("jar", []string{"p.json"}, "out", Options{FHIRVersion: "4.0.1"})
+	for _, a := range args {
+		if a == "-codesystem-validation-size-limit" {
+			t.Fatalf("unset limit still passed the argument: %v", args)
+		}
+	}
+}

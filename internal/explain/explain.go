@@ -33,8 +33,8 @@ func Known(id string) bool {
 // IDs returns the sorted list of message IDs that have a built-in explanation.
 func IDs() []string {
 	out := make([]string, 0, len(rules))
-	for id := range rules {
-		out = append(out, id)
+	for _, r := range rules {
+		out = append(out, r.ID)
 	}
 	sort.Strings(out)
 	return out

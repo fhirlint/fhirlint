@@ -803,3 +803,18 @@ func TestConfigFile_RedactFromConfig(t *testing.T) {
 		t.Error("redact = false, want true")
 	}
 }
+
+func TestConfigFile_CodeSystemSizeLimitFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "codesystem-size-limit: 5000\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+
+	if got := viper.GetInt("codesystem-size-limit"); got != 5000 {
+		t.Errorf("codesystem-size-limit = %d, want 5000", got)
+	}
+}

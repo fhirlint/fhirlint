@@ -94,6 +94,7 @@ var (
 	flagProxy                    string
 	flagHTTPSProxy               string
 	flagMaxMessages              int
+	flagCodeSystemSizeLimit      int
 	flagURLTimeout               string
 	flagLock                     bool
 	flagGenerateBaseline         string
@@ -206,6 +207,11 @@ func init() {
 		"Stop validating after this long and report partial results (e.g. 90s, 2m). Unset = unbounded.")
 	validateCmd.Flags().IntVar(&flagMaxMessages, "max-messages", 0,
 		"Stop after this many validation messages and report partial results. 0 = unbounded.")
+	validateCmd.Flags().IntVar(&flagCodeSystemSizeLimit, "codesystem-size-limit",
+		validator.UnsetCodeSystemSizeLimit,
+		"Max codes checked per ValueSet include, ConceptMap group or CodeSystem supplement. "+
+			"0 = no limit; -1 leaves the validator's own default (1000) in place.")
+	_ = viper.BindPFlag("codesystem-size-limit", validateCmd.Flags().Lookup("codesystem-size-limit"))
 	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
 	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
 	// Credentials deliberately have no flag and no config key — see
@@ -409,6 +415,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("max-messages") && viper.IsSet("max-messages") {
 		flagMaxMessages = viper.GetInt("max-messages")
 	}
+	if !cmd.Flags().Changed("codesystem-size-limit") && viper.IsSet("codesystem-size-limit") {
+		flagCodeSystemSizeLimit = viper.GetInt("codesystem-size-limit")
+	}
 	if !cmd.Flags().Changed("proxy") && viper.IsSet("proxy") {
 		flagProxy = viper.GetString("proxy")
 	}
@@ -510,6 +519,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if flagMaxMessages < 0 {
 		return fmt.Errorf("--max-messages must be zero or positive, got %d", flagMaxMessages)
 	}
+	if flagCodeSystemSizeLimit < validator.UnsetCodeSystemSizeLimit {
+		return fmt.Errorf("--codesystem-size-limit must be -1 (the validator's default), 0 (no limit) or positive, got %d",
+			flagCodeSystemSizeLimit)
+	}
 
 	var urlTimeout time.Duration
 	if flagURLTimeout != "0" {
@@ -577,6 +590,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		ExtraArgs:                flagValidatorArg,
 		ValidationTimeout:        validationTimeout,
 		MaxMessages:              flagMaxMessages,
+		CodeSystemSizeLimit:      codeSystemSizeLimitOpt(flagCodeSystemSizeLimit),
 		Proxy:                    validator.ProxyConfig{Proxy: flagProxy, HTTPSProxy: flagHTTPSProxy},
 		Timeout:                  validatorTimeout,
 	}
@@ -2920,4 +2934,14 @@ func checkExitCode(results []*validator.Result, neverFailPaths map[string]struct
 		}
 	}
 	return nil
+}
+
+// codeSystemSizeLimitOpt turns the flag's int sentinel into the optional value
+// the validator options carry. The flag needs a sentinel because a command line
+// cannot express nil; the option needs a pointer because 0 is a real setting.
+func codeSystemSizeLimitOpt(v int) *int {
+	if v == validator.UnsetCodeSystemSizeLimit {
+		return nil
+	}
+	return &v
 }

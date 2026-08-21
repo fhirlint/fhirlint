@@ -107,6 +107,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 
 func TerminalSummary(results []*validator.Result, minSeverity string) int {
 	total, fatalCount, errCount, warnCount, suppCount := 0, 0, 0, 0, 0
+	skippedChecks := 0
 	for _, r := range results {
 		for _, issue := range filterIssues(r.Issues, minSeverity) {
 			total++
@@ -120,6 +121,16 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 			}
 		}
 		suppCount += len(r.Suppressed)
+		// Counted over every issue, not the severity-filtered ones: the
+		// validator reports a skipped check as a hint, so the default filter
+		// would hide exactly the message that says a check did not run.
+		// Suppressed issues are already out of r.Issues, so a project that
+		// deliberately suppressed the hint is not nagged about it.
+		for _, issue := range r.Issues {
+			if validator.IsSkippedCheck(issue.MessageID) {
+				skippedChecks++
+			}
+		}
 	}
 	validCount := 0
 	for _, r := range results {
@@ -143,6 +154,13 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 		line += dimStyle.Render(fmt.Sprintf("  Suppressed: %d", suppCount))
 	}
 	fmt.Println(line)
+	if skippedChecks > 0 {
+		// A run where a class of checks did not execute is not the same as a
+		// clean run, and the hint that says so is easy to filter away.
+		fmt.Println(warningStyle.Render(fmt.Sprintf(
+			"Checks skipped: %d — too many codes to check against a code system. See --codesystem-size-limit.",
+			skippedChecks)))
+	}
 	return total
 }
 
