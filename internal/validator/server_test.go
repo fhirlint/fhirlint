@@ -139,3 +139,21 @@ func TestLooksLikeXML(t *testing.T) {
 		}
 	}
 }
+
+func TestServerArgs_NoHTTPAccess(t *testing.T) {
+	args := serverArgs("jar", ServerConfig{Port: 8080, FHIRVersion: "4.0.1", Offline: true, NoTerminologyServer: true})
+	if !containsArg(args, "-no-http-access") {
+		t.Errorf("offline server did not block the JAR's network: %v", args)
+	}
+
+	// The replay server lives on loopback, which the block would cut off too.
+	args = serverArgs("jar", ServerConfig{Port: 8080, FHIRVersion: "4.0.1", Offline: true, TerminologyServer: "http://127.0.0.1:8081"})
+	if containsArg(args, "-no-http-access") {
+		t.Errorf("replay server passed -no-http-access, blocking its own terminology: %v", args)
+	}
+
+	args = serverArgs("jar", ServerConfig{Port: 8080, FHIRVersion: "4.0.1"})
+	if containsArg(args, "-no-http-access") {
+		t.Errorf("ordinary server blocked the JAR's network: %v", args)
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/igaudit"
 )
 
@@ -109,6 +110,12 @@ type Options struct {
 	// validator checks none of them and issues a hint instead, because every
 	// code costs a terminology round trip.
 	//
+	// Offline forbids this run from using the network. fhirlint refuses to
+	// download the JAR or fetch IG packages, and — when nothing in the run
+	// needs a local loopback server — the JAR is told to block HTTP itself with
+	// -no-http-access, which is what turns the promise into an enforced one.
+	Offline bool
+
 	// A pointer because upstream's 0 means "no limit", so it cannot double as
 	// "not specified". nil passes no argument at all and leaves the validator's
 	// own default in place (1000 as of 6.10.2, where the parameter appeared).
@@ -203,6 +210,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	if opts.ValidationTimeout > 0 {
 		args = append(args, "-validation-timeout", strconv.FormatInt(opts.ValidationTimeout.Milliseconds(), 10))
 	}
+	if blocksJARNetwork(opts.Offline, opts.TerminologyServer) {
+		args = append(args, "-no-http-access")
+	}
 	if opts.CodeSystemSizeLimit != nil {
 		args = append(args, "-codesystem-validation-size-limit", strconv.Itoa(*opts.CodeSystemSizeLimit))
 	}
@@ -258,9 +268,47 @@ func IsSkippedCheck(messageID string) bool {
 	return false
 }
 
+// requireCachedJAR stops an offline run before EnsureJAR reaches for the
+// network. Downloading 250 MB is exactly what --offline promises not to do, and
+// finding that out from a stalled progress line would be worse than an error.
+func requireCachedJAR(offline bool, jarPath string) error {
+	if !offline || jarPath != "" {
+		return nil
+	}
+	path, err := cache.JARPath()
+	if err != nil {
+		return fmt.Errorf("--offline: cannot locate the JAR cache: %w", err)
+	}
+	if _, statErr := os.Stat(path); statErr != nil {
+		return fmt.Errorf(
+			"--offline: no validator JAR in the cache (%s) — run 'fhirlint update' once with network access, or point --jar at a local copy",
+			path)
+	}
+	return nil
+}
+
 // minCodeSystemSizeLimitVersion is the first validator release that understands
 // -codesystem-validation-size-limit.
 const minCodeSystemSizeLimitVersion = "6.10.2"
+
+// minNoHTTPAccessVersion is the first validator release that understands
+// -no-http-access (added with the managed-web-access options in 6.10.0).
+const minNoHTTPAccessVersion = "6.10.0"
+
+// blocksJARNetwork reports whether this run can hand the JAR its own network
+// block.
+//
+// -no-http-access sets the validator's access policy to PROHIBITED, and that
+// policy refuses every request unconditionally — there is no loopback
+// exemption (the localhost list in ManagedWebAccess only governs the
+// http→https upgrade). So a run replaying terminology from fhirlint's local
+// server cannot use it: the block would cut off the replay server too.
+//
+// The guarantee therefore differs by mode, and the caller says which one is in
+// force rather than leaving the user to guess.
+func blocksJARNetwork(offline bool, terminologyServer string) bool {
+	return offline && terminologyServer == ""
+}
 
 // checkOptionsSupported rejects options the JAR in use is too old to
 // understand. An unknown parameter makes the validator exit without producing
@@ -270,16 +318,51 @@ const minCodeSystemSizeLimitVersion = "6.10.2"
 // An empty or unorderable version is not treated as evidence: better to let the
 // run proceed and fail upstream than to refuse on a guess.
 func checkOptionsSupported(opts Options, jarVersion string) error {
-	if opts.CodeSystemSizeLimit == nil || jarVersion == "" {
+	if jarVersion == "" {
 		return nil
 	}
-	cmp, ok := igaudit.CompareVersions(jarVersion, minCodeSystemSizeLimitVersion)
+	if opts.CodeSystemSizeLimit != nil {
+		if err := requireVersion(jarVersion, minCodeSystemSizeLimitVersion, "--codesystem-size-limit"); err != nil {
+			return err
+		}
+	}
+	if blocksJARNetwork(opts.Offline, opts.TerminologyServer) {
+		if err := requireVersion(jarVersion, minNoHTTPAccessVersion, "--offline"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// jarVersion reports the version of the JAR this run actually executes.
+//
+// ValidatorVersion() answers a different question — what is in the cache — and
+// a run started with --jar or FHIRLINT_JAR does not execute that file. Asking
+// the cache there produces a version guard that refuses a JAR new enough to
+// have the flag, which is the most annoying way for a guard to be wrong.
+func jarVersion(jarPath string) string {
+	cachedPath, err := cache.JARPath()
+	if err == nil && jarPath == cachedPath {
+		return ValidatorVersion()
+	}
+	if v := versionFromJARManifest(jarPath); v != "" {
+		return v
+	}
+	// Unknown rather than the cache's answer: an unreadable manifest must not
+	// be reported as some other JAR's version.
+	return ""
+}
+
+// requireVersion rejects a flag the JAR in use is too old to understand. An
+// unorderable version is not treated as evidence.
+func requireVersion(jarVersion, minVersion, flag string) error {
+	cmp, ok := igaudit.CompareVersions(jarVersion, minVersion)
 	if !ok || cmp >= 0 {
 		return nil
 	}
 	return fmt.Errorf(
-		"--codesystem-size-limit needs validator %s or newer, but the JAR in use is %s — run 'fhirlint update', or drop the flag",
-		minCodeSystemSizeLimitVersion, jarVersion)
+		"%s needs validator %s or newer, but the JAR in use is %s — run 'fhirlint update', or drop the flag",
+		flag, minVersion, jarVersion)
 }
 
 // allowedBestPractice lists the values the HL7 validator JAR accepts for -best-practice.
@@ -323,11 +406,14 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 		return err
 	}
 
+	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
+		return err
+	}
 	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return err
 	}
-	if err := checkOptionsSupported(opts, ValidatorVersion()); err != nil {
+	if err := checkOptionsSupported(opts, jarVersion(jarPath)); err != nil {
 		return err
 	}
 
@@ -373,11 +459,14 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, err
 	}
 
+	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
+		return nil, err
+	}
 	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
 		return nil, err
 	}
-	if err := checkOptionsSupported(opts, ValidatorVersion()); err != nil {
+	if err := checkOptionsSupported(opts, jarVersion(jarPath)); err != nil {
 		return nil, err
 	}
 

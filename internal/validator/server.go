@@ -33,6 +33,12 @@ type ServerConfig struct {
 	JARPath             string
 	Proxy               ProxyConfig
 	ValidatorVersion    string
+
+	// Offline forbids network access for the server's whole lifetime: the JAR
+	// comes from the cache and is never downloaded, and — unless terminology is
+	// being replayed from a loopback server — the JAR is told to block HTTP
+	// itself. See Options.Offline.
+	Offline bool
 }
 
 // Server is a handle to a running validator HTTP server process.
@@ -45,6 +51,9 @@ type Server struct {
 // serverArgs builds the `server <port> …` argument list.
 func serverArgs(jarPath string, cfg ServerConfig) []string {
 	args := []string{"-jar", jarPath, "server", strconv.Itoa(cfg.Port), "-version", cfg.FHIRVersion}
+	if blocksJARNetwork(cfg.Offline, cfg.TerminologyServer) {
+		args = append(args, "-no-http-access")
+	}
 	switch {
 	case cfg.NoTerminologyServer:
 		args = append(args, "-tx", "n/a")
@@ -78,9 +87,17 @@ func StartServer(cfg ServerConfig, logW io.Writer, readyTimeout time.Duration) (
 	if err := validateFHIRVersion(cfg.FHIRVersion); err != nil {
 		return nil, err
 	}
+	if err := requireCachedJAR(cfg.Offline, cfg.JARPath); err != nil {
+		return nil, err
+	}
 	jarPath, err := EnsureJAR(cfg.JARPath, cfg.ValidatorVersion)
 	if err != nil {
 		return nil, err
+	}
+	if blocksJARNetwork(cfg.Offline, cfg.TerminologyServer) {
+		if err := requireVersion(jarVersion(jarPath), minNoHTTPAccessVersion, "--offline"); err != nil {
+			return nil, err
+		}
 	}
 
 	rw := &readyWriter{w: logW, marker: serverReadyMarker, ready: make(chan struct{})}

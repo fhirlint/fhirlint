@@ -164,6 +164,9 @@
     "no-terminology-server": {
       "type": "boolean"
     },
+    "offline": {
+      "type": "boolean"
+    },
     "output": {
       "type": [
         "string",

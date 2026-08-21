@@ -230,6 +230,11 @@ ignore:
 # validation-timeout: 2m
 # max-messages: 500
 
+# Forbid all network access: use the cached validator JAR and cached IG
+# packages, skip terminology unless a recording is replayed with tx-offline,
+# and block the validator's own HTTP where possible.
+# offline: true
+
 # Max codes checked against a code system for one ValueSet include, ConceptMap
 # group or CodeSystem supplement. Past this many, the validator checks none of
 # them and issues a hint instead — each code costs a terminology round trip.

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/fhirlint/fhirlint/internal/cache"
 )
 
 // fixtureOO loads a testdata/fixtures/*.json file as an operationOutcome.
@@ -370,5 +372,111 @@ func TestCheckOptionsSupported_CodeSystemSizeLimit(t *testing.T) {
 		if err := checkOptionsSupported(set, version); err != nil {
 			t.Errorf("checkOptionsSupported(%q) = %v, want nil", version, err)
 		}
+	}
+}
+
+// -no-http-access blocks every request the validator makes, loopback included:
+// the PROHIBITED policy has no exemption, verified against 6.10.2. So a run
+// replaying terminology from fhirlint's own local server cannot use it.
+func TestBlocksJARNetwork(t *testing.T) {
+	cases := []struct {
+		name              string
+		offline           bool
+		terminologyServer string
+		want              bool
+	}{
+		{"offline, terminology skipped", true, "", true},
+		{"offline, replaying from loopback", true, "http://127.0.0.1:8081", false},
+		{"offline, remote terminology", true, "https://tx.fhir.org", false},
+		{"not offline", false, "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := blocksJARNetwork(tc.offline, tc.terminologyServer); got != tc.want {
+				t.Errorf("blocksJARNetwork = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBuildArgs_NoHTTPAccess(t *testing.T) {
+	args := buildArgs("jar", []string{"p.json"}, "out",
+		Options{FHIRVersion: "4.0.1", Offline: true, NoTerminologyServer: true})
+	if !containsArg(args, "-no-http-access") {
+		t.Errorf("offline run did not block the JAR's network: %v", args)
+	}
+
+	// Replaying terminology: the block would cut off the replay server too.
+	args = buildArgs("jar", []string{"p.json"}, "out",
+		Options{FHIRVersion: "4.0.1", Offline: true, TerminologyServer: "http://127.0.0.1:8081"})
+	if containsArg(args, "-no-http-access") {
+		t.Errorf("replay run passed -no-http-access, which would block its own server: %v", args)
+	}
+
+	args = buildArgs("jar", []string{"p.json"}, "out", Options{FHIRVersion: "4.0.1"})
+	if containsArg(args, "-no-http-access") {
+		t.Errorf("ordinary run blocked the JAR's network: %v", args)
+	}
+}
+
+func containsArg(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCheckOptionsSupported_NoHTTPAccessNeedsVersion(t *testing.T) {
+	offline := Options{Offline: true, NoTerminologyServer: true}
+
+	if err := checkOptionsSupported(offline, "6.9.6"); err == nil {
+		t.Error("err = nil for a JAR without -no-http-access, want a rejection")
+	} else if !strings.Contains(err.Error(), "--offline") || !strings.Contains(err.Error(), "6.10.0") {
+		t.Errorf("err = %q, want it to name the flag and the required version", err)
+	}
+
+	if err := checkOptionsSupported(offline, "6.10.2"); err != nil {
+		t.Errorf("checkOptionsSupported(6.10.2) = %v, want nil", err)
+	}
+
+	// Replaying terminology means no -no-http-access, so no version floor.
+	replay := Options{Offline: true, TerminologyServer: "http://127.0.0.1:8081"}
+	if err := checkOptionsSupported(replay, "6.9.6"); err != nil {
+		t.Errorf("replay run rejected on an older JAR: %v", err)
+	}
+}
+
+// An offline run must fail before EnsureJAR reaches for the network, and only
+// when there is nothing cached to run.
+func TestRequireCachedJAR(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(cache.DirEnvVar, dir)
+
+	err := requireCachedJAR(true, "")
+	if err == nil {
+		t.Fatal("err = nil with an empty cache, want a refusal to download")
+	}
+	if !strings.Contains(err.Error(), "fhirlint update") {
+		t.Errorf("err = %q, want it to say how to populate the cache", err)
+	}
+
+	// An explicit --jar is the user pointing at a local file: nothing to fetch.
+	if err := requireCachedJAR(true, "/some/local.jar"); err != nil {
+		t.Errorf("explicit JAR path rejected: %v", err)
+	}
+
+	// Not offline: EnsureJAR may download as usual.
+	if err := requireCachedJAR(false, ""); err != nil {
+		t.Errorf("online run rejected: %v", err)
+	}
+
+	jar := filepath.Join(dir, "validator_cli.jar")
+	if writeErr := os.WriteFile(jar, []byte("not really a jar"), 0o600); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	if err := requireCachedJAR(true, ""); err != nil {
+		t.Errorf("cached JAR rejected: %v", err)
 	}
 }
