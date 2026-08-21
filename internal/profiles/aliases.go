@@ -18,9 +18,14 @@ import (
 // name#version reference directly to target a different version.
 var Aliases = map[string][]string{
 	// German profiles
-	"kbv-basis":   {"kbv.basis#1.5.0"},
-	"kbv-patient": {"kbv.basis#1.5.0"},
-	"diga":        {"de.bfarm.diga#1.2.0"},
+	"kbv-basis":   {"kbv.basis#1.9.0"},
+	"kbv-patient": {"kbv.basis#1.9.0"},
+
+	// DiGA profiles are published by the KBV as the MIO DiGA Toolkit, not by the
+	// BfArM: there is no de.bfarm.diga package on any registry, and this alias
+	// pointed at one until #335. kbv.mio.diga depends on kbv.basis 1.3.0, so a
+	// run combining `diga` with `kbv-basis` loads two versions of kbv.basis.
+	"diga": {"kbv.mio.diga#1.1.0"},
 
 	// MII Kerndatensatz, module by module. The modules are not on a common
 	// release train — person/fall/diagnose/prozedur are on 2025.0.x and depend
@@ -44,9 +49,12 @@ var Aliases = map[string][]string{
 	"mii-medikation":  {"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1"},
 
 	// International profiles
-	"us-core": {"hl7.fhir.us.core#9.0.0"},    // US Core (HL7 US Realm)
-	"ips":     {"hl7.fhir.uv.ips#2.0.1"},     // International Patient Summary
-	"ipa":     {"hl7.fhir.uv.ipa#1.1.0"},     // International Patient Access
+	"us-core": {"hl7.fhir.us.core#9.0.0"}, // US Core (HL7 US Realm)
+	"ips":     {"hl7.fhir.uv.ips#2.0.1"},  // International Patient Summary
+	"ipa":     {"hl7.fhir.uv.ipa#1.1.0"},  // International Patient Access
+	// UK Core: the registry serves a 2.1.0, but dist-tags.latest is still 2.0.2 on
+	// both packages.fhir.org and packages.simplifier.net, so 2.1.0 is not (yet)
+	// the published current release. Pin the tag, not the highest number.
 	"uk-core": {"fhir.r4.ukcore.stu2#2.0.2"}, // UK Core (NHS England, STU2)
 }
 

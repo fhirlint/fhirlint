@@ -24,8 +24,8 @@ fhirlint profiles
 
 | Alias | IG package | Covers |
 |-------|-----------|--------|
-| `kbv-basis` | `kbv.basis#1.5.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
-| `kbv-patient` | `kbv.basis#1.5.0` | KBV Patient profile specifically |
+| `kbv-basis` | `kbv.basis#1.9.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
+| `kbv-patient` | `kbv.basis#1.9.0` | KBV Patient profile specifically |
 | `mii` | all six modules below | MII core dataset, complete |
 | `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` | Patient, Practitioner, Organization |
 | `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` | Encounter |
@@ -33,7 +33,7 @@ fhirlint profiles
 | `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` | Procedure |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
-| `diga` | `de.bfarm.diga#1.2.0` | DiGA framework profiles |
+| `diga` | `kbv.mio.diga#1.1.0` | KBV MIO DiGA Toolkit profiles |
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
 
@@ -149,16 +149,24 @@ fhirlint validate patient.json \
 
 ## DiGA — Digitale Gesundheitsanwendungen
 
-DiGAs (digital health applications) must comply with the BfArM DiGA framework, which defines FHIR profiles for DiGA prescription codes and supporting resources.
+DiGAs (digital health applications) export patient data through the **MIO DiGA
+Toolkit**, published by the KBV as `kbv.mio.diga` — 48 profiles covering the
+export Bundle, Observation, CarePlan, Questionnaire and the rest. The BfArM
+defines the regulatory framework but publishes no FHIR package of its own, which
+is what the `diga` alias pointed at until #335.
 
 ### Validate against DiGA profiles
 
 ```bash
-fhirlint validate diga-codierung.json --profile diga
+fhirlint validate diga-export.json --profile diga
 
 # Equivalent
-fhirlint validate diga-codierung.json --ig de.bfarm.diga#1.2.0
+fhirlint validate diga-export.json --ig kbv.mio.diga#1.1.0
 ```
+
+`kbv.mio.diga` depends on `kbv.basis` 1.3.0. Combining `diga` with `kbv-basis`
+therefore loads two versions of `kbv.basis`; the validator accepts that, but pin
+`kbv.basis#1.3.0` explicitly if you need one version for the whole run.
 
 ### DiGA in CI
 
@@ -166,7 +174,7 @@ fhirlint validate diga-codierung.json --ig de.bfarm.diga#1.2.0
 # fhirlint.yml for a DiGA project
 fhir-version: 4.0.1
 ig:
-  - de.bfarm.diga#1.2.0
+  - kbv.mio.diga#1.1.0
 fail-on: error
 suppress:
   - constraint: dom-6

@@ -11,9 +11,9 @@ func TestResolve_KnownAliases(t *testing.T) {
 		alias string
 		want  []string
 	}{
-		{"kbv-basis", []string{"kbv.basis#1.5.0"}},
-		{"kbv-patient", []string{"kbv.basis#1.5.0"}},
-		{"diga", []string{"de.bfarm.diga#1.2.0"}},
+		{"kbv-basis", []string{"kbv.basis#1.9.0"}},
+		{"kbv-patient", []string{"kbv.basis#1.9.0"}},
+		{"diga", []string{"kbv.mio.diga#1.1.0"}},
 		{"mii-person", []string{"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"}},
 		{"mii-laborbefund", []string{"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"}},
 		{"us-core", []string{"hl7.fhir.us.core#9.0.0"}},

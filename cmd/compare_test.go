@@ -56,7 +56,7 @@ func TestResolveCompareSide_PackageAliasResolves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if ig != "kbv.basis#1.5.0" {
+	if ig != "kbv.basis#1.9.0" {
 		t.Errorf("ig = %q, want the alias resolved to a package spec", ig)
 	}
 	if canonical != "KBV_PR_Base_Patient" {

@@ -1746,8 +1746,8 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 
 | Alias | Resolves to |
 |-------|-------------|
-| `kbv-basis` | `kbv.basis#1.5.0` |
-| `kbv-patient` | `kbv.basis#1.5.0` |
+| `kbv-basis` | `kbv.basis#1.9.0` |
+| `kbv-patient` | `kbv.basis#1.9.0` |
 | `mii` | all six MII Kerndatensatz modules (see below) |
 | `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` |
 | `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` |
@@ -1755,7 +1755,7 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 | `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` |
-| `diga` | `de.bfarm.diga#1.2.0` |
+| `diga` | `kbv.mio.diga#1.1.0` |
 
 An alias can stand for more than one package. The MII publishes no umbrella
 package — the Kerndatensatz ships module by module — so `mii` loads all six
