@@ -2980,19 +2980,43 @@ func codeSystemSizeLimitOpt(v int) *int {
 // different guarantees, and the weaker one says so rather than implying a block
 // that is not in place.
 func applyOffline(opts *validator.Options, w io.Writer) error {
-	replaying := opts.TerminologyServer != ""
-
-	if !replaying && !opts.NoTerminologyServer {
+	if announceOffline(w, opts.TerminologyServer != "") && !opts.NoTerminologyServer {
 		opts.NoTerminologyServer = true
-		_, _ = fmt.Fprintln(w, "--offline: terminology checks are skipped (no reachable server). "+
-			"Record one with 'fhirlint tx warm' and replay it with --tx-offline to keep them.")
 	}
+	return requireCachedIGs(opts.IGs, opts.Profiles)
+}
+
+// applyOfflineServer is applyOffline for the long-lived validator server, which
+// `serve` runs and `lsp` starts on the user's behalf. Same policy, different
+// struct: the server's terminology settings are fixed for its lifetime, so the
+// decision is made once here rather than per request.
+func applyOfflineServer(cfg *validator.ServerConfig, w io.Writer) error {
+	if announceOffline(w, cfg.TerminologyServer != "") && !cfg.NoTerminologyServer {
+		cfg.NoTerminologyServer = true
+	}
+	cfg.Offline = true
+	return requireCachedIGs(cfg.IGs, cfg.Profiles)
+}
+
+// announceOffline states which guarantee an offline run actually gets and
+// reports whether terminology has to be switched off to get it.
+//
+// Terminology is the part that cannot be handled silently. Left alone, the
+// validator would go to tx.fhir.org. And a replay means a loopback HTTP server,
+// which -no-http-access would block along with everything else — the JAR's
+// PROHIBITED policy has no loopback exemption. So the two modes come with
+// different guarantees, and the weaker one says so rather than implying a block
+// that is not in place.
+func announceOffline(w io.Writer, replaying bool) (skipTerminology bool) {
 	if replaying {
 		_, _ = fmt.Fprintln(w, "--offline: terminology is replayed from a local server, so the validator's own "+
 			"network block cannot be used. fhirlint downloads nothing; the JAR could still follow a URL "+
 			"if content asks it to. For a hard block, drop --tx-offline or isolate the network.")
+		return false
 	}
-	return requireCachedIGs(opts.IGs, opts.Profiles)
+	_, _ = fmt.Fprintln(w, "--offline: terminology checks are skipped (no reachable server). "+
+		"Record one with 'fhirlint tx warm' and replay it with --tx-offline to keep them.")
+	return true
 }
 
 // requireCachedIGs fails an offline run whose IG packages are not in the local

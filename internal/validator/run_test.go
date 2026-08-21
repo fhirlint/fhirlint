@@ -380,18 +380,19 @@ func TestCheckOptionsSupported_CodeSystemSizeLimit(t *testing.T) {
 // replaying terminology from fhirlint's own local server cannot use it.
 func TestBlocksJARNetwork(t *testing.T) {
 	cases := []struct {
-		name string
-		opts Options
-		want bool
+		name              string
+		offline           bool
+		terminologyServer string
+		want              bool
 	}{
-		{"offline, terminology skipped", Options{Offline: true, NoTerminologyServer: true}, true},
-		{"offline, replaying from loopback", Options{Offline: true, TerminologyServer: "http://127.0.0.1:8081"}, false},
-		{"offline, remote terminology", Options{Offline: true, TerminologyServer: "https://tx.fhir.org"}, false},
-		{"not offline", Options{NoTerminologyServer: true}, false},
+		{"offline, terminology skipped", true, "", true},
+		{"offline, replaying from loopback", true, "http://127.0.0.1:8081", false},
+		{"offline, remote terminology", true, "https://tx.fhir.org", false},
+		{"not offline", false, "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := blocksJARNetwork(tc.opts); got != tc.want {
+			if got := blocksJARNetwork(tc.offline, tc.terminologyServer); got != tc.want {
 				t.Errorf("blocksJARNetwork = %v, want %v", got, tc.want)
 			}
 		})
@@ -453,7 +454,7 @@ func TestRequireCachedJAR(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(cache.DirEnvVar, dir)
 
-	err := requireCachedJAR(Options{Offline: true})
+	err := requireCachedJAR(true, "")
 	if err == nil {
 		t.Fatal("err = nil with an empty cache, want a refusal to download")
 	}
@@ -462,12 +463,12 @@ func TestRequireCachedJAR(t *testing.T) {
 	}
 
 	// An explicit --jar is the user pointing at a local file: nothing to fetch.
-	if err := requireCachedJAR(Options{Offline: true, JARPath: "/some/local.jar"}); err != nil {
+	if err := requireCachedJAR(true, "/some/local.jar"); err != nil {
 		t.Errorf("explicit JAR path rejected: %v", err)
 	}
 
 	// Not offline: EnsureJAR may download as usual.
-	if err := requireCachedJAR(Options{}); err != nil {
+	if err := requireCachedJAR(false, ""); err != nil {
 		t.Errorf("online run rejected: %v", err)
 	}
 
@@ -475,7 +476,7 @@ func TestRequireCachedJAR(t *testing.T) {
 	if writeErr := os.WriteFile(jar, []byte("not really a jar"), 0o600); writeErr != nil {
 		t.Fatal(writeErr)
 	}
-	if err := requireCachedJAR(Options{Offline: true}); err != nil {
+	if err := requireCachedJAR(true, ""); err != nil {
 		t.Errorf("cached JAR rejected: %v", err)
 	}
 }

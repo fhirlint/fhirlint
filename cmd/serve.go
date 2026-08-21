@@ -27,6 +27,7 @@ var (
 	flagServeTxCache             string
 	flagServeTxOffline           bool
 	flagServeTxDir               string
+	flagServeOffline             bool
 )
 
 var serveCmd = &cobra.Command{
@@ -64,6 +65,8 @@ func init() {
 		"Replay terminology responses recorded by 'fhirlint tx warm' instead of contacting a server")
 	serveCmd.Flags().StringVar(&flagServeTxDir, "tx-dir", "",
 		"Directory holding the terminology recording (default: "+txreplay.DefaultDir+"/)")
+	serveCmd.Flags().BoolVar(&flagServeOffline, "offline", false,
+		"Forbid all network access: cached JAR, cached IG packages, and the validator's own HTTP blocked")
 
 	noFile := cobra.ShellCompDirectiveNoFileComp
 	_ = serveCmd.RegisterFlagCompletionFunc("fhir-version", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -72,6 +75,11 @@ func init() {
 }
 
 func runServe(cmd *cobra.Command, _ []string) error {
+	if flagServeOffline && cmd.Flags().Changed("terminology-server") {
+		return fmt.Errorf("--offline forbids network access, so it cannot be combined with --terminology-server — " +
+			"drop one, or replay a recording with --tx-offline")
+	}
+
 	// Offline terminology: stand in for the terminology server for the whole
 	// lifetime of the validator server.
 	var txPlayer *txreplay.Server
@@ -125,6 +133,12 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		JARPath:             viper.GetString("jar"),
 		Proxy:               validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 		ValidatorVersion:    viper.GetString("validator-version"),
+	}
+
+	if flagServeOffline {
+		if err := applyOfflineServer(&cfg, os.Stderr); err != nil {
+			return err
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Starting validator server on port %d (FHIR %s)…\n", cfg.Port, cfg.FHIRVersion)

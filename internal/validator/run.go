@@ -210,7 +210,7 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	if opts.ValidationTimeout > 0 {
 		args = append(args, "-validation-timeout", strconv.FormatInt(opts.ValidationTimeout.Milliseconds(), 10))
 	}
-	if blocksJARNetwork(opts) {
+	if blocksJARNetwork(opts.Offline, opts.TerminologyServer) {
 		args = append(args, "-no-http-access")
 	}
 	if opts.CodeSystemSizeLimit != nil {
@@ -271,8 +271,8 @@ func IsSkippedCheck(messageID string) bool {
 // requireCachedJAR stops an offline run before EnsureJAR reaches for the
 // network. Downloading 250 MB is exactly what --offline promises not to do, and
 // finding that out from a stalled progress line would be worse than an error.
-func requireCachedJAR(opts Options) error {
-	if !opts.Offline || opts.JARPath != "" {
+func requireCachedJAR(offline bool, jarPath string) error {
+	if !offline || jarPath != "" {
 		return nil
 	}
 	path, err := cache.JARPath()
@@ -306,8 +306,8 @@ const minNoHTTPAccessVersion = "6.10.0"
 //
 // The guarantee therefore differs by mode, and the caller says which one is in
 // force rather than leaving the user to guess.
-func blocksJARNetwork(opts Options) bool {
-	return opts.Offline && opts.TerminologyServer == ""
+func blocksJARNetwork(offline bool, terminologyServer string) bool {
+	return offline && terminologyServer == ""
 }
 
 // checkOptionsSupported rejects options the JAR in use is too old to
@@ -326,7 +326,7 @@ func checkOptionsSupported(opts Options, jarVersion string) error {
 			return err
 		}
 	}
-	if blocksJARNetwork(opts) {
+	if blocksJARNetwork(opts.Offline, opts.TerminologyServer) {
 		if err := requireVersion(jarVersion, minNoHTTPAccessVersion, "--offline"); err != nil {
 			return err
 		}
@@ -406,7 +406,7 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 		return err
 	}
 
-	if err := requireCachedJAR(opts); err != nil {
+	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
 		return err
 	}
 	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
@@ -459,7 +459,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, err
 	}
 
-	if err := requireCachedJAR(opts); err != nil {
+	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
 		return nil, err
 	}
 	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)

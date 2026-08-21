@@ -1303,6 +1303,15 @@ isolate the network.
 
 `--offline` needs validator 6.10.0 or newer (where `-no-http-access` was added) and refuses to run against an older JAR rather than failing obscurely. `--offline` and `--terminology-server` are mutually exclusive.
 
+The same flag is on [`fhirlint serve`](#server-mode-warm-validator) and [`fhirlint lsp`](#editor-integration-language-server), where the decision is made once for the server's lifetime:
+
+```bash
+fhirlint serve --offline --ig kbv.basis#1.9.0
+fhirlint lsp --offline
+```
+
+`lsp --offline --server <url>` is the one case where it does nothing: that server belongs to another process, started with whatever policy its owner chose, and the run says so instead of implying otherwise.
+
 ### Offline terminology
 
 `--tx-offline` replays terminology responses recorded earlier, so a validation run needs no terminology server at all. This is what makes a run reproducible: same inputs, same recording, same result, no network.

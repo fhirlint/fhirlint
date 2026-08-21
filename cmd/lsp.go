@@ -21,6 +21,7 @@ var (
 	flagLSPIG          []string
 	flagLSPProfile     []string
 	flagLSPNoSuppress  bool
+	flagLSPOffline     bool
 )
 
 var lspCmd = &cobra.Command{
@@ -56,6 +57,8 @@ func init() {
 		"Profile alias or URL applied to every validated document (repeatable)")
 	lspCmd.Flags().BoolVar(&flagLSPNoSuppress, "no-suppress-action", false,
 		"Do not offer the quick fix that writes suppressions into fhirlint.yml")
+	lspCmd.Flags().BoolVar(&flagLSPOffline, "offline", false,
+		"Forbid all network access for the validator server this starts")
 }
 
 func runLSP(cmd *cobra.Command, _ []string) error {
@@ -77,6 +80,13 @@ func runLSP(cmd *cobra.Command, _ []string) error {
 	opts := validator.Options{Profiles: resolvedProfiles}
 
 	serverURL := flagLSPServer
+	if flagLSPOffline && serverURL != "" {
+		// Nothing to enforce: the server is someone else's process, started
+		// with whatever policy its owner chose. Say so rather than implying
+		// this run made it offline.
+		_, _ = fmt.Fprintln(logW, "fhirlint lsp: --offline has no effect with --server; "+
+			"the validator server was started elsewhere, with its own network policy.")
+	}
 	if serverURL == "" {
 		if err := validator.CheckJava(); err != nil {
 			return err
@@ -86,14 +96,21 @@ func runLSP(cmd *cobra.Command, _ []string) error {
 			return err
 		}
 		_, _ = fmt.Fprintln(logW, "fhirlint lsp: starting validator server…")
-		srv, err := validator.StartServer(validator.ServerConfig{
+		cfg := validator.ServerConfig{
 			Port:             port,
 			FHIRVersion:      flagLSPFHIRVersion,
 			IGs:              resolveIGs(flagLSPIG),
+			Profiles:         resolvedProfiles,
 			JARPath:          viper.GetString("jar"),
 			ValidatorVersion: viper.GetString("validator-version"),
 			Proxy:            validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
-		}, logW, serverStartupTimeout)
+		}
+		if flagLSPOffline {
+			if err := applyOfflineServer(&cfg, logW); err != nil {
+				return err
+			}
+		}
+		srv, err := validator.StartServer(cfg, logW, serverStartupTimeout)
 		if err != nil {
 			return err
 		}

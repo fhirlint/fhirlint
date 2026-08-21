@@ -78,3 +78,36 @@ func TestRequireCachedIGs(t *testing.T) {
 		t.Errorf("canonical profile URL treated as a package: %v", err)
 	}
 }
+
+// serve and lsp reach the same policy through the server config: the terminology
+// decision is made once for the server's whole lifetime.
+func TestApplyOfflineServer(t *testing.T) {
+	var out bytes.Buffer
+	cfg := validator.ServerConfig{}
+
+	if err := applyOfflineServer(&cfg, &out); err != nil {
+		t.Fatalf("applyOfflineServer: %v", err)
+	}
+	if !cfg.Offline {
+		t.Error("Offline not set on the server config")
+	}
+	if !cfg.NoTerminologyServer {
+		t.Error("terminology server left on for an offline server")
+	}
+	if !strings.Contains(out.String(), "terminology checks are skipped") {
+		t.Errorf("output = %q, want it to say terminology was dropped", out.String())
+	}
+
+	// Replaying: same weaker guarantee as a one-shot run, same wording.
+	out.Reset()
+	replay := validator.ServerConfig{TerminologyServer: "http://127.0.0.1:8081"}
+	if err := applyOfflineServer(&replay, &out); err != nil {
+		t.Fatalf("applyOfflineServer: %v", err)
+	}
+	if replay.NoTerminologyServer {
+		t.Error("replay server switched off by the offline policy")
+	}
+	if !strings.Contains(out.String(), "network block cannot be used") {
+		t.Errorf("output = %q, want the residual risk stated", out.String())
+	}
+}
