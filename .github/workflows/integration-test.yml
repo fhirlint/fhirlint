@@ -74,6 +74,16 @@ jobs:
         # timeout. The suite itself runs in a couple of minutes.
         run: go test -v -tags integration -count=1 -timeout 20m ./internal/validator/...
 
+      # A separate step, not another package in the one above: `go test` runs
+      # packages in parallel, and on a cache miss both TestMains would download
+      # the same JAR to the same path at once. Running them in sequence also
+      # keeps it obvious which package failed.
+      - name: Run CLI integration tests
+        env:
+          FHIRLINT_VALIDATOR_VERSION: ${{ matrix.validator }}
+        # No download here — the step above populated the cache.
+        run: go test -v -tags integration -count=1 -timeout 10m ./cmd/...
+
   canary:
     name: Integration tests (latest validator, ${{ matrix.os }})
     if: github.event_name != 'push'
@@ -109,6 +119,11 @@ jobs:
       - name: Run integration tests against the latest validator
         # Always a download here, and it counts against this timeout.
         run: go test -v -tags integration -count=1 -timeout 20m ./internal/validator/...
+
+      - name: Run CLI integration tests against the latest validator
+        # Sequential for the same reason as the pinned job, and free of the
+        # download because the step above just did it.
+        run: go test -v -tags integration -count=1 -timeout 10m ./cmd/...
 
       - name: Report the validator version
         if: always()

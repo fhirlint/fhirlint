@@ -34,7 +34,7 @@ FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
 go test -tags registry -v ./internal/profiles/
 ```
 
-The integration tests live in `internal/validator/integration_test.go` and are skipped by default.
+The integration tests live in `internal/validator/` (the JAR itself) and `cmd/` (the CLI end to end); both are behind the `integration` tag and skipped by default. CI runs the two packages as separate steps, because `go test` runs packages in parallel and on a cold cache both would download the same JAR at once.
 
 CI runs them twice over: pushes to `main` test against the version pinned in
 `.github/workflows/integration-test.yml`, and a weekly scheduled job tests
