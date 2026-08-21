@@ -11,6 +11,7 @@ FHIR validation is strict by design — but real projects sometimes make deliber
 - [Re-levelling instead of suppressing](#re-levelling-instead-of-suppressing)
 - [--show-suppressed: making decisions visible](#--show-suppressed-making-decisions-visible)
 - [Stale rule warnings](#stale-rule-warnings)
+- [Sharing rules with the validator (advisor file)](#sharing-rules-with-the-validator-advisor-file)
 - [Suppression in JSON output](#suppression-in-json-output)
 - [Common suppressions](#common-suppressions)
 
@@ -240,6 +241,68 @@ This happens when:
 - The message ID was renamed in a new validator version
 
 Stale rules should be removed — a suppression that matches nothing is misleading noise. Treat this warning as a prompt to review whether the accepted deviation still applies.
+
+---
+
+## Sharing rules with the validator (advisor file)
+
+Suppression rules are applied by fhirlint, after the JAR has produced its output. That covers every run that goes through fhirlint — and nothing else. The raw `java -jar validator_cli.jar` someone runs to reproduce a finding, and the IG Publisher build next to it, still report everything the project has already decided to accept.
+
+The validator has its own mechanism for this: `-advisor-file`, which the IG Publisher accepts too. Export yours from `fhirlint.yml`:
+
+```bash
+fhirlint suppress export -o advisor.json
+
+java -jar validator_cli.jar patient.json -advisor-file advisor.json
+```
+
+The file is small — the format has exactly one key:
+
+```json
+{
+  "suppress": [
+    "UNABLE_TO_INFER_CODESYSTEM",
+    "*@Patient.name",
+    "*@Patient.name.*"
+  ]
+}
+```
+
+### What survives the conversion
+
+The advisor format filters messages by message ID and element path, and knows nothing else. So:
+
+| Rule | Exported as | |
+|------|-------------|---|
+| `messageId: X` | `"X"` | ✅ |
+| `expression: Patient.name` | `"*@Patient.name"` and `"*@Patient.name.*"` | ✅ |
+| `constraint: dom-6` | — | ❌ |
+| `pattern: <regex>` | — | ❌ |
+| any rule with a `severity:` filter | — | ❌ |
+| `severity-override:` rules | — | ❌ |
+| rules under `overrides:` | — | ❌ |
+
+An `expression` rule needs two entries because an advisor path matches only its own depth unless its last segment is `*` — one entry covers the element, the other its descendants. `*` as the message ID matches any message, which is what an expression rule means.
+
+`constraint` cannot be expressed: fhirlint matches the short key against the `#dom-6` **suffix** of a URI message ID (`http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6`), and the advisor matches IDs by equality or a trailing-`*` prefix. `pattern` matches the message text, while the advisor's regex applies to the path — same syntax, different subject.
+
+`reason` and `expires` have nowhere to go in the format, so an exported rule loses them. An **expired** rule is not exported at all: writing it into a file with no expiry mechanism would quietly bring it back to life.
+
+Every rule that is dropped is listed on stderr with the reason:
+
+```
+Exported 1 of 2 suppression rule(s) as 1 advisor entry.
+
+Not exported — no advisor equivalent:
+  constraint:dom-6
+      the advisor matches message ids by prefix, not by the #constraint suffix fhirlint uses
+```
+
+Add `--strict` to exit non-zero when anything was dropped — useful as a CI check that the exported file and the config have not drifted apart. The file is still written; `--strict` reports that it is incomplete, it does not refuse to produce it.
+
+### What it does not buy
+
+Only shared rules. The JSON advisor implements one hook upstream — message filtering by ID and path. It does not change severities, and it does not skip validation work, so exporting will not make a run faster.
 
 ---
 

@@ -852,6 +852,18 @@ Reports do not lose the original. Terminal output marks a re-levelled finding, a
 
 `reason` and `expires` behave exactly as they do for suppressions, including the warning when a rule lapses or matches nothing, and `require-suppress-reason` covers these rules too — a downgrade stops a finding failing the build just as effectively as hiding it does. Config only: a re-levelling carries a reason and usually a date, which is not something to retype on every invocation.
 
+### Sharing the rules with the validator
+
+Suppression rules only hold for runs that go through fhirlint. A raw `validator_cli.jar` run, or an IG Publisher build, still reports everything the project has accepted. Both read the validator's own advisor file, so export yours:
+
+```bash
+fhirlint suppress export -o advisor.json
+
+java -jar validator_cli.jar patient.json -advisor-file advisor.json
+```
+
+The advisor format filters by message ID and element path only, so `messageId` and `expression` rules export while `constraint`, `pattern` and severity-filtered rules cannot. Every dropped rule is listed with the reason, and `--strict` turns that into a non-zero exit for CI. See the [suppression guide](docs/suppression.md#sharing-rules-with-the-validator-advisor-file) for the full mapping.
+
 ---
 
 ## Custom lint rules
