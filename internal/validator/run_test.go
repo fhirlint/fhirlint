@@ -2,6 +2,7 @@ package validator
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -478,5 +479,88 @@ func TestRequireCachedJAR(t *testing.T) {
 	}
 	if err := requireCachedJAR(true, ""); err != nil {
 		t.Errorf("cached JAR rejected: %v", err)
+	}
+}
+
+// The JVM reads user.home from the OS passwd entry and ignores $HOME, so a CI
+// job that exports a writable $HOME leaves fhirlint and the validator looking
+// at two different home directories (#351).
+func TestJVMArgs_PinsUserHome(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("no home directory on this machine: %v", err)
+	}
+
+	args := jvmArgs("/tmp/validator_cli.jar")
+	want := []string{"-Duser.home=" + home, "-jar", "/tmp/validator_cli.jar"}
+	if len(args) != len(want) {
+		t.Fatalf("jvmArgs = %v, want %v", args, want)
+	}
+	for i := range want {
+		if args[i] != want[i] {
+			t.Errorf("jvmArgs[%d] = %q, want %q", i, args[i], want[i])
+		}
+	}
+}
+
+// Someone who spelled out user.home themselves should not have it overruled.
+func TestJVMArgs_RespectsAnExplicitOverride(t *testing.T) {
+	t.Setenv("JAVA_TOOL_OPTIONS", "-Duser.home=/somewhere/else -Xmx2g")
+
+	args := jvmArgs("/tmp/validator_cli.jar")
+	for _, a := range args {
+		if strings.HasPrefix(a, "-Duser.home=") {
+			t.Errorf("jvmArgs = %v, want no user.home when JAVA_TOOL_OPTIONS already sets one", args)
+		}
+	}
+	if len(args) != 2 || args[0] != "-jar" {
+		t.Errorf("jvmArgs = %v, want just the -jar pair", args)
+	}
+}
+
+// The validator writes even fatal errors to stdout and leaves stderr empty, so
+// an error that reports only stderr tells the user nothing.
+func TestJarDiagnostics(t *testing.T) {
+	got := jarDiagnostics("Unable to parse command line arguments: Unknown option\n", "")
+	if !strings.Contains(got, "stdout: Unable to parse") {
+		t.Errorf("jarDiagnostics = %q, want the stdout content labelled", got)
+	}
+	if strings.Contains(got, "stderr:") {
+		t.Errorf("jarDiagnostics = %q, want an empty stream omitted", got)
+	}
+
+	got = jarDiagnostics("", "boom on stderr")
+	if !strings.Contains(got, "stderr: boom on stderr") {
+		t.Errorf("jarDiagnostics = %q, want the stderr content", got)
+	}
+
+	// Nothing at all is itself worth stating plainly.
+	if got := jarDiagnostics("", "  \n "); !strings.Contains(got, "wrote nothing") {
+		t.Errorf("jarDiagnostics = %q, want it to say both streams were empty", got)
+	}
+}
+
+// The validator prints a banner and a line per loaded package before failing,
+// so the message that matters is at the end.
+func TestTailLines(t *testing.T) {
+	var lines []string
+	for i := 0; i < 30; i++ {
+		lines = append(lines, fmt.Sprintf("line %d", i))
+	}
+	got := tailLines(strings.Join(lines, "\n"), 5)
+
+	if !strings.Contains(got, "line 29") {
+		t.Errorf("tailLines dropped the end: %q", got)
+	}
+	if strings.Contains(got, "line 0\n") {
+		t.Errorf("tailLines kept the start: %q", got)
+	}
+	if !strings.Contains(got, "25 earlier line(s) omitted") {
+		t.Errorf("tailLines = %q, want it to say how much it dropped", got)
+	}
+
+	short := "one\ntwo"
+	if got := tailLines(short, 5); got != short {
+		t.Errorf("tailLines(%q) = %q, want it unchanged", short, got)
 	}
 }

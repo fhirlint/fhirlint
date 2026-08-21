@@ -50,7 +50,7 @@ type Server struct {
 
 // serverArgs builds the `server <port> …` argument list.
 func serverArgs(jarPath string, cfg ServerConfig) []string {
-	args := []string{"-jar", jarPath, "server", strconv.Itoa(cfg.Port), "-version", cfg.FHIRVersion}
+	args := append(jvmArgs(jarPath), "server", strconv.Itoa(cfg.Port), "-version", cfg.FHIRVersion)
 	if blocksJARNetwork(cfg.Offline, cfg.TerminologyServer) {
 		args = append(args, "-no-http-access")
 	}

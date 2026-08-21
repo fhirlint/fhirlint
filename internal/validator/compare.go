@@ -68,7 +68,7 @@ func RunCompare(left, right string, opts CompareOptions) (*CompareResult, error)
 		return nil, err
 	}
 
-	args := []string{"-jar", jarPath, "compare", "-version", opts.FHIRVersion, "-tx", "n/a"}
+	args := append(jvmArgs(jarPath), "compare", "-version", opts.FHIRVersion, "-tx", "n/a")
 	for _, ig := range opts.IGs {
 		args = append(args, "-ig", ig)
 	}
