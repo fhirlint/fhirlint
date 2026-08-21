@@ -2983,7 +2983,11 @@ func applyOffline(opts *validator.Options, w io.Writer) error {
 	if announceOffline(w, opts.TerminologyServer != "") && !opts.NoTerminologyServer {
 		opts.NoTerminologyServer = true
 	}
-	return requireCachedIGs(opts.IGs, opts.Profiles)
+	cacheRoot, err := coverage.DefaultCacheRoot()
+	if err != nil {
+		return fmt.Errorf("--offline: cannot locate the FHIR package cache: %w", err)
+	}
+	return requireCachedIGs(cacheRoot, opts.IGs, opts.Profiles)
 }
 
 // applyOfflineServer is applyOffline for the long-lived validator server, which
@@ -2995,7 +2999,11 @@ func applyOfflineServer(cfg *validator.ServerConfig, w io.Writer) error {
 		cfg.NoTerminologyServer = true
 	}
 	cfg.Offline = true
-	return requireCachedIGs(cfg.IGs, cfg.Profiles)
+	cacheRoot, err := coverage.DefaultCacheRoot()
+	if err != nil {
+		return fmt.Errorf("--offline: cannot locate the FHIR package cache: %w", err)
+	}
+	return requireCachedIGs(cacheRoot, cfg.IGs, cfg.Profiles)
 }
 
 // announceOffline states which guarantee an offline run actually gets and
@@ -3023,11 +3031,10 @@ func announceOffline(w io.Writer, replaying bool) (skipTerminology bool) {
 // FHIR package cache. The JAR would otherwise reach for the registry and fail
 // with its own message about a package it could not resolve, which reads like
 // the package is wrong rather than like the cache is empty.
-func requireCachedIGs(igs, profiles []string) error {
-	cacheRoot, err := coverage.DefaultCacheRoot()
-	if err != nil {
-		return fmt.Errorf("--offline: cannot locate the FHIR package cache: %w", err)
-	}
+// The cache root is a parameter rather than resolved here: os.UserHomeDir reads
+// a different variable per platform, so a test that fakes it through the
+// environment passes on Linux and fails on Windows.
+func requireCachedIGs(cacheRoot string, igs, profiles []string) error {
 	for _, ref := range append(append([]string{}, igs...), profiles...) {
 		name, version := iglock.ParseIGID(ref)
 		if name == "" || version == "" {

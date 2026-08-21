@@ -54,17 +54,16 @@ func TestApplyOffline_ReplayStatesTheWeakerGuarantee(t *testing.T) {
 
 func TestRequireCachedIGs(t *testing.T) {
 	cacheRoot := t.TempDir()
-	t.Setenv("HOME", cacheRoot)
-	pkgDir := filepath.Join(cacheRoot, ".fhir", "packages", "kbv.basis#1.9.0", "package")
+	pkgDir := filepath.Join(cacheRoot, "kbv.basis#1.9.0", "package")
 	if err := os.MkdirAll(pkgDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := requireCachedIGs([]string{"kbv.basis#1.9.0"}, nil); err != nil {
+	if err := requireCachedIGs(cacheRoot, []string{"kbv.basis#1.9.0"}, nil); err != nil {
 		t.Errorf("cached package rejected: %v", err)
 	}
 
-	err := requireCachedIGs([]string{"kbv.basis#1.9.0", "hl7.fhir.us.core#9.0.0"}, nil)
+	err := requireCachedIGs(cacheRoot, []string{"kbv.basis#1.9.0", "hl7.fhir.us.core#9.0.0"}, nil)
 	if err == nil {
 		t.Fatal("err = nil for a package that is not cached")
 	}
@@ -74,7 +73,7 @@ func TestRequireCachedIGs(t *testing.T) {
 
 	// A canonical URL or a bare profile name is not something to fetch, so it
 	// must not be mistaken for an uncached package.
-	if err := requireCachedIGs(nil, []string{"http://hl7.org/fhir/StructureDefinition/Patient"}); err != nil {
+	if err := requireCachedIGs(cacheRoot, nil, []string{"http://hl7.org/fhir/StructureDefinition/Patient"}); err != nil {
 		t.Errorf("canonical profile URL treated as a package: %v", err)
 	}
 }
