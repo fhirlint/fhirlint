@@ -78,7 +78,7 @@ func EnsureJAR(override, version string) (string, error) {
 	// A stat that fails for any other reason — no permission on the cache
 	// directory, a broken mount — is fatal here. Carrying on would return a path
 	// we already know we cannot reach, and the run would fail several steps later
-	// as "validator produced no output", blaming the validator for a problem with
+	// as a validator failure, blaming the validator for a problem with
 	// our own cache (#316).
 	if statErr != nil && !os.IsNotExist(statErr) {
 		return "", fmt.Errorf(

@@ -154,7 +154,7 @@ func validateExtraArgs(extra []string) error {
 // buildArgs constructs the java -jar argument list for the given inputs and options.
 // Separated from Run() so it can be unit-tested without invoking the JAR.
 func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Options) []string {
-	args := []string{"-jar", jarPath}
+	args := jvmArgs(jarPath)
 	args = append(args, inputPaths...)
 	args = append(args, "-version", opts.FHIRVersion)
 	// outputPath is empty in watch mode — skip structured output flags.
@@ -239,6 +239,30 @@ func validateFHIRVersion(version string) error {
 	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, FHIRVersionList())
 }
 
+// jvmArgs starts the argument list for every JVM fhirlint launches.
+//
+// It pins user.home to the home directory fhirlint itself uses. On Linux the
+// JVM takes user.home from the OS passwd entry and ignores $HOME, so a CI job
+// that exports a writable $HOME — because the runner's real home is not
+// writable — gets fhirlint writing to one place and the validator reading from
+// another. The validator then dies listing a package cache it cannot reach
+// (#351).
+//
+// The two are the same directory on any ordinary machine, so this is a no-op
+// there. When they differ, fhirlint's answer is the right one: it is the same
+// $HOME that decided where ~/.fhirlint and the ~/.fhir package cache the
+// --offline check inspects live.
+//
+// A user.home already set through JAVA_TOOL_OPTIONS wins: someone who spelled
+// it out deliberately should not have it overruled.
+func jvmArgs(jarPath string) []string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" || strings.Contains(os.Getenv("JAVA_TOOL_OPTIONS"), "-Duser.home") {
+		return []string{"-jar", jarPath}
+	}
+	return []string{"-Duser.home=" + home, "-jar", jarPath}
+}
+
 // UnsetCodeSystemSizeLimit is what a command-line int uses to say "not
 // specified", since a flag cannot carry nil. It cannot be 0: upstream gives 0
 // the meaning "check every code, however many there are".
@@ -312,8 +336,8 @@ func blocksJARNetwork(offline bool, terminologyServer string) bool {
 
 // checkOptionsSupported rejects options the JAR in use is too old to
 // understand. An unknown parameter makes the validator exit without producing
-// output, which reaches the user as "validator produced no output" — accurate,
-// and no help at all in working out that a pinned JAR is the reason.
+// output; the error now carries what it printed (#351), but a picocli stack
+// trace is still a poor way to learn that a pinned JAR is the reason.
 //
 // An empty or unorderable version is not treated as evidence: better to let the
 // run proceed and fail upstream than to refuse on a guess.
@@ -491,9 +515,13 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	}
 	defer cancel()
 
-	var stderrBuf bytes.Buffer
+	// Both streams, because the validator uses stdout for everything — its
+	// banner, its progress, and the exception it dies on. Reporting only
+	// stderr is why a JAR-side failure used to arrive as "produced no output"
+	// with nothing after it (#351).
+	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd := exec.CommandContext(ctx, "java", args...) //nolint:gosec // intentional: runs java with user-controlled input paths
-	cmd.Stdout = nil
+	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 	// Non-zero exit is expected when validation finds errors — not a tool failure.
 	_ = cmd.Run()
@@ -508,20 +536,23 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	}
 
 	if len(jsonBytes) == 0 {
-		if err := oomError(stderrBuf.String()); err != nil {
+		// The recognisers look at both streams: which one carries a given
+		// message is the JAR's business and has changed between releases.
+		combined := stderrBuf.String() + "\n" + stdoutBuf.String()
+		if err := oomError(combined); err != nil {
 			return nil, err
 		}
-		if err := txUnreachableError(stderrBuf.String(), opts); err != nil {
+		if err := txUnreachableError(combined, opts); err != nil {
 			return nil, err
 		}
-		// Nothing recognised. Say the validator produced no output — which is
-		// what we know — rather than asserting a crash, and trim the Java frames
-		// so the exception message is not buried under them.
-		return nil, fmt.Errorf("validator produced no output\nfiles: %v\nstderr: %s",
-			inputPaths, trimJavaFrames(stderrBuf.String()))
+		// Nothing recognised. Say the validator produced no result — which is
+		// what we know — rather than asserting a crash, and show what it did
+		// say instead of leaving the user with an empty stderr.
+		return nil, fmt.Errorf("validator produced no result\nfiles: %v\n%s",
+			inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()))
 	}
 
-	return parseOutput(jsonBytes, inputPaths, stderrBuf.String())
+	return parseOutput(jsonBytes, inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()))
 }
 
 // txCapabilityFailure is the sentence the validator emits when it cannot read a
@@ -592,6 +623,43 @@ func txUnreachableError(stderr string, opts Options) error {
 // replacing the rest with a count. A validator stack trace runs to dozens of
 // frames of HAPI internals, which pushes the one line that says what went wrong
 // off the top of the terminal.
+// jarDiagnosticLines bounds how much of the validator's output an error
+// carries. It prints a banner and a line per loaded package before it fails, so
+// the whole buffer would bury the message that matters; the failure is at the
+// end.
+const jarDiagnosticLines = 15
+
+// jarDiagnostics renders what the validator said when it produced no result.
+//
+// Both streams are shown, labelled, because the split is not intuitive: the
+// validator writes even fatal errors to stdout, and stderr is usually empty.
+// Omitting an empty stream keeps the common case to one block.
+func jarDiagnostics(stdout, stderr string) string {
+	var b strings.Builder
+	for _, s := range []struct{ name, text string }{{"stdout", stdout}, {"stderr", stderr}} {
+		trimmed := strings.TrimSpace(s.text)
+		if trimmed == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "%s: %s\n", s.name, tailLines(trimJavaFrames(trimmed), jarDiagnosticLines))
+	}
+	if b.Len() == 0 {
+		return "the validator wrote nothing to stdout or stderr"
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// tailLines keeps the last n lines, noting what it dropped so the output is not
+// silently partial.
+func tailLines(s string, n int) string {
+	lines := strings.Split(s, "\n")
+	if len(lines) <= n {
+		return s
+	}
+	kept := lines[len(lines)-n:]
+	return fmt.Sprintf("(%d earlier line(s) omitted)\n%s", len(lines)-n, strings.Join(kept, "\n"))
+}
+
 func trimJavaFrames(stderr string) string {
 	const keep = 3
 	lines := strings.Split(stderr, "\n")
@@ -623,19 +691,21 @@ func oomError(stderr string) error {
 }
 
 // parseOutput handles both single OperationOutcome (one file) and Bundle (multiple files).
-func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, error) {
+// diagnostics is what the validator said, rendered by jarDiagnostics: both
+// streams, labelled and bounded. It is only ever shown when something failed.
+func parseOutput(data []byte, inputPaths []string, diagnostics string) ([]*Result, error) {
 	var peek struct {
 		ResourceType string `json:"resourceType"`
 	}
 	if err := json.Unmarshal(data, &peek); err != nil {
-		return nil, fmt.Errorf("parsing validator output: %w\nraw: %s\nstderr: %s", err, data, stderr)
+		return nil, fmt.Errorf("parsing validator output: %w\nraw: %s\n%s", err, data, diagnostics)
 	}
 
 	switch peek.ResourceType {
 	case "OperationOutcome":
 		var oo operationOutcome
 		if err := json.Unmarshal(data, &oo); err != nil {
-			return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s\nstderr: %s", err, data, stderr)
+			return nil, fmt.Errorf("parsing OperationOutcome: %w\nraw: %s\n%s", err, data, diagnostics)
 		}
 		filename := ""
 		if len(inputPaths) > 0 {
@@ -651,7 +721,7 @@ func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, er
 			} `json:"entry"`
 		}
 		if err := json.Unmarshal(data, &bundle); err != nil {
-			return nil, fmt.Errorf("parsing Bundle: %w\nraw: %s\nstderr: %s", err, data, stderr)
+			return nil, fmt.Errorf("parsing Bundle: %w\nraw: %s\n%s", err, data, diagnostics)
 		}
 		results := make([]*Result, len(bundle.Entry))
 		for i, entry := range bundle.Entry {
@@ -667,7 +737,7 @@ func parseOutput(data []byte, inputPaths []string, stderr string) ([]*Result, er
 		return results, nil
 
 	default:
-		return nil, fmt.Errorf("unexpected resourceType %q in validator output\nstderr: %s", peek.ResourceType, stderr)
+		return nil, fmt.Errorf("unexpected resourceType %q in validator output\n%s", peek.ResourceType, diagnostics)
 	}
 }
 

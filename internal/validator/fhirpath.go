@@ -67,7 +67,7 @@ func RunFHIRPath(expr, inputPath string, opts FHIRPathOptions) (*FHIRPathResult,
 		return nil, err
 	}
 
-	args := []string{"-jar", jarPath, "fhirpath", expr, inputPath, "-version", opts.FHIRVersion, "-tx", "n/a"}
+	args := append(jvmArgs(jarPath), "fhirpath", expr, inputPath, "-version", opts.FHIRVersion, "-tx", "n/a")
 
 	ctx := context.Background()
 	var cancel context.CancelFunc = func() {}

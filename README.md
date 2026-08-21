@@ -418,6 +418,19 @@ Error: --extract cannot be used with FHIR Mapping Language input (.fml):
 fhirlint passes it to the validator unchanged
 ```
 
+### Running where `$HOME` is not the passwd home
+
+CI runners sometimes have an unwritable home directory, and jobs export a writable `$HOME` instead. The JVM does not follow: on Linux it takes `user.home` from the OS passwd entry and ignores `$HOME`.
+
+```
+$ HOME=/tmp/writable java -XshowSettings:properties -version 2>&1 | grep user.home
+    user.home = /var/www          # not /tmp/writable
+```
+
+fhirlint therefore starts every validator process with `-Duser.home` set to the same home it uses itself, so the two agree on where `~/.fhirlint` and the `~/.fhir` package cache live. Nothing to configure — on an ordinary machine the two are the same directory.
+
+If you set `user.home` yourself through `JAVA_TOOL_OPTIONS`, that wins; fhirlint does not override it.
+
 ### Skipping non-FHIR files
 
 Pointed at a whole repo, fhirlint reports every unrelated `.json` as a hard failure:
