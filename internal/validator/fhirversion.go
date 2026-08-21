@@ -25,7 +25,16 @@ type FHIRVersion struct {
 // because for R4B they disagree: there is an hl7.fhir.r4b.core package, but
 // tx.fhir.org serves no /r4b endpoint and the JAR maps R4B to /r4 — confirmed
 // against the JAR. Deriving either from the other would be right twice and
-// wrong once. A release added here needs both verified rather than guessed.
+// wrong once. A release added here needs both verified rather than guessed;
+// fhirversion_registry_test.go is what verifies them.
+//
+// R6 is absent on purpose. As of 2026-08-21 neither field can be verified:
+// hl7.fhir.r6.core — the package VersionUtilities.packageForVersion names — is
+// not on packages.fhir.org, and tx.fhir.org answers /r4 and /r5 but 404s on
+// /r6. The JAR accepts a 6.0.0 version string and maps it to 6.0.0-ballot3,
+// while the spec build is at ballot4. A row added now would advertise a release
+// whose core package cannot be fetched and whose terminology endpoint does not
+// exist. TestR6NotYetAvailable fires when that changes (#306).
 var FHIRVersions = []FHIRVersion{
 	{ID: "4.0.1", Name: "R4", TxPath: "/r4", CorePackage: "hl7.fhir.r4.core"},
 	{ID: "4.3.0", Name: "R4B", TxPath: "/r4", CorePackage: "hl7.fhir.r4b.core"},

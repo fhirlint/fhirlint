@@ -29,8 +29,11 @@ import (
 
 // Options configures the FHIR validator. All fields are optional.
 type Options struct {
-	// FHIRVersion is the FHIR version to validate against: "4.0.1", "4.3.0", "5.0.0".
-	// Defaults to "4.0.1" when empty.
+	// FHIRVersion is the FHIR version to validate against. The accepted values
+	// come from validator.FHIRVersions — `fhirlint version` prints them, and
+	// LookupFHIRVersion answers for them. Not enumerated here: a list in a doc
+	// comment is the one copy no test can keep honest (#306).
+	// Defaults to validator.DefaultFHIRVersion when empty.
 	FHIRVersion string
 
 	// Profiles is a list of profile URLs or fhirlint aliases (e.g. "kbv-basis").
