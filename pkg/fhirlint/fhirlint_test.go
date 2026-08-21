@@ -233,3 +233,23 @@ func TestApplyRedaction_LeavesResultsAloneByDefault(t *testing.T) {
 		t.Error("Redacted must stay false when the option is off")
 	}
 }
+
+func TestToInternalOpts_CodeSystemSizeLimit(t *testing.T) {
+	// nil leaves the validator's default alone.
+	if got := toInternalOpts(Options{}).CodeSystemSizeLimit; got != nil {
+		t.Errorf("unset CodeSystemSizeLimit = %v, want nil", *got)
+	}
+
+	// 0 is a real setting upstream ("no limit"), so it must survive the trip.
+	zero := 0
+	got := toInternalOpts(Options{CodeSystemSizeLimit: &zero}).CodeSystemSizeLimit
+	if got == nil || *got != 0 {
+		t.Errorf("CodeSystemSizeLimit = %v, want a pointer to 0", got)
+	}
+
+	limit := 5000
+	got = toInternalOpts(Options{CodeSystemSizeLimit: &limit}).CodeSystemSizeLimit
+	if got == nil || *got != 5000 {
+		t.Errorf("CodeSystemSizeLimit = %v, want a pointer to 5000", got)
+	}
+}

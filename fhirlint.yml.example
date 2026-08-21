@@ -230,6 +230,12 @@ ignore:
 # validation-timeout: 2m
 # max-messages: 500
 
+# Max codes checked against a code system for one ValueSet include, ConceptMap
+# group or CodeSystem supplement. Past this many, the validator checks none of
+# them and issues a hint instead — each code costs a terminology round trip.
+# 0 = no limit, -1 = the validator's own default (1000). Omit for the default.
+# codesystem-size-limit: 5000
+
 # Proxy for the validator's terminology calls, as host:port. fhirlint's own
 # requests already honour HTTP_PROXY/HTTPS_PROXY; the JAR does not, which is why
 # these exist. Both default to those environment variables when unset.

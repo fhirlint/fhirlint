@@ -1254,6 +1254,28 @@ fhirlint validate patient.json --best-practice error     # escalate to errors
 >
 > For runs that must not depend on the server, see [offline terminology](#offline-terminology) below.
 
+### When the validator stops checking codes
+
+Checking a code costs a terminology round trip, so the validator caps how many it will check for a single ValueSet include, ConceptMap group or CodeSystem supplement. Past the cap it checks **none** of them and issues a hint:
+
+```
+Checks skipped: 2 — too many codes to check against a code system. See --codesystem-size-limit.
+```
+
+The cap is 1000 by default. A German project validating against ICD-10-GM, OPS or ATC is over it immediately, so a green run there is not evidence that the codes are valid — it can mean nobody looked. fhirlint counts these hints separately in the summary for that reason: they arrive at hint severity, which most projects filter out, and the message saying a check did not run would otherwise be the first thing hidden.
+
+```bash
+# Check them all, however many there are
+fhirlint validate ./ig/ --codesystem-size-limit 0
+
+# Or raise the cap
+fhirlint validate ./ig/ --codesystem-size-limit 5000
+```
+
+Expect a remote terminology server to be slow about it — one round trip per code. Recording once with [`fhirlint tx warm`](#offline-terminology) and replaying makes repeat runs cheap.
+
+`fhirlint explain VALUESET_INC_TOO_MANY_CODES` (also `CONCEPTMAP_VS_TOO_MANY_CODES`, `CODESYSTEM_CS_SUPP_TOO_MANY_CODES`) spells this out offline. The CodeSystem-supplement form is new in validator 6.10.2: a supplement that used to be checked can stop being checked after upgrading.
+
 ### Offline terminology
 
 `--tx-offline` replays terminology responses recorded earlier, so a validation run needs no terminology server at all. This is what makes a run reproducible: same inputs, same recording, same result, no network.
@@ -1684,6 +1706,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--timeout` | `5m` | Timeout for the Java validator process |
 | `--validation-timeout` | — | Stop validating after this long and report partial results (e.g. `90s`, `2m`) |
 | `--max-messages` | `0` | Stop after this many validation messages and report partial results (`0` = unbounded) |
+| `--codesystem-size-limit` | `-1` | Max codes checked per ValueSet include, ConceptMap group or CodeSystem supplement (`0` = no limit, `-1` = the validator's own default of 1000) |
 | `--proxy` | `$HTTP_PROXY` | HTTP proxy for the validator's terminology calls, `host:port` |
 | `--https-proxy` | `$HTTPS_PROXY` | HTTPS proxy for the validator's terminology calls, `host:port` |
 | `--cache` | `false` | Cache validation results per file hash |

@@ -339,3 +339,36 @@ func TestTrimJavaFrames_ShortTraceUnchanged(t *testing.T) {
 		t.Error("the frame should be kept")
 	}
 }
+
+// A JAR older than the parameter refuses to start and produces no output at
+// all, which reaches the user as "validator produced no output". Catch it with
+// a message that names the cause.
+func TestCheckOptionsSupported_CodeSystemSizeLimit(t *testing.T) {
+	limit := 5000
+	set := Options{CodeSystemSizeLimit: &limit}
+
+	if err := checkOptionsSupported(set, "6.9.6"); err == nil {
+		t.Error("err = nil for a JAR that predates the parameter, want a rejection")
+	} else if !strings.Contains(err.Error(), "6.10.2") || !strings.Contains(err.Error(), "6.9.6") {
+		t.Errorf("err = %q, want it to name both the required and the actual version", err)
+	}
+
+	for _, version := range []string{"6.10.2", "6.11.0", "7.0.0"} {
+		if err := checkOptionsSupported(set, version); err != nil {
+			t.Errorf("checkOptionsSupported(%s) = %v, want nil", version, err)
+		}
+	}
+
+	// Unset: nothing to check, whatever the JAR is.
+	if err := checkOptionsSupported(Options{}, "6.9.6"); err != nil {
+		t.Errorf("unset option rejected on an old JAR: %v", err)
+	}
+
+	// Unknown or unorderable versions are not evidence — let the run proceed
+	// and fail upstream rather than refusing on a guess.
+	for _, version := range []string{"", "custom-build"} {
+		if err := checkOptionsSupported(set, version); err != nil {
+			t.Errorf("checkOptionsSupported(%q) = %v, want nil", version, err)
+		}
+	}
+}

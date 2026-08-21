@@ -90,6 +90,15 @@ type Options struct {
 	// issues found so far. Zero is unbounded.
 	MaxMessages int
 
+	// CodeSystemSizeLimit caps how many codes the validator checks against a
+	// code system for one ValueSet include, ConceptMap group or CodeSystem
+	// supplement. Past the cap it checks none of them and issues a hint.
+	//
+	// A pointer because the value 0 is meaningful — it is upstream's "no
+	// limit" — so it cannot also stand for "not specified". nil leaves the
+	// validator's own default in place (1000 as of 6.10.2).
+	CodeSystemSizeLimit *int
+
 	// Proxy and HTTPSProxy route the validator's terminology calls through a
 	// proxy, as "host:port". Empty falls back to $HTTP_PROXY / $HTTPS_PROXY.
 	//
@@ -300,6 +309,7 @@ func toInternalOpts(opts Options) validator.Options {
 		ExtraArgs:                opts.ExtraArgs,
 		ValidationTimeout:        opts.ValidationTimeout,
 		MaxMessages:              opts.MaxMessages,
+		CodeSystemSizeLimit:      opts.CodeSystemSizeLimit,
 		Proxy: validator.ProxyConfig{
 			Proxy:      opts.Proxy,
 			HTTPSProxy: opts.HTTPSProxy,

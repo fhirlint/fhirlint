@@ -243,3 +243,36 @@ func TestTerminalSummary_WithSeverityFilter(t *testing.T) {
 		t.Errorf("expected total=1 after error-only filter, got %d", total)
 	}
 }
+
+// A skipped check arrives as a hint, so the default severity filter hides it.
+// The summary has to report it anyway: a run where a class of checks did not
+// execute is not a clean run.
+func TestTerminalSummary_SkippedChecksSurviveTheSeverityFilter(t *testing.T) {
+	results := []*validator.Result{
+		{Valid: true, Issues: []validator.Issue{
+			{Severity: "information", MessageID: "VALUESET_INC_TOO_MANY_CODES"},
+			{Severity: "information", MessageID: "CODESYSTEM_CS_SUPP_TOO_MANY_CODES"},
+		}},
+	}
+
+	out := captureStdout(t, func() { TerminalSummary(results, "error") })
+
+	if !strings.Contains(out, "Checks skipped: 2") {
+		t.Errorf("summary = %q, want it to report 2 skipped checks", out)
+	}
+	if !strings.Contains(out, "--codesystem-size-limit") {
+		t.Errorf("summary = %q, want it to name the flag that changes the limit", out)
+	}
+}
+
+func TestTerminalSummary_NoSkippedChecksNoLine(t *testing.T) {
+	results := []*validator.Result{
+		{Valid: false, Issues: []validator.Issue{{Severity: "error", MessageID: "SOMETHING_ELSE"}}},
+	}
+
+	out := captureStdout(t, func() { TerminalSummary(results, "information") })
+
+	if strings.Contains(out, "Checks skipped") {
+		t.Errorf("summary = %q, want no skipped-checks line", out)
+	}
+}

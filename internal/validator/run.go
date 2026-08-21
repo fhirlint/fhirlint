@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fhirlint/fhirlint/internal/igaudit"
 )
 
 // Issue is our internal representation, mapped from OperationOutcome.issue.
@@ -100,7 +102,20 @@ type Options struct {
 	Proxy                    ProxyConfig   // http/https proxy for the JAR's terminology calls (-proxy/-https-proxy/-auth)
 	ValidationTimeout        time.Duration // stop validating after this long, returning partial results (-validation-timeout); 0 = unbounded
 	MaxMessages              int           // stop after this many validation messages, returning partial results (-max-validation-messages); 0 = unbounded
-	Timeout                  time.Duration // 0 means no timeout
+
+	// CodeSystemSizeLimit caps how many codes the validator checks against a
+	// code system for a single ValueSet include, ConceptMap group or CodeSystem
+	// supplement (-codesystem-validation-size-limit). Past the cap the
+	// validator checks none of them and issues a hint instead, because every
+	// code costs a terminology round trip.
+	//
+	// A pointer because upstream's 0 means "no limit", so it cannot double as
+	// "not specified". nil passes no argument at all and leaves the validator's
+	// own default in place (1000 as of 6.10.2, where the parameter appeared).
+	// A plain int would make every existing Options literal request "no limit"
+	// by omission — and on a validator older than 6.10.2, fail outright.
+	CodeSystemSizeLimit *int
+	Timeout             time.Duration // 0 means no timeout
 }
 
 // reservedValidatorArgs are flags fhirlint sets itself and whose values the
@@ -188,6 +203,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	if opts.ValidationTimeout > 0 {
 		args = append(args, "-validation-timeout", strconv.FormatInt(opts.ValidationTimeout.Milliseconds(), 10))
 	}
+	if opts.CodeSystemSizeLimit != nil {
+		args = append(args, "-codesystem-validation-size-limit", strconv.Itoa(*opts.CodeSystemSizeLimit))
+	}
 	if opts.MaxMessages > 0 {
 		args = append(args, "-max-validation-messages", strconv.Itoa(opts.MaxMessages))
 	}
@@ -209,6 +227,59 @@ func validateFHIRVersion(version string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, FHIRVersionList())
+}
+
+// UnsetCodeSystemSizeLimit is what a command-line int uses to say "not
+// specified", since a flag cannot carry nil. It cannot be 0: upstream gives 0
+// the meaning "check every code, however many there are".
+const UnsetCodeSystemSizeLimit = -1
+
+// SkippedCheckMessageIDs are the messages the validator issues when it declines
+// to check a set of codes because there are more of them than
+// -codesystem-validation-size-limit allows.
+//
+// They arrive as hints, which is how a whole class of checks can silently stop
+// running: filter hints out, as most projects do, and a run where nothing was
+// checked looks exactly like a run where everything passed. Reporters use this
+// list to say so regardless of the severity filter (#338).
+var SkippedCheckMessageIDs = []string{
+	"VALUESET_INC_TOO_MANY_CODES",       // a ValueSet include
+	"CONCEPTMAP_VS_TOO_MANY_CODES",      // a ConceptMap group
+	"CODESYSTEM_CS_SUPP_TOO_MANY_CODES", // a CodeSystem supplement
+}
+
+// IsSkippedCheck reports whether a message id is one of the above.
+func IsSkippedCheck(messageID string) bool {
+	for _, id := range SkippedCheckMessageIDs {
+		if strings.EqualFold(messageID, id) {
+			return true
+		}
+	}
+	return false
+}
+
+// minCodeSystemSizeLimitVersion is the first validator release that understands
+// -codesystem-validation-size-limit.
+const minCodeSystemSizeLimitVersion = "6.10.2"
+
+// checkOptionsSupported rejects options the JAR in use is too old to
+// understand. An unknown parameter makes the validator exit without producing
+// output, which reaches the user as "validator produced no output" — accurate,
+// and no help at all in working out that a pinned JAR is the reason.
+//
+// An empty or unorderable version is not treated as evidence: better to let the
+// run proceed and fail upstream than to refuse on a guess.
+func checkOptionsSupported(opts Options, jarVersion string) error {
+	if opts.CodeSystemSizeLimit == nil || jarVersion == "" {
+		return nil
+	}
+	cmp, ok := igaudit.CompareVersions(jarVersion, minCodeSystemSizeLimitVersion)
+	if !ok || cmp >= 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"--codesystem-size-limit needs validator %s or newer, but the JAR in use is %s — run 'fhirlint update', or drop the flag",
+		minCodeSystemSizeLimitVersion, jarVersion)
 }
 
 // allowedBestPractice lists the values the HL7 validator JAR accepts for -best-practice.
@@ -256,6 +327,9 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 	if err != nil {
 		return err
 	}
+	if err := checkOptionsSupported(opts, ValidatorVersion()); err != nil {
+		return err
+	}
 
 	warnInsecureTerminologyServer(os.Stderr, opts)
 	args := buildArgs(jarPath, inputPaths, "", opts)
@@ -301,6 +375,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 
 	jarPath, err := EnsureJAR(opts.JARPath, opts.ValidatorVersion)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkOptionsSupported(opts, ValidatorVersion()); err != nil {
 		return nil, err
 	}
 

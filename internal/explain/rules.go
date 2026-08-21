@@ -128,6 +128,49 @@ var rules = map[string]Rule{
 		HowToFix: "Make the first `entry.resource` a MessageHeader when `Bundle.type` is\n" +
 			"`message`.",
 	},
+	"valueset_inc_too_many_codes": {
+		ID:        "VALUESET_INC_TOO_MANY_CODES",
+		Title:     "Too many codes in a ValueSet include to check them all",
+		DefinedIn: "HL7 Validator (terminology checking budget)",
+		Description: "The include lists more codes than -codesystem-validation-size-limit\n" +
+			"allows (1000 by default). Checking a code costs a terminology server\n" +
+			"round trip, so past the limit the validator checks *none* of them and\n" +
+			"issues this hint instead.\n\n" +
+			"This is not a finding about your resource. It says a check did not\n" +
+			"run, so a clean result here is not evidence that the codes are valid.",
+		HowToFix: "Raise or remove the limit if you want the codes checked:\n\n" +
+			"  fhirlint validate ./ig/ --codesystem-size-limit 0   # 0 = no limit\n\n" +
+			"Expect it to be slow against a remote terminology server — one round\n" +
+			"trip per code. Recording the traffic once with `fhirlint tx warm` and\n" +
+			"replaying it with --tx-offline makes repeat runs cheap.",
+	},
+	"conceptmap_vs_too_many_codes": {
+		ID:        "CONCEPTMAP_VS_TOO_MANY_CODES",
+		Title:     "Too many codes in a ConceptMap group to check them all",
+		DefinedIn: "HL7 Validator (terminology checking budget)",
+		Description: "The ConceptMap group maps more codes than\n" +
+			"-codesystem-validation-size-limit allows (1000 by default), so the\n" +
+			"validator checked none of them against the code system.\n\n" +
+			"As with the ValueSet form, this reports a check that did not run\n" +
+			"rather than a problem with the mapping.",
+		HowToFix: "Raise or remove the limit with --codesystem-size-limit (0 = no\n" +
+			"limit), or accept that large ConceptMaps are not code-checked and\n" +
+			"verify them another way.",
+	},
+	"codesystem_cs_supp_too_many_codes": {
+		ID:        "CODESYSTEM_CS_SUPP_TOO_MANY_CODES",
+		Title:     "Too many codes in a CodeSystem supplement to check them all",
+		DefinedIn: "HL7 Validator 6.10.2+ (terminology checking budget)",
+		Description: "A CodeSystem supplement adds designations or properties to codes in\n" +
+			"another code system. This one carries more codes than\n" +
+			"-codesystem-validation-size-limit allows (1000 by default), so none\n" +
+			"of them were checked against the code system they supplement.\n\n" +
+			"New in validator 6.10.2: supplements were not size-limited before,\n" +
+			"so a supplement that used to be checked may stop being checked after\n" +
+			"an upgrade.",
+		HowToFix: "Raise or remove the limit with --codesystem-size-limit (0 = no\n" +
+			"limit) to check the supplement's codes again.",
+	},
 	"obs-6": {
 		ID:        "obs-6",
 		Title:     "dataAbsentReason SHALL only be present if value[x] is not present",
