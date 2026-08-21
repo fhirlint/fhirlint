@@ -84,6 +84,12 @@ type PackageReport struct {
 	// survive a cold cache.
 	NotFound bool `json:"notFound,omitempty"`
 
+	// VersionMissing means the package exists but the registry does not serve
+	// the pinned version. It fails exactly like NotFound — nothing resolves on
+	// a cold cache — but points somewhere else: the name is right and the
+	// version is wrong, which is what a hand-written pin usually gets wrong.
+	VersionMissing bool `json:"versionMissing,omitempty"`
+
 	// Error records why this package could not be checked. It is distinct from
 	// NotFound: an unreachable registry is not evidence about the package.
 	Error string `json:"error,omitempty"`
@@ -92,7 +98,7 @@ type PackageReport struct {
 // IsProblem reports whether this package needs the reader's attention.
 // A version that is merely ahead of the registry's latest does not.
 func (p PackageReport) IsProblem() bool {
-	return p.Outdated || p.Differs || p.Deprecated || p.NotFound
+	return p.Outdated || p.Differs || p.Deprecated || p.NotFound || p.VersionMissing
 }
 
 // Report is the result of auditing every package in a lock file.
@@ -168,6 +174,14 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 	case err != nil:
 		p.Error = err.Error()
 		return p
+	}
+
+	// A packument with no versions map at all is a registry quirk rather than
+	// evidence about the pin, so only a populated list can contradict it.
+	if len(pkg.Versions) > 0 {
+		if _, ok := pkg.Versions[version]; !ok {
+			p.VersionMissing = true
+		}
 	}
 
 	if note, ok := pkg.deprecation(version); ok {

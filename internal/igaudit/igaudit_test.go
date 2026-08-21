@@ -97,6 +97,36 @@ func TestAuditClassifiesPackages(t *testing.T) {
 	}
 }
 
+// A pin at a version the registry does not serve is as broken as a missing
+// package, and used to pass silently: the alias table pointed `mii` at
+// de.medizininformatikinitiative.kerndatensatz#2024.0.0 for months, and the
+// audit reported the package as fine because the *name* resolved (#336).
+func TestAuditVersionMissing(t *testing.T) {
+	c := registry(t, map[string]string{
+		"real.pkg": packument("2.0.0", "1.0.0", "2.0.0"),
+		// A packument with no versions map at all: a registry quirk, not
+		// evidence about the pin, so it must not be reported as missing.
+		"bare.pkg": `{"dist-tags":{"latest":"1.0.0"}}`,
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"real.pkg#9.9.9", "real.pkg#1.0.0", "bare.pkg#1.0.0"})
+
+	p := findPackage(t, r, "real.pkg#9.9.9")
+	if !p.VersionMissing || !p.IsProblem() {
+		t.Errorf("real.pkg#9.9.9: got versionMissing=%v problem=%v, want true/true", p.VersionMissing, p.IsProblem())
+	}
+	// The package itself resolves, so this is not the same finding as NotFound.
+	if p.NotFound {
+		t.Error("real.pkg#9.9.9: reported as NotFound, but the package exists")
+	}
+	if p := findPackage(t, r, "real.pkg#1.0.0"); p.VersionMissing {
+		t.Error("real.pkg#1.0.0: a version the registry serves was reported as missing")
+	}
+	if p := findPackage(t, r, "bare.pkg#1.0.0"); p.VersionMissing {
+		t.Error("bare.pkg#1.0.0: an empty versions map was read as evidence the pin is wrong")
+	}
+}
+
 func TestAuditSortsByID(t *testing.T) {
 	c := registry(t, map[string]string{
 		"a.pkg": packument("1.0.0", "1.0.0"),

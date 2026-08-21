@@ -28,6 +28,10 @@ go test ./... -tags integration
 
 # …against a specific validator release instead of whatever is cached
 FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
+
+# Registry check — verifies the built-in profile aliases still resolve against
+# packages.fhir.org. Run it when you touch a pin in internal/profiles/aliases.go
+go test -tags registry -v ./internal/profiles/
 ```
 
 The integration tests live in `internal/validator/integration_test.go` and are skipped by default.
