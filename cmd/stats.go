@@ -27,7 +27,7 @@ var statsCmd = &cobra.Command{
 profiles they declare, and an aggregate validation summary.
 
 Resource-type and profile counts are gathered offline by parsing each file
-(.json, .ndjson, .xml). The validation summary runs the validator; skip it with
+(.json, .jsonl, .ndjson, .xml). The validation summary runs the validator; skip it with
 --no-validate for an instant, offline structural overview.
 
 With no path, the current directory is used.`,
@@ -80,16 +80,29 @@ func runStats(_ *cobra.Command, args []string) error {
 		return &exitErr{code: 2, err: fmt.Errorf("collecting files: %w", err)}
 	}
 	if len(paths) == 0 {
-		return &exitErr{code: 2, err: fmt.Errorf("no FHIR files (.json/.ndjson/.xml) found in %q", arg)}
+		return &exitErr{code: 2, err: fmt.Errorf("no FHIR files (%s) found in %q", input.ExtensionList(), arg)}
 	}
 
 	var resources []stats.Resource
+	// Formats fhirlint cannot read are counted separately and reported. They
+	// are valid input for the validator, so they are in `paths` — but counting
+	// them as zero resources without saying so would understate a dataset and
+	// look like a miscount (#341).
+	unreadable := map[string]int{}
 	for _, p := range paths {
+		if ft, known := input.LookupFileType(p); known && ft.Kind == input.KindValidatorOnly {
+			unreadable[ft.Parser]++
+			continue
+		}
 		rs, perr := stats.ParseFile(p)
 		if perr != nil {
 			return &exitErr{code: 2, err: fmt.Errorf("reading %s: %w", p, perr)}
 		}
 		resources = append(resources, rs...)
+	}
+	for parser, n := range unreadable {
+		fmt.Fprintf(os.Stderr, "note: %d %s file(s) not counted — the validator reads them, fhirlint does not\n",
+			n, parser)
 	}
 
 	report := stats.Compute(resources)

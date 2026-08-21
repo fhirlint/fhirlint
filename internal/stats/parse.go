@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/tidwall/gjson"
+
+	"github.com/fhirlint/fhirlint/internal/input"
 )
 
 // ParseFile extracts the FHIR resources from a file. A .json or .xml file
@@ -21,14 +23,19 @@ func ParseFile(path string) ([]Resource, error) {
 		return nil, err
 	}
 
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".ndjson":
+	if input.IsLineDelimited(path) {
 		return parseNDJSON(data), nil
-	case ".xml":
-		return []Resource{parseXML(data)}, nil
-	default:
-		return []Resource{parseJSON(data)}, nil
 	}
+	if strings.EqualFold(filepath.Ext(path), ".xml") {
+		return []Resource{parseXML(data)}, nil
+	}
+	// A format fhirlint cannot read is not a resource it can count. Saying so
+	// beats the old default branch, which handed a FHIR Mapping Language file
+	// to the JSON parser and counted the failure as one resource.
+	if !input.IsParsable(path) {
+		return nil, nil
+	}
+	return []Resource{parseJSON(data)}, nil
 }
 
 func parseJSON(data []byte) Resource {

@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/input"
@@ -230,8 +229,10 @@ func ValidateFile(path string, opts Options) (*Result, error) {
 	return result, nil
 }
 
-// ValidateDir validates all .json and .xml files in a directory
-// in a single JVM invocation.
+// ValidateDir validates every FHIR file in a directory in a single JVM
+// invocation. It accepts the same extensions the CLI does, line-delimited
+// exports included — before #340 it silently skipped them, so a directory of
+// .ndjson returned no results and no error.
 func ValidateDir(dir string, opts Options) ([]*Result, error) {
 	var paths []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -241,8 +242,7 @@ func ValidateDir(dir string, opts Options) ([]*Result, error) {
 		if d.IsDir() {
 			return nil
 		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".json" && ext != ".xml" {
+		if !input.IsFHIRFile(path) {
 			return nil
 		}
 		paths = append(paths, path)
