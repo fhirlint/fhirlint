@@ -135,6 +135,18 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		ValidatorVersion:    viper.GetString("validator-version"),
 	}
 
+	// Same policy as validate, applied once for the server's lifetime: only an
+	// explicitly named server is authenticated, and never the replay server.
+	if txSettings == "" && cfg.TerminologyServer != "" && !cfg.NoTerminologyServer {
+		opts := validator.Options{TerminologyServer: cfg.TerminologyServer}
+		cleanup, err := applyTerminologyAuth(&opts, nil, os.Stderr)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		cfg.FHIRSettings = opts.FHIRSettings
+	}
+
 	if flagServeOffline {
 		if err := applyOfflineServer(&cfg, os.Stderr); err != nil {
 			return err

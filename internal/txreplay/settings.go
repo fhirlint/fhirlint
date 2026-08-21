@@ -1,28 +1,14 @@
 package txreplay
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
+
+	"github.com/fhirlint/fhirlint/internal/jarsettings"
 )
 
-// jarSettings mirrors the parts of the validator's fhir-settings.json we need.
-// Only the server exemption list matters here; the file is written fresh for
-// each run, so nothing else has to be preserved.
-type jarSettings struct {
-	Servers []jarServer `json:"servers"`
-}
-
-type jarServer struct {
-	URL                 string `json:"url"`
-	AllowHTTP           bool   `json:"allowHttp"`
-	AllowPrivateNetwork bool   `json:"allowPrivateNetwork"`
-}
-
-// WriteJARSettings writes a fhir-settings.json that lets the validator talk to
-// our local replay server, and returns its path plus a cleanup function.
+// ReplayServerEntry describes fhirlint's own replay server for the validator's
+// settings file.
 //
 // Validator 6.10.0 added SSRF protection that refuses plain-HTTP and
 // private-network destinations. Our server is both: loopback, over HTTP.
@@ -35,32 +21,27 @@ type jarServer struct {
 // deal worse: it would lift the protection for every request the run makes.
 //
 // The URL must carry the port. Prefix matching was tightened when
-// CVE-2026-34361 was fixed, so a host-only entry no longer covers a port-bearing
-// URL — which is why this file is generated per run rather than shipped.
-func WriteJARSettings(baseURL string) (path string, cleanup func(), err error) {
-	if _, perr := url.Parse(baseURL); perr != nil {
-		return "", nil, fmt.Errorf("invalid replay server URL %q: %w", baseURL, perr)
+// CVE-2026-34361 was fixed, so a host-only entry no longer covers a
+// port-bearing URL — which is why the file is generated per run rather than
+// shipped.
+func ReplayServerEntry(baseURL string) (jarsettings.Server, error) {
+	if _, err := url.Parse(baseURL); err != nil {
+		return jarsettings.Server{}, fmt.Errorf("invalid replay server URL %q: %w", baseURL, err)
 	}
-	dir, err := os.MkdirTemp("", "fhirlint-tx-settings-")
-	if err != nil {
-		return "", nil, fmt.Errorf("creating validator settings directory: %w", err)
-	}
-	cleanup = func() { _ = os.RemoveAll(dir) }
-
-	data, err := json.MarshalIndent(jarSettings{Servers: []jarServer{{
+	return jarsettings.Server{
 		URL:                 baseURL,
 		AllowHTTP:           true,
 		AllowPrivateNetwork: true,
-	}}}, "", "  ")
-	if err != nil {
-		cleanup()
-		return "", nil, fmt.Errorf("encoding validator settings: %w", err)
-	}
+	}, nil
+}
 
-	path = filepath.Join(dir, "fhir-settings.json")
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		cleanup()
-		return "", nil, fmt.Errorf("writing validator settings: %w", err)
+// WriteJARSettings writes a settings file whose only entry is the replay
+// server. Callers that also have terminology credentials build the list
+// themselves and call jarsettings.Write, because the validator reads one file.
+func WriteJARSettings(baseURL string) (path string, cleanup func(), err error) {
+	entry, err := ReplayServerEntry(baseURL)
+	if err != nil {
+		return "", nil, err
 	}
-	return path, cleanup, nil
+	return jarsettings.Write([]jarsettings.Server{entry})
 }

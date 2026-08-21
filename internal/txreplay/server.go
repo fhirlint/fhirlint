@@ -39,15 +39,27 @@ func (m Miss) String() string {
 // it proxies; without one it replays from the store and records what it could
 // not answer.
 type Server struct {
-	store    *Store
-	upstream string
-	client   *http.Client
+	store           *Store
+	upstream        string
+	upstreamHeaders map[string]string
+	client          *http.Client
 
 	mu     sync.Mutex
 	misses []Miss
 
 	listener net.Listener
 	srv      *http.Server
+}
+
+// WithUpstreamHeaders sets headers added to every proxied request — the
+// credential for an authenticated terminology server, in practice.
+//
+// Recording is the one path where fhirlint makes the terminology call itself,
+// so the JAR's settings file cannot help here. The headers are not stored: the
+// point of a recording is that replaying it needs no credential at all.
+func (s *Server) WithUpstreamHeaders(h map[string]string) *Server {
+	s.upstreamHeaders = h
+	return s
 }
 
 // NewRecorder proxies to upstream and stores every interaction.
@@ -149,6 +161,9 @@ func (s *Server) record(w http.ResponseWriter, r *http.Request, body []byte) {
 		if v := r.Header.Get(h); v != "" {
 			req.Header.Set(h, v)
 		}
+	}
+	for name, value := range s.upstreamHeaders {
+		req.Header.Set(name, value)
 	}
 
 	resp, err := s.client.Do(req) //nolint:gosec // G704: see the request construction above
