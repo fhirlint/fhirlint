@@ -1,6 +1,8 @@
 package txreplay
 
 import (
+	"github.com/fhirlint/fhirlint/internal/jarsettings"
+
 	"encoding/json"
 	"io"
 	"net/http"
@@ -311,7 +313,9 @@ func TestWriteJARSettings_ExemptsExactURLIncludingPort(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got jarSettings
+	var got struct {
+		Servers []jarsettings.Server `json:"servers"`
+	}
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("settings file is not valid JSON: %v\n%s", err, data)
 	}
@@ -341,5 +345,43 @@ func TestWriteJARSettings_CleanupRemovesTheFile(t *testing.T) {
 
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Errorf("settings file should be gone after cleanup, stat gave %v", err)
+	}
+}
+
+// Recording is the one path where fhirlint calls the terminology server
+// itself, so the credential has to go on the recorder's own request — and must
+// not end up in the recording, which is the point of replaying without one.
+func TestRecorder_SendsUpstreamHeadersButDoesNotStoreThem(t *testing.T) {
+	var gotAuth string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/fhir+json")
+		_, _ = w.Write([]byte(`{"resourceType":"Parameters"}`))
+	}))
+	defer upstream.Close()
+
+	store, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := NewRecorder(store, upstream.URL, nil).
+		WithUpstreamHeaders(map[string]string{"Authorization": "Bearer s3cr3t"})
+	base, err := rec.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = rec.Stop() }()
+
+	resp, err := http.Post(base+"/CodeSystem/$validate-code", "application/fhir+json", strings.NewReader(`{"resourceType":"Parameters"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+
+	if gotAuth != "Bearer s3cr3t" {
+		t.Errorf("upstream saw Authorization %q, want the credential forwarded", gotAuth)
+	}
+	if store.Len() != 1 {
+		t.Fatalf("recorded %d interaction(s), want 1", store.Len())
 	}
 }

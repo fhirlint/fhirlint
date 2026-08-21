@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/txauth"
 	"github.com/fhirlint/fhirlint/internal/txreplay"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -90,6 +91,26 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		upstream = validator.DefaultTerminologyEndpoint(flagTxWarmFHIRVersion)
 	}
 	rec := txreplay.NewRecorder(store, upstream, nil)
+	// Recording is the one path where fhirlint calls the terminology server
+	// itself, so credentials go on the recorder's own requests rather than
+	// through the validator's settings file. Only an explicitly named server:
+	// the public default never gets a credential it did not ask for.
+	if flagTxWarmServer != "" {
+		creds, cerr := txauth.FromEnv()
+		if cerr != nil {
+			return cerr
+		}
+		if !creds.Empty() {
+			if strings.HasPrefix(upstream, "http://") {
+				return fmt.Errorf(
+					"refusing to send terminology credentials to %s over plain HTTP — use https, or unset %s/%s/%s",
+					upstream, txauth.TokenEnvVar, txauth.APIKeyEnvVar, txauth.BasicEnvVar)
+			}
+			name, value := creds.Header()
+			rec.WithUpstreamHeaders(map[string]string{name: value})
+			fmt.Fprintf(os.Stderr, "Authenticating to %s (%s)\n", upstream, creds.Describe())
+		}
+	}
 	baseURL, err := rec.Start()
 	if err != nil {
 		return err

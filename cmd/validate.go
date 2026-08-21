@@ -20,6 +20,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/coverage"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/jarsettings"
 	"github.com/fhirlint/fhirlint/internal/lint"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/ndjson"
@@ -30,6 +31,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/rules"
 	"github.com/fhirlint/fhirlint/internal/suppress"
+	"github.com/fhirlint/fhirlint/internal/txauth"
 	"github.com/fhirlint/fhirlint/internal/txreplay"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
@@ -658,6 +660,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
 		warnValidatorVersionDrift(os.Stderr, store.ReadManifest(), validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
 	}
+
+	txAuthCleanup, txAuthErr := applyTerminologyAuth(&opts, flagValidatorArg, os.Stderr)
+	if txAuthErr != nil {
+		return txAuthErr
+	}
+	defer txAuthCleanup()
 
 	if flagOffline {
 		if err := applyOffline(&opts, os.Stderr); err != nil {
@@ -3073,4 +3081,55 @@ func requireParsable(path, flag string) error {
 	ft, _ := input.LookupFileType(path)
 	return fmt.Errorf("%s cannot be used with %s input (%s): fhirlint passes it to the validator unchanged",
 		flag, ft.Parser, ft.Ext)
+}
+
+// applyTerminologyAuth attaches terminology-server credentials to a run, by
+// generating the fhir-settings.json the validator reads them from.
+//
+// Only an explicitly named server gets credentials. When no --terminology-server
+// is given the validator talks to the public tx.fhir.org, and sending a token
+// there because it happened to be in the environment would be a way to leak it.
+//
+// Replaying a recording skips this: there is no server to authenticate to, the
+// recording was made with whatever credentials the recording run had, and the
+// settings file is already spoken for.
+func applyTerminologyAuth(opts *validator.Options, validatorArgs []string, w io.Writer) (func(), error) {
+	noop := func() {}
+
+	if opts.TerminologyServer == "" || opts.NoTerminologyServer || opts.FHIRSettings != "" {
+		return noop, nil
+	}
+	creds, err := txauth.FromEnv()
+	if err != nil {
+		return noop, err
+	}
+	if creds.Empty() {
+		return noop, nil
+	}
+	if strings.HasPrefix(opts.TerminologyServer, "http://") {
+		return noop, fmt.Errorf(
+			"refusing to send terminology credentials to %s over plain HTTP — use https, or unset %s/%s/%s",
+			opts.TerminologyServer, txauth.TokenEnvVar, txauth.APIKeyEnvVar, txauth.BasicEnvVar)
+	}
+	if err := ensureNoUserFHIRSettings(validatorArgs); err != nil {
+		return noop, err
+	}
+
+	path, cleanup, err := jarsettings.Write([]jarsettings.Server{{
+		URL:                opts.TerminologyServer,
+		AuthenticationType: string(creds.Mode),
+		Token:              creds.Token,
+		APIKey:             creds.APIKey,
+		Username:           creds.Username,
+		Password:           creds.Password,
+	}})
+	if err != nil {
+		return noop, err
+	}
+	opts.FHIRSettings = path
+	// Said out loud: a run that authenticates should never look like one that
+	// did not, and the variable name is the thing to check when a server
+	// rejects the credential.
+	_, _ = fmt.Fprintf(w, "Authenticating to %s (%s)\n", opts.TerminologyServer, creds.Describe())
+	return cleanup, nil
 }

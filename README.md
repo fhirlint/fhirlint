@@ -1349,6 +1349,35 @@ fhirlint lsp --offline
 
 `lsp --offline --server <url>` is the one case where it does nothing: that server belongs to another process, started with whatever policy its owner chose, and the run says so instead of implying otherwise.
 
+### Authenticating to a terminology server
+
+A terminology server that is not `tx.fhir.org` usually wants a credential. fhirlint reads it from the environment — one variable per scheme, and the one that is set decides the scheme:
+
+| Variable | Sent as |
+|---|---|
+| `FHIRLINT_TX_TOKEN` | `Authorization: Bearer <token>` |
+| `FHIRLINT_TX_APIKEY` | `Api-Key: <key>` |
+| `FHIRLINT_TX_AUTH` | `Authorization: Basic <base64(user:password)>`, value is `username:password` |
+
+```bash
+export FHIRLINT_TX_TOKEN="$ONTOSERVER_TOKEN"
+fhirlint validate ./fhir/ --terminology-server https://ontoserver.example.org/fhir
+```
+
+```
+Authenticating to https://ontoserver.example.org/fhir (bearer token from FHIRLINT_TX_TOKEN)
+```
+
+Environment only, deliberately: a flag lands in shell history and CI logs, and a config value lands in the repository. This is the same reasoning as `FHIRLINT_PROXY_AUTH`, which is proxy authentication and unrelated to terminology.
+
+Rules worth knowing:
+
+- **Only an explicitly named server is authenticated.** Without `--terminology-server` the validator talks to the public `tx.fhir.org`, and a credential that happens to be in the environment is not sent there.
+- **Never over plain HTTP.** `http://` plus a credential is refused rather than leaked.
+- **Setting two variables is an error.** Two credentials means one is stale, and picking a winner silently is how the wrong one gets used for months.
+- `fhirlint serve` authenticates the same way, once for the server's lifetime.
+- `fhirlint tx warm --terminology-server …` authenticates while recording. The credential is not stored in the recording, so replaying it in CI needs no secret at all — which is the point.
+
 ### Offline terminology
 
 `--tx-offline` replays terminology responses recorded earlier, so a validation run needs no terminology server at all. This is what makes a run reproducible: same inputs, same recording, same result, no network.
