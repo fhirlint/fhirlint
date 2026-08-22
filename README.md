@@ -691,7 +691,7 @@ Profiles come from IG packages in the local FHIR package cache (`~/.fhir/package
 fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 --offline
 ```
 
-The checksum is the registry's own `dist.shasum`. It catches a truncated or tampered transfer; it is not a defence against the registry itself, since the digest and the archive come from the same place. A mismatch fails the install. A checksum that cannot be fetched at all is a visible warning rather than a failure, matching how the validator JAR is handled — but it is never silent.
+The checksum is the registry's own `dist.shasum`. It catches a truncated or tampered transfer; it is not a defence against the registry itself, since the digest and the archive come from the same place. A mismatch fails the install. A checksum that cannot be fetched at all is a visible warning rather than a failure, matching how the validator JAR is handled — but it is never silent. (The JAR itself gets a stronger check where upstream allows one: see [SECURITY.md](SECURITY.md#properties-you-can-rely-on).)
 
 ### How resources are attributed
 
@@ -1946,7 +1946,7 @@ fhirlint validate patient.json
 
 ### Moving the cache
 
-`FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version and checksum files, and the `--cache` result cache:
+`FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version and verification-status files, and the `--cache` result cache:
 
 ```bash
 export FHIRLINT_CACHE_DIR=/mnt/build-cache/fhirlint

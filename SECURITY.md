@@ -12,7 +12,7 @@ Fixes go into the latest release. There are no maintained release branches, so u
 
 fhirlint is usually pointed at data it has no reason to trust — resources from an API, a partner, or a contributor's pull request — and it runs in CI where that data reaches it automatically.
 
-**Trusted:** the fhirlint binary and its configuration (`fhirlint.yml`, CLI flags, suppression rules), and the validator JAR *after* its checksum has been verified.
+**Trusted:** the fhirlint binary and its configuration (`fhirlint.yml`, CLI flags, suppression rules), and the validator JAR *after* it has been verified.
 
 **Untrusted:** the FHIR resources being validated, responses from a terminology server, anything fetched via `--url`, and the JAR download until it is verified.
 
@@ -34,8 +34,12 @@ The security-relevant question is whether untrusted input can make fhirlint do s
 
 ### Properties you can rely on
 
-- **The JAR is checksum-verified before use** against the `.sha256` published with the upstream release. A mismatch deletes the download and fails with an explicit error — it is never used.
-- **An unverified JAR is never silent.** Upstream does not always publish a checksum, and the request can fail, so verification being skipped is not fatal. But it prints a warning at download time, and `fhirlint version` marks the JAR `(checksum NOT verified)` for as long as it stays cached. You can always tell which you have.
+- **The JAR is verified before use**, strongest check first:
+  1. **The detached PGP signature** (`validator_cli.jar.asc`) against the HL7 release signing key, which fhirlint pins in-tree. This is the only check that means anything if the release channel itself is compromised, because it binds the JAR to a maintainer's key rather than to something GitHub also serves.
+  2. **The SHA-256 digest GitHub records for the release asset**, when no signature verifies. This travels the same channel as the download, so it proves the transfer was not corrupted or truncated — not that the release is genuine. It is recorded as the weaker method it is.
+
+  A signature that is present and does not verify, or a digest that does not match, deletes the download and fails with an explicit error. It is never used, and a matching digest never launders a failed signature.
+- **An unverified JAR is never silent.** Releases before 6.6.0 carry neither a signature nor a digest, and either request can fail, so being unable to verify is not fatal. But it prints a warning at download time, and `fhirlint version` marks the JAR `(NOT verified)` for as long as it stays cached. You can always tell which you have, and which check produced it.
 - **`fhirlint update` and `fhirlint audit`** report advisories that affect the version you actually have, not the whole history of the project.
 - **Exit codes follow findings.** `--fail-on` controls the threshold; a run that finds errors at or above it exits non-zero.
 - **Your input files are not modified.** Preprocessing (`--extract`, `--ignore`, `--bundle-entries`) works on temp copies.
@@ -62,13 +66,32 @@ fhirlint downloads and runs the official **[HL7 FHIR Validator](https://github.c
 fhirlint audit
 ```
 
-`fhirlint version` additionally reports whether the cached JAR passed checksum verification:
+`fhirlint version` additionally reports how the cached JAR was verified:
 
 ```
-validator: 6.9.12 (checksum verified)  (https://github.com/hapifhir/org.hl7.fhir.core/releases)
+validator: 6.10.2 (verified: PGP signature)  (https://github.com/hapifhir/org.hl7.fhir.core/releases)
 ```
 
-`(checksum NOT verified)` means the JAR is in use but its checksum could not be obtained — re-run `fhirlint update` on a working connection. No marker at all means the JAR predates this being recorded.
+| Marker | Meaning |
+|---|---|
+| `(verified: PGP signature)` | Checked against the pinned HL7 release signing key. The strong case. |
+| `(verified: GitHub release digest)` | No usable signature; the JAR matches the SHA-256 GitHub records for the asset. Rules out a corrupted transfer, not a compromised release. |
+| `(verified: an earlier fhirlint)` | Cached by a version that recorded only that it had verified, not how. |
+| `(NOT verified)` | In use, but neither check could be made — re-run `fhirlint update` on a working connection. |
+| *no marker* | The JAR predates this being recorded. |
+
+### The pinned signing key
+
+fhirlint embeds the HL7 release signing key rather than fetching it at verification time: a key fetched over the same channel as the JAR proves nothing about the JAR. Pinning also makes a key rotation a reviewable commit instead of a silent change.
+
+```
+85D1 C17C F115 2107 B272  386C 8FDF A682 8139 9B5D
+David Otasek <dotasek.dev@gmail.com>
+```
+
+The same key signs the Maven Central releases of `ca.uhn.hapi.fhir:org.hl7.fhir.validation`, an upload path with separate credentials, which is how it was corroborated beyond the keyserver copy.
+
+If upstream rotates the key, signatures stop matching the pin. fhirlint treats that as **unverified, not as tampering** — it cannot tell a rotation from a substitution, and refusing to run would turn an upstream change into an outage for everyone. The warning names the expected fingerprint so you can see what happened, and the digest check still runs. The pin's own expiry is checked by CI ahead of time and asserted by the test suite.
 
 This checks whether your local JAR is outdated and queries the GitHub Security Advisory database, reporting only the advisories that **affect your installed version**. Add `--format json` for machine-readable output (used by automation and dashboards).
 

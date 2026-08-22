@@ -17,7 +17,7 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("fhirlint:  %s\n", fhirlintVersion())
 		fmt.Printf("validator: %s%s  (%s)\n",
 			validator.ValidatorVersion(),
-			checksumSuffix(),
+			verifySuffix(),
 			validator.JARReleasesURL(),
 		)
 		if viper.IsSet("fhir-version") {
@@ -31,18 +31,19 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-// checksumSuffix annotates the validator version with how its checksum
-// verification went. Silence would leave users unable to tell a verified JAR
-// from one installed when the checksum could not be fetched (#260).
-func checksumSuffix() string {
-	verified, known := validator.JARChecksumVerified()
+// verifySuffix annotates the validator version with how the JAR was verified.
+// Silence would leave users unable to tell a verified JAR from one installed
+// when the check could not be made (#260), and naming the method matters
+// because a PGP signature and a release digest are not worth the same (#358).
+func verifySuffix() string {
+	method, verified, known := validator.JARVerification()
 	switch {
 	case !known:
 		return "" // nothing recorded (older cache, or no JAR yet)
 	case verified:
-		return " (checksum verified)"
+		return " (verified: " + method + ")"
 	default:
-		return " (checksum NOT verified)"
+		return " (NOT verified)"
 	}
 }
 

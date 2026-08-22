@@ -2,7 +2,6 @@ package validator
 
 import (
 	"archive/zip"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -350,10 +349,10 @@ func downloadJARFrom(url, dest, pinned string) error {
 		return err
 	}
 
-	verified, err := verifyJARChecksum(tmp, version)
+	result, err := verifyJAR(tmp, version)
 	if err != nil {
 		return fmt.Errorf(
-			"JAR checksum mismatch — download may be corrupted or tampered with.\n"+
+			"the downloaded validator JAR failed verification — it may be corrupted or tampered with.\n"+
 				"Discarded; any previously cached JAR is untouched.\n"+
 				"Details: %w", err)
 	}
@@ -366,115 +365,68 @@ func downloadJARFrom(url, dest, pinned string) error {
 	if version != "" {
 		_ = saveValidatorVersion(version)
 	}
-	_ = saveChecksumStatus(verified)
-	if !verified {
-		// Not fatal — upstream does not always publish a checksum — but never
-		// silent: an attacker able to tamper with the download can usually also
-		// make the checksum request fail (#260).
+	_ = saveVerifyStatus(result.method)
+	if !result.ok() {
+		// Not fatal — releases before 6.6.0 carry neither a signature nor a
+		// digest — but never silent: an attacker able to tamper with the
+		// download can usually also make these requests fail (#260, #358).
 		fmt.Fprintf(os.Stderr,
-			"\nwarning: could not verify the checksum of the downloaded validator JAR\n"+
-				"  no checksum published for %s, or it could not be fetched.\n"+
+			"\nwarning: could not verify the downloaded validator JAR (%s)\n"+
+				"  %s.\n"+
 				"  The JAR is installed but unverified. Run 'fhirlint update' on a\n"+
-				"  working connection to retry, and see SECURITY.md.\n", version)
+				"  working connection to retry, and see SECURITY.md.\n", version, result.reason)
 	}
 	return nil
 }
 
-// saveChecksumStatus records whether the cached JAR was checksum-verified, so
-// `fhirlint version` can report it rather than leaving users to guess.
-func saveChecksumStatus(verified bool) error {
+// saveVerifyStatus records how the cached JAR was verified, so `fhirlint
+// version` can report it rather than leaving users to guess. The method is
+// recorded, not just a boolean, because a signature and a digest are worth
+// different amounts and a future format change must not read an old file as
+// stronger than it was.
+func saveVerifyStatus(method verifyMethod) error {
 	path, err := cache.ChecksumStatusPath()
 	if err != nil {
 		return err
 	}
 	value := "unverified"
-	if verified {
-		value = "verified"
+	if method != verifiedNot {
+		value = "verified:" + string(method)
 	}
 	return os.WriteFile(path, []byte(value), 0600)
 }
 
-// JARChecksumVerified reports whether the cached JAR passed checksum
-// verification when it was downloaded. The second return is false when nothing
-// was recorded — a JAR cached by an older version, or none at all.
-func JARChecksumVerified() (verified, known bool) {
+// JARVerification reports how the cached JAR was verified when it was
+// downloaded. known is false when nothing was recorded — a JAR cached by an
+// older fhirlint, or none at all.
+func JARVerification() (method string, verified, known bool) {
 	path, err := cache.ChecksumStatusPath()
 	if err != nil {
-		return false, false
+		return "", false, false
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // known cache path
 	if err != nil {
-		return false, false
+		return "", false, false
 	}
-	switch strings.TrimSpace(string(data)) {
-	case "verified":
-		return true, true
-	case "unverified":
-		return false, true
+	switch value := strings.TrimSpace(string(data)); {
+	case value == "unverified":
+		return verifiedNot.describe(), false, true
+	case value == "verified":
+		// Written by a fhirlint that verified against the upstream .sha256 and
+		// recorded only that it had. Trusted, but it cannot say how (#358).
+		return verifiedLegacy.describe(), true, true
+	case strings.HasPrefix(value, "verified:"):
+		m := verifyMethod(strings.TrimPrefix(value, "verified:"))
+		switch m {
+		case verifiedSignature, verifiedDigest, verifiedLegacy:
+			return m.describe(), true, true
+		}
+		// A method written by a newer fhirlint than this one. Do not claim a
+		// verification whose meaning is unknown here.
+		return "", false, false
 	default:
-		return false, false
+		return "", false, false
 	}
-}
-
-// verifyJARChecksum fetches the .sha256 file for the given release version and
-// compares it against the downloaded JAR.
-//
-// It returns verified=false with a nil error when the checksum could not be
-// obtained at all — an unreachable or unpublished checksum file. That case is
-// not fatal, because upstream does not always publish one, but it must never
-// pass unnoticed: anyone able to tamper with the JAR download can usually also
-// make the checksum request fail. Callers are expected to surface it (#260).
-//
-// A genuine mismatch is returned as an error and must be treated as fatal.
-func verifyJARChecksum(jarPath, version string) (verified bool, err error) {
-	if version == "" {
-		// Without a version there is no checksum URL to fetch.
-		return false, nil
-	}
-	url := fmt.Sprintf(
-		"https://github.com/hapifhir/org.hl7.fhir.core/releases/download/%s/validator_cli.jar.sha256",
-		version,
-	)
-	return verifyJARChecksumURL(jarPath, url)
-}
-
-func verifyJARChecksumURL(jarPath, checksumURL string) (bool, error) {
-	resp, err := http.Get(checksumURL) //nolint:gosec,noctx // known URL pattern, version from trusted source
-	if err != nil {
-		return false, nil // network error fetching checksum
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return false, nil // no checksum file published for this release
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return false, nil
-	}
-	// SHA256 files may be "hash  filename" (GNU coreutils format) or just "hash".
-	fields := strings.Fields(strings.TrimSpace(string(body)))
-	if len(fields) == 0 {
-		// An empty or whitespace-only checksum file. Indexing here used to panic.
-		return false, nil
-	}
-	expected := strings.ToLower(fields[0])
-
-	f, err := os.Open(jarPath) //nolint:gosec // our own cache path
-	if err != nil {
-		return false, err
-	}
-	defer func() { _ = f.Close() }()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return false, err
-	}
-	actual := fmt.Sprintf("%x", h.Sum(nil))
-
-	if actual != expected {
-		return false, fmt.Errorf("expected %s, got %s", expected, actual)
-	}
-	return true, nil
 }
 
 func saveValidatorVersion(version string) error {

@@ -3,8 +3,6 @@ package validator
 import (
 	"archive/zip"
 	"bytes"
-	"crypto/sha256"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -261,112 +259,6 @@ func TestEnsureJAR_Override_CorruptedFile_ReturnsError(t *testing.T) {
 	}
 }
 
-func sha256hex(data []byte) string {
-	h := sha256.Sum256(data)
-	return fmt.Sprintf("%x", h)
-}
-
-func TestVerifyJARChecksum_MatchingHash(t *testing.T) {
-	content := []byte("fake jar content")
-	path := writeJAR(t, content)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, sha256hex(content))
-	}))
-	defer srv.Close()
-
-	// Temporarily override the URL pattern via a wrapper function call
-	verified, err := verifyJARChecksumURL(path, srv.URL)
-	if err != nil {
-		t.Errorf("expected nil for matching checksum, got: %v", err)
-	}
-	if !verified {
-		t.Error("a matching checksum must report verified")
-	}
-}
-
-func TestVerifyJARChecksum_MismatchHash(t *testing.T) {
-	path := writeJAR(t, []byte("fake jar content"))
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "0000000000000000000000000000000000000000000000000000000000000000")
-	}))
-	defer srv.Close()
-
-	verified, err := verifyJARChecksumURL(path, srv.URL)
-	if err == nil {
-		t.Error("expected error for mismatched checksum, got nil")
-	}
-	if verified {
-		t.Error("a mismatch must never report verified")
-	}
-}
-
-func TestVerifyJARChecksum_404_SkipsVerification(t *testing.T) {
-	path := writeJAR(t, []byte("fake jar content"))
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-
-	verified, err := verifyJARChecksumURL(path, srv.URL)
-	if err != nil {
-		t.Errorf("expected nil when checksum file not published, got: %v", err)
-	}
-	if verified {
-		t.Error("a 404 must report unverified, not verified")
-	}
-}
-
-func TestVerifyJARChecksum_GNUFormat(t *testing.T) {
-	content := []byte("fake jar content")
-	path := writeJAR(t, content)
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// GNU coreutils sha256sum format: "hash  filename"
-		fmt.Fprintf(w, "%s  validator_cli.jar\n", sha256hex(content))
-	}))
-	defer srv.Close()
-
-	verified, err := verifyJARChecksumURL(path, srv.URL)
-	if err != nil {
-		t.Errorf("expected nil for GNU-format checksum, got: %v", err)
-	}
-	if !verified {
-		t.Error("GNU-format checksum must report verified")
-	}
-}
-
-func TestVerifyJARChecksum_EmptyVersion_Skips(t *testing.T) {
-	path := writeJAR(t, []byte("content"))
-	verified, err := verifyJARChecksum(path, "")
-	if err != nil {
-		t.Errorf("expected nil for empty version, got: %v", err)
-	}
-	if verified {
-		t.Error("without a version there is no checksum to check, so it cannot be verified")
-	}
-}
-
-func TestVerifyJARChecksum_EmptyChecksumFile_DoesNotPanic(t *testing.T) {
-	// An empty or whitespace-only body used to panic on fields[0].
-	for _, body := range []string{"", "   ", "\n\n"} {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprint(w, body)
-		}))
-		path := writeJAR(t, []byte("content"))
-		verified, err := verifyJARChecksumURL(path, srv.URL)
-		srv.Close()
-		if err != nil {
-			t.Errorf("body %q: unexpected error %v", body, err)
-		}
-		if verified {
-			t.Errorf("body %q: an unusable checksum file must report unverified", body)
-		}
-	}
-}
-
 func TestEnsureJAR_Override_MissingFile_ReturnsError(t *testing.T) {
 	_, err := EnsureJAR("/nonexistent/validator_cli.jar", "")
 	if err == nil {
@@ -468,6 +360,10 @@ func TestDownloadJARFrom_CapturesVersionFromRedirect(t *testing.T) {
 
 	versionedURL = gh.URL + "/releases/download/6.9.7/validator_cli.jar"
 
+	// Keep verification local: the test server 404s both, so the download is
+	// recorded unverified instead of reaching github.com for a real signature.
+	pointVerificationAt(t, gh.URL)
+
 	tmp := t.TempDir()
 	t.Setenv("FHIRLINT_CACHE_DIR", tmp)
 
@@ -552,4 +448,14 @@ func TestEnsureJAR_Override_UnreadableFile(t *testing.T) {
 	if !strings.Contains(err.Error(), "cannot be read") {
 		t.Errorf("error should say the file cannot be read, not that it is corrupt: %v", err)
 	}
+}
+
+// pointVerificationAt redirects the signature and digest lookups at a test
+// server, so unit tests never depend on the network.
+func pointVerificationAt(t *testing.T, base string) {
+	t.Helper()
+	sigOrig, apiOrig := jarSignatureURLFor, releaseAPIURLFor
+	jarSignatureURLFor = func(v string) string { return base + "/sig/" + v }
+	releaseAPIURLFor = func(v string) string { return base + "/api/" + v }
+	t.Cleanup(func() { jarSignatureURLFor, releaseAPIURLFor = sigOrig, apiOrig })
 }
