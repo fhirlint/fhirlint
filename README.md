@@ -1944,6 +1944,26 @@ export FHIRLINT_JAR=/path/to/validator_cli.jar
 fhirlint validate patient.json
 ```
 
+### Update notices
+
+When a newer fhirlint release or validator JAR exists, `fhirlint version` and the end of a `validate` run say so:
+
+```
+Updates available:
+  fhirlint   v1.8.0 → v1.9.0    https://github.com/fhirlint/fhirlint/releases
+  validator  6.9.0 → 6.10.2     run: fhirlint update
+```
+
+The lookup is cached for 24 hours, times out after 3 seconds, and fails silently — it never delays or breaks a run. The notice goes to stderr, so it never contaminates a report on stdout.
+
+It stays quiet when there is nobody to act on it: with `CI` set, when stderr is not a terminal, under `--offline`, and whenever `FHIRLINT_NO_UPDATE_NOTIFIER` is set to anything:
+
+```bash
+export FHIRLINT_NO_UPDATE_NOTIFIER=1
+```
+
+Builds installed with `go install` or built from source are not compared against releases — there is no release version to compare them to, so no notice appears.
+
 ### Moving the cache
 
 `FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version and verification-status files, and the `--cache` result cache:

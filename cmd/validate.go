@@ -2573,16 +2573,6 @@ func outputFile(ext string) string {
 	return flagOutput
 }
 
-func printUpdateNotice() {
-	// The check is an HTTP call to the GitHub API. --offline said no.
-	if flagOffline {
-		return
-	}
-	if newer := validator.CheckForUpdate(); newer != "" {
-		fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
-	}
-}
-
 // reportRuleOutcome prints the warnings a selector rule earns: expired, unused,
 // or about to lapse. kind names the config section ("suppress",
 // "severity-override") and label is how the rule is shown to the user.

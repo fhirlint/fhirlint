@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"runtime/debug"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
@@ -25,9 +24,7 @@ var versionCmd = &cobra.Command{
 		} else {
 			fmt.Printf("fhir:      %s (default)\n", validator.FHIRVersionName(defaultFHIRVersion))
 		}
-		if newer := validator.CheckForUpdate(); newer != "" {
-			fmt.Fprintf(os.Stderr, "\nA new validator version (%s) is available. Run: fhirlint update\n", newer)
-		}
+		printUpdateNotice()
 	},
 }
 

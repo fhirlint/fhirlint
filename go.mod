@@ -5,12 +5,14 @@ go 1.25.13
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/mattn/go-isatty v0.0.20
 	github.com/muesli/termenv v0.16.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/tidwall/gjson v1.19.0
 	go.yaml.in/yaml/v3 v3.0.5
+	golang.org/x/mod v0.40.0
 )
 
 require (
@@ -24,7 +26,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
