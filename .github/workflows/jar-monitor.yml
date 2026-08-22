@@ -5,13 +5,71 @@ on:
     - cron: '0 7 * * 1'   # Weekly, Monday 07:00 UTC
   workflow_dispatch:
 
-permissions:
-  issues: write
+permissions: {}
 
 jobs:
+  # The pinned HL7 signing key has an expiry. When it lapses, JAR verification
+  # silently degrades to the weaker digest check — exactly the kind of quiet
+  # failure #358 was about. Warn well before that, not after.
+  check-signing-key:
+    name: Warn before the pinned HL7 signing key expires
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Days until the pinned key expires
+        id: expiry
+        run: |
+          set -euo pipefail
+          go run ./internal/tools/keyexpiry | tee expiry.txt
+          echo "days=$(cut -f1 expiry.txt)" >> "$GITHUB_OUTPUT"
+          echo "date=$(cut -f2 expiry.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: File or resolve the rotation issue
+        if: steps.expiry.outputs.days != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          DAYS: ${{ steps.expiry.outputs.days }}
+          EXPIRES: ${{ steps.expiry.outputs.date }}
+        run: |
+          set -euo pipefail
+          title="Rotate the pinned HL7 signing key (expires $EXPIRES)"
+          existing=$(gh issue list --label security --label signing-key --state open \
+            --json number --jq '.[0].number // ""')
+
+          if [ "$DAYS" -gt 90 ]; then
+            echo "Pinned key valid for $DAYS more days; nothing to do."
+            exit 0
+          fi
+
+          body="The HL7 release signing key pinned in \`internal/validator/hl7_signing_key.asc\` expires on **$EXPIRES** ($DAYS days).
+
+          Once it lapses, \`fhirlint\` stops verifying JAR signatures and falls back to the weaker GitHub digest check, and \`fhirlint version\` reports \`(verified: GitHub release digest)\` instead of the signature.
+
+          **Action:** confirm the current upstream key, re-pin it, and check the new fingerprint against a second channel (the Maven Central signatures of \`ca.uhn.hapi.fhir:org.hl7.fhir.validation\`) before merging. See SECURITY.md, \"The pinned signing key\"."
+
+          if [ -n "$existing" ]; then
+            printf '%s\n' "$body" | gh issue comment "$existing" --body-file -
+          else
+            printf '%s\n' "$body" | gh issue create \
+              --title "$title" --label security --label signing-key --body-file -
+          fi
+
   check-advisories:
     name: Check advisories affecting the latest JAR
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       # Audit against the *latest* validator JAR using fhirlint itself, so we
       # only alert when a published advisory actually affects the version users
