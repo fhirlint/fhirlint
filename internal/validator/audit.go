@@ -7,9 +7,15 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const advisoriesURL = "https://api.github.com/repos/hapifhir/org.hl7.fhir.core/security-advisories"
+
+// advisoryTimeout keeps an unreachable API from stalling the audit. It used to
+// borrow the update check's constant; that moved to internal/updatecheck (#360)
+// and this call has its own reason to be bounded.
+const advisoryTimeout = 3 * time.Second
 
 // AuditReport holds the results of a security audit of the validator JAR.
 type AuditReport struct {
@@ -153,7 +159,7 @@ func Audit() AuditReport {
 }
 
 func fetchAdvisories() ([]Advisory, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), advisoryTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, advisoriesURL, nil)
