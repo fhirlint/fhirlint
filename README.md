@@ -2067,7 +2067,27 @@ IG packages (fhirlint.lock)
 
 The JAR half checks the installed version against the latest release and against the published [security advisories](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories) for `org.hl7.fhir.core`.
 
-The IG half reads [`fhirlint.lock`](#ig-lock-file) and asks the FHIR package registry about each pinned package. There is nothing to configure: the lock file already knows which packages you use. Without a lock file the section is skipped with a hint, and the JAR check still runs.
+The IG half asks the FHIR package registry about each of your packages, taking them from the first source it finds:
+
+1. **[`fhirlint.lock`](#ig-lock-file)**, when there is one. Preferred, because it pins exactly what a run resolved to — including the transitive packages your config never names.
+2. **the `ig:` list in your config**, otherwise. Most projects have no lock file, and auditing what they did declare beats skipping the half of the audit they ran the command for.
+
+The header names which one was used, and the config fallback adds a note:
+
+```
+IG packages (fhirlint.yml)
+  ✓ de.medizininformatikinitiative.kerndatensatz.person  2025.0.1 — current
+  ✗ kbv.basis                                            1.5.0 → 1.9.0 available
+  ! ./local-ig                                           not pinned — no version to check
+  (1 of 2 package(s) need attention)
+  note: from the ig: list — run 'fhirlint validate --lock' to pin transitive packages too
+```
+
+Entries that name no registry version — a bare package name, a local directory, `#latest` — are listed as not pinned rather than dropped silently: an unpinned IG is itself worth seeing in an audit. With neither source the section is skipped with a hint, and the JAR check still runs.
+
+The audit is scoped to your project, not to the machine. It never audits the whole [package cache](#the-fhir-package-cache), which accumulates across every project that machine has ever validated.
+
+In `--format json`, `igSource` names the file the packages came from and `igUnpinned` lists the entries that could not be checked. `lockFile` keeps naming the lock file only, so consumers reading that field are unaffected.
 
 A package is reported as:
 
