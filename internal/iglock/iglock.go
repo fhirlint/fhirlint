@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/fhirpkg"
 )
 
 const LockFileName = "fhirlint.lock"
@@ -75,22 +76,9 @@ func PackageURL(name, version string) string {
 	return "https://packages.fhir.org/" + name + "/" + version
 }
 
-// fhirPackageCacheDir returns the default FHIR package cache directory.
-func fhirPackageCacheDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".fhir", "packages"), nil
-}
-
 // PackageManifestPath returns the path to package.json for a cached package.
 func PackageManifestPath(name, version string) (string, error) {
-	dir, err := fhirPackageCacheDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, name+"#"+version, "package", "package.json"), nil
+	return fhirpkg.ManifestPath(name, version)
 }
 
 // HashPackage computes SHA256 of the package.json for the given cached IG.

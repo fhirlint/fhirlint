@@ -47,6 +47,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Validating the configuration file](#validating-the-configuration-file)
 - [Configuration reference](#configuration-reference)
 - [Built-in profile aliases](#built-in-profile-aliases)
+- [The FHIR package cache](#the-fhir-package-cache)
 - [JAR management](#jar-management)
 - [Auditing the toolchain](#auditing-the-toolchain)
 - [Go library](#go-library)
@@ -1918,6 +1919,67 @@ fhirlint profiles
 # Validate against an international profile alias
 fhirlint validate patient.json --profile us-core
 ```
+
+---
+
+## The FHIR package cache
+
+IG packages live in `~/.fhir/packages`, the cache the validator JAR populates and the whole FHIR toolchain shares — the IG publisher and sushi write there too. fhirlint only ever reads it: nothing in fhirlint removes or renames anything in that directory, because another tool may be mid-way through using it.
+
+`FHIRLINT_CACHE_DIR` does **not** move it. That variable relocates fhirlint's own cache; the package cache is resolved by the validator JAR from its own `user.home`, and an override only fhirlint honoured would point the two at different directories.
+
+### What is installed
+
+```bash
+fhirlint packages              # grouped by package, alphabetical
+fhirlint packages --sort size  # largest first
+fhirlint packages --json
+```
+
+```
+FHIR package cache — 61 package(s), 1.2 GB
+
+hl7.terminology.r4
+  6.2.0              64 MB  FHIR 4.0.1
+  7.2.0              61 MB  FHIR 4.0.1
+kbv.basis  (installed under more than one spelling)
+  1.1.0             239 KB  FHIR 4.0.1     KBV.Basis
+  1.9.0               1 MB  FHIR 4.0.1     kbv.basis
+```
+
+Versions of one package are grouped rather than scattered through an alphabetical listing. Packages published under more than one capitalisation are folded into one group and flagged — older KBV releases used `KBV.Basis`, newer ones `kbv.basis`, and both end up on disk as separate copies of the same thing. The directory names themselves are never rewritten.
+
+### What a package depends on
+
+```bash
+fhirlint packages tree de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1
+```
+
+```
+de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1
+├── de.basisprofil.r4#1.5.4   (declared 1.5.x)
+│   └── hl7.fhir.r4.core#4.0.1
+├── de.medizininformatikinitiative.kerndatensatz.meta#2025.0.3   (declared 2025.0.x)
+│   └── hl7.fhir.r4.core#4.0.1   …
+└── kbv.all.st#1.27.0
+    └── hl7.fhir.r4.core#4.0.1   …
+
+All dependencies are in the cache.
+2 declared as a version range; the resolved version shown is what is installed now.
+```
+
+Resolved entirely from manifests on disk, so it works offline. Use `--depth N` to stop at N levels of dependencies, and `--json` for the whole tree as a structure.
+
+Two markers matter:
+
+| | meaning |
+|---|---|
+| `MISSING` | declared but not in the cache — a run with `--offline` would fail on it |
+| `(declared 1.5.x)` | the dependency is a **range**, not a pin; the version shown is what happens to be installed now |
+
+That second one is why [`fhirlint.lock`](#ig-lock-file) records a manifest SHA256 rather than trusting version strings: a manifest alone does not determine which version a run resolves to.
+
+A `…` marks a package already expanded elsewhere in the tree, or one cut off by `--depth`.
 
 ---
 

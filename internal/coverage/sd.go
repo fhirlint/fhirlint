@@ -14,6 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/fhirpkg"
 )
 
 // StructureDefinition is the subset of a FHIR StructureDefinition this package
@@ -270,13 +272,7 @@ func PackageDir(cacheRoot, name, version string) string {
 }
 
 // DefaultCacheRoot is where the FHIR package cache lives.
-func DefaultCacheRoot() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".fhir", "packages"), nil
-}
+func DefaultCacheRoot() (string, error) { return fhirpkg.CacheRoot() }
 
 // ErrPackageNotCached reports a package that is not in the local FHIR package
 // cache and could not be fetched, because downloading was switched off.
