@@ -38,15 +38,15 @@ func captureOutErr(t *testing.T, fn func()) string {
 
 func TestPrintIGTerminal_NoLockFile(t *testing.T) {
 	var got int
-	out := captureOutErr(t, func() { got = printIGTerminal(igaudit.Report{}, nil) })
+	out := captureOutErr(t, func() { got = printIGTerminal(igaudit.Report{}, igSource{}, nil) })
 
 	if got != 0 {
 		t.Errorf("problem count = %d, want 0", got)
 	}
 	// A project without a lock file has not done anything wrong, so the section
 	// has to read as a hint rather than as a finding.
-	if !strings.Contains(out, "no fhirlint.lock found") {
-		t.Errorf("want a hint about the missing lock file, got:\n%s", out)
+	if !strings.Contains(out, "no fhirlint.lock and no ig: list") {
+		t.Errorf("want a hint about the missing lock file and config list, got:\n%s", out)
 	}
 	if !strings.Contains(out, "fhirlint validate --lock") {
 		t.Errorf("want the command that writes a lock file, got:\n%s", out)
@@ -56,7 +56,7 @@ func TestPrintIGTerminal_NoLockFile(t *testing.T) {
 func TestPrintIGTerminal_ReadError(t *testing.T) {
 	var got int
 	out := captureOutErr(t, func() {
-		got = printIGTerminal(igaudit.Report{}, errors.New("reading fhirlint.lock: broken"))
+		got = printIGTerminal(igaudit.Report{}, igSource{}, errors.New("reading fhirlint.lock: broken"))
 	})
 
 	if got != 0 {
@@ -79,7 +79,7 @@ func TestPrintIGTerminal_Classification(t *testing.T) {
 	}}
 
 	var got int
-	out := captureOutErr(t, func() { got = printIGTerminal(report, nil) })
+	out := captureOutErr(t, func() { got = printIGTerminal(report, igSource{Label: "fhirlint.lock"}, nil) })
 
 	// Outdated, deprecated, not-found and differs count. Ahead and a check that
 	// could not run do not.
@@ -127,7 +127,7 @@ func TestPrintAuditJSON_IGFields(t *testing.T) {
 	}}
 
 	out := captureOutErr(t, func() {
-		if err := printAuditJSON(validator.AuditReport{CurrentVersion: "6.10.2"}, igReport, nil); err != nil {
+		if err := printAuditJSON(validator.AuditReport{CurrentVersion: "6.10.2"}, igReport, igSource{Label: "fhirlint.lock"}, nil); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -155,7 +155,7 @@ func TestPrintAuditJSON_IGFields(t *testing.T) {
 
 func TestPrintAuditJSON_NoLockFile(t *testing.T) {
 	out := captureOutErr(t, func() {
-		if err := printAuditJSON(validator.AuditReport{CurrentVersion: "6.10.2"}, igaudit.Report{}, nil); err != nil {
+		if err := printAuditJSON(validator.AuditReport{CurrentVersion: "6.10.2"}, igaudit.Report{}, igSource{}, nil); err != nil {
 			t.Fatal(err)
 		}
 	})

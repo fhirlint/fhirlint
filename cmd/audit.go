@@ -11,6 +11,9 @@ import (
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"path/filepath"
+	"sort"
 )
 
 var flagAuditFormat string
@@ -71,9 +74,15 @@ type auditJSON struct {
 	// LockFile is the lock file the IG packages were read from, empty when
 	// there was none. IGPackages is always an array so that consumers can index
 	// it without a nil check.
-	LockFile   string                  `json:"lockFile,omitempty"`
+	LockFile string `json:"lockFile,omitempty"`
+	// IGSource names the file the packages came from — the lock file, or the
+	// config when falling back to its ig: list.
+	IGSource   string                  `json:"igSource,omitempty"`
 	IGPackages []igaudit.PackageReport `json:"igPackages"`
-	IGError    string                  `json:"igError,omitempty"`
+	// IGUnpinned lists ig: entries that name no registry version and so could
+	// not be checked. Always an array.
+	IGUnpinned []string `json:"igUnpinned"`
+	IGError    string   `json:"igError,omitempty"`
 }
 
 type auditAdvisoryJSON struct {
@@ -85,14 +94,14 @@ type auditAdvisoryJSON struct {
 
 func runAudit(_ *cobra.Command, _ []string) error {
 	report := validator.Audit()
-	igReport, igErr := auditIGPackages()
+	igReport, igSrc, igErr := auditIGPackages()
 
 	if flagAuditFormat == "json" {
-		return printAuditJSON(report, igReport, igErr)
+		return printAuditJSON(report, igReport, igSrc, igErr)
 	}
 
 	jarIssues := printJARTerminal(report)
-	igIssues := printIGTerminal(igReport, igErr)
+	igIssues := printIGTerminal(igReport, igSrc, igErr)
 
 	fmt.Println()
 	switch auditExitCode(jarIssues, igIssues) {
@@ -121,27 +130,85 @@ func auditExitCode(jarIssues, igIssues int) int {
 	}
 }
 
-// auditIGPackages reads the lock file and checks each package against the
-// registry. A missing lock file is not an error: most projects do not pin, and
-// the JAR half of the audit is still worth running for them.
-func auditIGPackages() (igaudit.Report, error) {
+// igSource is where the packages being audited came from. The two sources
+// answer different questions, so which one was used is part of the result.
+type igSource struct {
+	// Label names the file for the user, empty when nothing was found.
+	Label string
+	// IDs are auditable "name#version" packages.
+	IDs []string
+	// Unpinned are entries naming no version — an unpinned IG cannot be checked
+	// against the registry, and that is itself worth reporting.
+	Unpinned []string
+	// FromConfig marks the fallback, which covers only what the config declares
+	// and not the transitive packages a lock file would.
+	FromConfig bool
+}
+
+// resolveIGSource picks what to audit: the lock file when there is one, the
+// config's ig: list otherwise.
+//
+// The lock file is preferred because it pins exactly what a run resolved to,
+// transitive packages included. The config only names direct dependencies — but
+// most projects have no lock file, and auditing what they did declare beats
+// skipping the half of the audit they ran the command for (#364).
+func resolveIGSource() (igSource, error) {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
-		return igaudit.Report{}, fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
+		return igSource{}, fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
 	}
-	if lf == nil || len(lf.Packages) == 0 {
-		return igaudit.Report{}, nil
+	if lf != nil && len(lf.Packages) > 0 {
+		src := igSource{Label: iglock.LockFileName}
+		for id := range lf.Packages {
+			src.IDs = append(src.IDs, id)
+		}
+		sort.Strings(src.IDs)
+		return src, nil
 	}
 
-	ids := make([]string, 0, len(lf.Packages))
-	for id := range lf.Packages {
-		ids = append(ids, id)
+	igs := viper.GetStringSlice("ig")
+	if len(igs) == 0 {
+		return igSource{}, nil
+	}
+	src := igSource{Label: configFileLabel(), FromConfig: true}
+	for _, ig := range igs {
+		// ParseIGID rejects local paths and "latest" as well as bare names —
+		// none of them name a registry version to check.
+		if name, version := iglock.ParseIGID(ig); name != "" && version != "" {
+			src.IDs = append(src.IDs, ig)
+			continue
+		}
+		src.Unpinned = append(src.Unpinned, ig)
+	}
+	sort.Strings(src.IDs)
+	sort.Strings(src.Unpinned)
+	return src, nil
+}
+
+// configFileLabel names the config the ig: list came from.
+func configFileLabel() string {
+	if used := viper.ConfigFileUsed(); used != "" {
+		return filepath.Base(used)
+	}
+	return "the config"
+}
+
+// auditIGPackages checks each package in the resolved source against the
+// registry. Finding no source at all is not an error: the JAR half of the audit
+// is still worth running.
+func auditIGPackages() (igaudit.Report, igSource, error) {
+	src, err := resolveIGSource()
+	if err != nil {
+		return igaudit.Report{}, igSource{}, err
+	}
+	if len(src.IDs) == 0 {
+		return igaudit.Report{}, src, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), igAuditTimeout)
 	defer cancel()
 
-	return igaudit.Audit(ctx, igaudit.NewClient(), ids), nil
+	return igaudit.Audit(ctx, igaudit.NewClient(), src.IDs), src, nil
 }
 
 // printJARTerminal renders the JAR half of the audit and returns how many
@@ -195,25 +262,30 @@ func printJARTerminal(report validator.AuditReport) int {
 // printIGTerminal renders the IG package half of the audit and returns how many
 // packages need attention. Packages that could not be checked are reported but
 // not counted — an unreachable registry says nothing about the package.
-func printIGTerminal(r igaudit.Report, igErr error) int {
+func printIGTerminal(r igaudit.Report, src igSource, igErr error) int {
 	fmt.Println()
-	fmt.Printf("IG packages (%s)\n", iglock.LockFileName)
+	label := src.Label
+	if label == "" {
+		label = iglock.LockFileName
+	}
+	fmt.Printf("IG packages (%s)\n", label)
 
 	if igErr != nil {
 		fmt.Fprintf(os.Stderr, "  ! %s\n", igErr)
 		return 0
 	}
-	if len(r.Packages) == 0 {
-		fmt.Printf("  – no %s found — record your IG packages with: fhirlint validate --lock\n",
+	if len(r.Packages) == 0 && len(src.Unpinned) == 0 {
+		fmt.Printf("  – no %s and no ig: list — record your IG packages with: fhirlint validate --lock\n",
 			iglock.LockFileName)
 		return 0
 	}
 
 	width := 0
 	for _, p := range r.Packages {
-		if len(p.Name) > width {
-			width = len(p.Name)
-		}
+		width = max(width, len(p.Name))
+	}
+	for _, ig := range src.Unpinned {
+		width = max(width, len(ig))
 	}
 
 	for _, p := range r.Packages {
@@ -240,8 +312,19 @@ func printIGTerminal(r igaudit.Report, igErr error) int {
 		}
 	}
 
+	// An unpinned IG cannot be checked against the registry, and that is worth
+	// seeing in an audit rather than silently dropping.
+	for _, ig := range src.Unpinned {
+		fmt.Fprintf(os.Stderr, "  ! %-*s  not pinned — no version to check\n", width, ig)
+	}
+
 	if n := r.Problems(); n > 0 {
 		fmt.Printf("  (%d of %d package(s) need attention)\n", n, len(r.Packages))
+	}
+	if src.FromConfig {
+		// The config names direct dependencies only; a lock file also pins what
+		// they pull in.
+		fmt.Printf("  note: from the ig: list — run 'fhirlint validate --lock' to pin transitive packages too\n")
 	}
 	return r.Problems()
 }
@@ -256,7 +339,7 @@ func deprecationSuffix(note string) string {
 // printAuditJSON emits the audit report as JSON and always exits 0, so callers
 // (e.g. the security-monitor workflow) can parse the result rather than rely on
 // an exit code that conflates "outdated" with "security advisory".
-func printAuditJSON(report validator.AuditReport, igReport igaudit.Report, igErr error) error {
+func printAuditJSON(report validator.AuditReport, igReport igaudit.Report, src igSource, igErr error) error {
 	affecting := make([]auditAdvisoryJSON, 0)
 	for _, a := range report.AffectingAdvisories() {
 		affecting = append(affecting, auditAdvisoryJSON{
@@ -282,8 +365,18 @@ func printAuditJSON(report validator.AuditReport, igReport igaudit.Report, igErr
 		AdvisoryError:  report.AdvisoryError,
 		IGPackages:     packages,
 	}
-	if len(packages) > 0 {
+	// LockFile keeps naming the lock file only, so the workflow that reads this
+	// does not start seeing a config file in a field named lockFile. IGSource
+	// carries the general answer (#364).
+	if len(packages) > 0 && !src.FromConfig {
 		out.LockFile = iglock.LockFileName
+	}
+	if src.Label != "" {
+		out.IGSource = src.Label
+	}
+	out.IGUnpinned = src.Unpinned
+	if out.IGUnpinned == nil {
+		out.IGUnpinned = []string{}
 	}
 	if igErr != nil {
 		out.IGError = igErr.Error()
