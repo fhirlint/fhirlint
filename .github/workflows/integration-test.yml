@@ -35,7 +35,7 @@ jobs:
         # the old JAR. In the job name so a failure names the version it ran
         # against. Bump when the canary job below has been green on a newer
         # release.
-        validator: ['6.10.1']
+        validator: ['6.10.2']
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
