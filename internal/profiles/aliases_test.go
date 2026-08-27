@@ -1,6 +1,8 @@
 package profiles
 
 import (
+	"io"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -50,18 +52,116 @@ func TestResolve_MIIExpandsToModules(t *testing.T) {
 
 // Every per-module alias must name exactly the reference the aggregate uses.
 // Two pins for the same module would load two versions of it in one run.
+// Every set alias and its per-module aliases must agree: a module alias that
+// drifts from the aggregate means one of the two pins was bumped and the other
+// forgotten, which is invisible until a run loads two versions of one package.
 func TestAliases_ModuleAliasesMatchAggregate(t *testing.T) {
-	aggregate := Resolve("mii")
+	for _, set := range []string{"mii", "isik"} {
+		aggregate := Resolve(set)
+		if len(aggregate) < 2 {
+			t.Fatalf("%q should be a multi-package alias, got %v", set, aggregate)
+		}
+		for alias, pkgs := range Aliases {
+			if !strings.HasPrefix(alias, set+"-") {
+				continue
+			}
+			if len(pkgs) != 1 {
+				t.Errorf("alias %q resolves to %d packages, want exactly 1", alias, len(pkgs))
+				continue
+			}
+			if !slices.Contains(aggregate, pkgs[0]) {
+				t.Errorf("alias %q resolves to %q, which is not in the %s aggregate %q",
+					alias, pkgs[0], set, aggregate)
+			}
+		}
+	}
+}
+
+// Each module of a set alias should have its own alias, or the set is the only
+// way to reach it and a project wanting one module has to load all of them.
+func TestAliases_EverySetMemberHasAModuleAlias(t *testing.T) {
+	for _, set := range []string{"mii", "isik"} {
+		covered := map[string]bool{}
+		for alias, pkgs := range Aliases {
+			if strings.HasPrefix(alias, set+"-") && len(pkgs) == 1 {
+				covered[pkgs[0]] = true
+			}
+		}
+		for _, pkg := range Resolve(set) {
+			if !covered[pkg] {
+				t.Errorf("%s member %q has no module alias of its own", set, pkg)
+			}
+		}
+	}
+}
+
+// ISiK is the reason List() stopped hardcoding its column width: the longest
+// alias outgrew the constant and broke the arrow column.
+func TestAliases_LongestNameIsRenderable(t *testing.T) {
+	longest := ""
+	for alias := range Aliases {
+		if len(alias) > len(longest) {
+			longest = alias
+		}
+	}
+	if longest == "" {
+		t.Fatal("the alias table is empty")
+	}
+	out := captureStdout(t, List)
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), longest+" ") {
+			if !strings.Contains(line, "→") {
+				t.Errorf("the longest alias %q does not render with its arrow:\n%s", longest, line)
+			}
+			return
+		}
+	}
+	t.Errorf("the longest alias %q is missing from List() output", longest)
+}
+
+// captureStdout runs f and returns what it printed.
+func captureStdout(t *testing.T, f func()) string {
+	t.Helper()
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	done := make(chan string)
+	go func() {
+		var b strings.Builder
+		_, _ = io.Copy(&b, r)
+		done <- b.String()
+	}()
+	f()
+	_ = w.Close()
+	os.Stdout = orig
+	return <-done
+}
+
+// The ISiK modules share a 4.0.x train but not their base-profile pin, and
+// isik-medikation pulls an IPS version that differs from the `ips` alias. Both
+// are documented on the table; this pins the shape those comments describe so a
+// future edit cannot quietly change it.
+func TestAliases_ISiKSetIsTheDocumentedFiveModules(t *testing.T) {
+	got := Resolve("isik")
+	want := []string{
+		"de.gematik.isik-basismodul#4.0.3",
+		"de.gematik.isik-medikation#4.0.3",
+		"de.gematik.isik-terminplanung#4.0.3",
+		"de.gematik.isik-vitalparameter#4.0.2",
+		"de.gematik.isik-dokumentenaustausch#4.0.1",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("isik = %q, want %q", got, want)
+	}
+	// isik-labor has only a 4.0.0-rc and no dist-tag, so it must not be pinned.
 	for alias, pkgs := range Aliases {
-		if !strings.HasPrefix(alias, "mii-") {
-			continue
-		}
-		if len(pkgs) != 1 {
-			t.Errorf("alias %q resolves to %d packages, want exactly 1", alias, len(pkgs))
-			continue
-		}
-		if !slices.Contains(aggregate, pkgs[0]) {
-			t.Errorf("alias %q resolves to %q, which is not in the mii aggregate %q", alias, pkgs[0], aggregate)
+		for _, p := range pkgs {
+			if strings.Contains(p, "isik-labor") {
+				t.Errorf("alias %q pins %q, which has no published release", alias, p)
+			}
 		}
 	}
 }

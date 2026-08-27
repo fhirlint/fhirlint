@@ -48,6 +48,34 @@ var Aliases = map[string][]string{
 	"mii-laborbefund": {"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"},
 	"mii-medikation":  {"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1"},
 
+	// gematik ISiK — the interoperability profiles German hospitals implement.
+	//
+	// The modules share a 4.0.x train but not their base-profile pin:
+	// isik-vitalparameter wants de.basisprofil.r4 1.5.3 while the others want
+	// 1.5.2, so loading the full set pulls two versions of the German base
+	// profiles. The JAR accepts that — the same situation `mii` has with
+	// kerndatensatz.meta — but a project that wants one coherent set should
+	// name the modules it needs instead.
+	//
+	// isik-medikation also depends on hl7.fhir.uv.ips 1.1.0, which collides
+	// with the `ips` alias below (2.0.1) if a run combines the two.
+	//
+	// de.gematik.isik-labor is absent on purpose: its only published version is
+	// 4.0.0-rc and its dist-tags are empty, so there is no release to pin. An
+	// alias pointing at a package the registry does not serve is #335 again.
+	"isik": {
+		"de.gematik.isik-basismodul#4.0.3",
+		"de.gematik.isik-medikation#4.0.3",
+		"de.gematik.isik-terminplanung#4.0.3",
+		"de.gematik.isik-vitalparameter#4.0.2",
+		"de.gematik.isik-dokumentenaustausch#4.0.1",
+	},
+	"isik-basis":               {"de.gematik.isik-basismodul#4.0.3"},
+	"isik-medikation":          {"de.gematik.isik-medikation#4.0.3"},
+	"isik-terminplanung":       {"de.gematik.isik-terminplanung#4.0.3"},
+	"isik-vitalparameter":      {"de.gematik.isik-vitalparameter#4.0.2"},
+	"isik-dokumentenaustausch": {"de.gematik.isik-dokumentenaustausch#4.0.1"},
+
 	// International profiles
 	"us-core": {"hl7.fhir.us.core#9.0.0"}, // US Core (HL7 US Realm)
 	"ips":     {"hl7.fhir.uv.ips#2.0.1"},  // International Patient Summary
@@ -102,7 +130,13 @@ func List() {
 	sort.Strings(aliases)
 
 	const indent = "  "
-	const width = 20
+	// Derived, not fixed: a hardcoded width silently breaks the arrow column as
+	// soon as an alias outgrows it, which isik-dokumentenaustausch did (#368).
+	width := 0
+	for _, alias := range aliases {
+		width = max(width, len(alias))
+	}
+
 	for _, alias := range aliases {
 		pkgs := Aliases[alias]
 		fmt.Printf("%s%-*s → %s\n", indent, width, alias, pkgs[0])
