@@ -10,7 +10,7 @@
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
-`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON, HTML, JUnit, SARIF, Markdown, and CodeClimate reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA).
+`fhirlint` wraps the official [HL7 FHIR Validator](https://github.com/hapifhir/org.hl7.fhir.core) and adds what it lacks: clean terminal output, multiple input sources, JSON, HTML, JUnit, SARIF, Markdown, and CodeClimate reports, pipeline-ready exit codes, watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, ISiK, DiGA).
 
 The validator JAR is downloaded automatically on first use — no manual setup required.
 
@@ -1895,6 +1895,12 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` |
 | `diga` | `kbv.mio.diga#1.1.0` |
+| `isik` | all five gematik ISiK modules (see below) |
+| `isik-basis` | `de.gematik.isik-basismodul#4.0.3` |
+| `isik-medikation` | `de.gematik.isik-medikation#4.0.3` |
+| `isik-terminplanung` | `de.gematik.isik-terminplanung#4.0.3` |
+| `isik-vitalparameter` | `de.gematik.isik-vitalparameter#4.0.2` |
+| `isik-dokumentenaustausch` | `de.gematik.isik-dokumentenaustausch#4.0.1` |
 
 An alias can stand for more than one package. The MII publishes no umbrella
 package — the Kerndatensatz ships module by module — so `mii` loads all six
@@ -1902,6 +1908,17 @@ modules, and the `mii-*` aliases name them individually. The modules are not on
 a common release train, so `mii` pulls two versions of the shared
 `kerndatensatz.meta` package; if that matters for your project, name the modules
 you actually need instead.
+
+`isik` works the same way and carries the same caveat. The five modules share a
+4.0.x train, but `isik-vitalparameter` pins `de.basisprofil.r4` 1.5.3 while the
+others pin 1.5.2, so the set loads two versions of the German base profiles.
+`isik-medikation` additionally depends on `hl7.fhir.uv.ips` 1.1.0, which is not
+the version the `ips` alias pins (2.0.1) — combining the two in one run loads
+both.
+
+`de.gematik.isik-labor` has no alias on purpose: the registry serves only a
+`4.0.0-rc` for it, with no `dist-tags.latest`, so there is no published release
+to pin. Name it explicitly if you need the release candidate.
 
 **International profiles:**
 
@@ -2171,7 +2188,7 @@ Detailed guides for common workflows:
 - [Validating partial JSON](docs/extract.md) — `--extract` and `--extract-each` for non-FHIR API wrappers and array responses, including XML support
 - [Suppression rules](docs/suppression.md) — when to suppress vs. fix, selector types, committing decisions to `fhirlint.yml`
 - [Baseline mode](docs/baseline.md) — incremental adoption, managing technical debt, CI regression detection
-- [German FHIR profiles](docs/german-profiles.md) — KBV, MII, DiGA: aliases, version pinning, combining profiles
+- [German FHIR profiles](docs/german-profiles.md) — KBV, MII, ISiK, DiGA: aliases, version pinning, combining profiles
 - [Offline terminology](docs/terminology-offline.md) — recording and replaying terminology so a run needs no terminology server
 - [Language server](docs/lsp.md) — editor setup, hover, quick fixes, and how diagnostics differ from a CLI run
 

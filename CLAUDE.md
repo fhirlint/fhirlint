@@ -1,6 +1,6 @@
 # fhirlint — Claude Code context
 
-fhirlint is a Go CLI that wraps the HL7 FHIR Validator JAR and adds developer-friendly output (terminal, JSON, HTML, JUnit, SARIF), watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, DiGA). The JAR is auto-downloaded on first use.
+fhirlint is a Go CLI that wraps the HL7 FHIR Validator JAR and adds developer-friendly output (terminal, JSON, HTML, JUnit, SARIF), watch mode, suppression rules, and built-in aliases for German FHIR profiles (KBV, MII, ISiK, DiGA). The JAR is auto-downloaded on first use.
 
 ## Architecture
 

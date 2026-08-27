@@ -19,7 +19,7 @@ It wraps the official HL7 FHIR Validator with a better developer experience:
   - Auto-downloads the validator JAR on first use
   - Accepts files, directories, stdin, and HTTP URLs
   - Outputs to terminal, JSON, or HTML
-  - Ships with German profile aliases (KBV, MII, DiGA)
+  - Ships with German profile aliases (KBV, MII, ISiK, DiGA)
 
 Configuration can be stored in fhirlint.yml or .fhirlint.yml in the project root.
 
