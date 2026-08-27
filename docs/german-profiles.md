@@ -1,4 +1,4 @@
-# German FHIR profiles (KBV, MII, DiGA)
+# German FHIR profiles (KBV, MII, ISiK, DiGA)
 
 fhirlint ships with built-in aliases for the most common German FHIR profiles and implementation guides. This guide explains what each profile covers, how to use the aliases, and how to combine them for real-world German FHIR projects.
 
@@ -7,6 +7,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [Built-in aliases](#built-in-aliases)
 - [KBV — Kassenärztliche Bundesvereinigung](#kbv--kassenärztliche-bundesvereinigung)
 - [MII — Medizininformatik-Initiative](#mii--medizininformatik-initiative)
+- [ISiK — gematik hospital interoperability](#isik--gematik-hospital-interoperability)
 - [DiGA — Digitale Gesundheitsanwendungen](#diga--digitale-gesundheitsanwendungen)
 - [Combining profiles](#combining-profiles)
 - [Version pinning](#version-pinning)
@@ -34,6 +35,12 @@ fhirlint profiles
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
 | `diga` | `kbv.mio.diga#1.1.0` | KBV MIO DiGA Toolkit profiles |
+| `isik` | all five modules below | gematik ISiK, complete |
+| `isik-basis` | `de.gematik.isik-basismodul#4.0.3` | Patient, Encounter, Practitioner, Organization, Coverage, Condition, Procedure, … (18 resource types) |
+| `isik-medikation` | `de.gematik.isik-medikation#4.0.3` | Medication, MedicationRequest, MedicationStatement, MedicationAdministration |
+| `isik-terminplanung` | `de.gematik.isik-terminplanung#4.0.3` | Appointment, Schedule, Slot, HealthcareService |
+| `isik-vitalparameter` | `de.gematik.isik-vitalparameter#4.0.2` | Observation (66 vital-sign profiles) |
+| `isik-dokumentenaustausch` | `de.gematik.isik-dokumentenaustausch#4.0.1` | DocumentReference, document Bundle |
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
 
@@ -143,6 +150,56 @@ Some projects need to comply with both MII and KBV profiles — for example, a h
 fhirlint validate patient.json \
   --ig kbv.basis#1.5.0 \
   --ig de.medizininformatikinitiative.kerndatensatz.person#2025.0.1
+```
+
+---
+
+## ISiK — gematik hospital interoperability
+
+ISiK ("Informationstechnische Systeme im Krankenhaus") is the gematik profile
+set for hospital interoperability, published module by module as
+`de.gematik.isik-*`. All five modules are R4 and share a 4.0.x train.
+
+### Validate against ISiK
+
+```bash
+# The whole set
+fhirlint validate patient.json --profile isik
+
+# One module
+fhirlint validate observation.json --profile isik-vitalparameter
+
+# Equivalent with the full package reference
+fhirlint validate patient.json --ig de.gematik.isik-basismodul#4.0.3
+```
+
+### Two version overlaps to know about
+
+The modules do not agree on their base-profile pin. `isik-vitalparameter`
+depends on `de.basisprofil.r4` 1.5.3 while the other modules depend on 1.5.2, so
+`--profile isik` loads two versions of the German base profiles. The validator
+accepts that; pin `de.basisprofil.r4` explicitly if your project needs one
+version throughout.
+
+`isik-medikation` depends on `hl7.fhir.uv.ips` 1.1.0, which is not the version
+the `ips` alias pins (2.0.1). Combining `--profile isik --profile ips` therefore
+loads both IPS versions.
+
+`fhirlint packages tree` shows what a module actually pulls in, resolved against
+what is in your cache:
+
+```bash
+fhirlint packages tree de.gematik.isik-medikation#4.0.3
+```
+
+### isik-labor is not aliased
+
+The registry serves only a `4.0.0-rc` for `de.gematik.isik-labor`, with no
+`dist-tags.latest` — there is no published release to pin, so it gets no alias.
+Name it explicitly if you need the release candidate:
+
+```bash
+fhirlint validate labor.json --ig de.gematik.isik-labor#4.0.0-rc
 ```
 
 ---

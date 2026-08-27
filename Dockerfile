@@ -44,11 +44,17 @@ RUN apk add --no-cache curl && \
     # Fail the build rather than shipping an unparsed version file.
     grep -qE '^[0-9]+\.[0-9]+' /out/validator_version.txt
 
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jre-alpine AS runtime
 # Pull in base-image package fixes that are published upstream but not yet in a
 # temurin release, so the shipped image does not carry known HIGH/CRITICAL CVEs.
 # The reproducibility cost is accepted deliberately: shipping known-vulnerable
 # packages is the worse trade, and the Trivy gate is what makes this visible.
+#
+# This layer must not be served from the build cache. A cached `apk upgrade`
+# replays whatever was current when it first ran and never sees a fix published
+# afterwards — silently turning the mitigation off. The workflows that build
+# this image exclude the `runtime` stage from the cache for that reason; the
+# stage is named so they can (#371).
 # hadolint ignore=DL3017
 RUN apk --no-cache upgrade
 
