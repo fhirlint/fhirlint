@@ -46,6 +46,13 @@ jobs:
           tags: fhirlint:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # The runtime stage runs `apk --no-cache upgrade`. Cached, that layer
+          # replays an upgrade from whenever it first ran and never picks up a
+          # base-image fix published since — which is how openssl 3.5.7-r0
+          # survived in the image after 3.5.8-r0 was already in Alpine (#371).
+          # The jar-downloader stage stays cached, so the ~250 MB validator JAR
+          # is still not refetched.
+          no-cache-filters: runtime
 
       - name: Scan image (Trivy)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
