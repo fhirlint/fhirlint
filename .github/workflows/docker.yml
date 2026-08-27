@@ -75,6 +75,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # The runtime stage runs `apk --no-cache upgrade`. Cached, that layer
+          # replays an upgrade from whenever it first ran and never picks up a
+          # base-image fix published since — which is how openssl 3.5.7-r0
+          # survived in the image after 3.5.8-r0 was already in Alpine (#371).
+          # The jar-downloader stage stays cached, so the ~250 MB validator JAR
+          # is still not refetched.
+          no-cache-filters: runtime
 
       # Everything below is keyed on the immutable digest, not a tag: tags move,
       # and an attestation that points at a moving target proves nothing.
