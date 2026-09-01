@@ -25,6 +25,13 @@ var versionFromURL = regexp.MustCompile(`/releases/download/([^/]+)/`)
 // caller can skip the firewall/proxy advice that does not apply to a typo.
 var errNoSuchRelease = errors.New("no validator release")
 
+// errVerification marks a JAR that downloaded completely and then failed its
+// signature or digest check. The distinction matters for what the caller tells
+// the user: nothing about the network went wrong, so firewall advice is noise,
+// and the one remedy that advice offers (--jar) would bypass the check that
+// just fired.
+var errVerification = errors.New("JAR verification failed")
+
 // jarURLForVersion returns the download URL for a specific validator release,
 // or the "latest" URL when version is empty.
 func jarURLForVersion(version string) string {
@@ -120,7 +127,12 @@ func EnsureJAR(override, version string) (string, error) {
 			// No os.Remove here: downloadJAR only replaces jarPath once the new
 			// file is complete and checksum-checked, so whatever was cached
 			// before is still usable.
-			if !errors.Is(err, errNoSuchRelease) {
+			switch {
+			case errors.Is(err, errVerification):
+				printVerificationAdvice(os.Stderr, version)
+			case errors.Is(err, errNoSuchRelease):
+				// A typo in a pinned version. The error names it already.
+			default:
 				fmt.Fprintf(os.Stderr,
 					"\nJAR download failed (URL: %s).\n"+
 						"To work around firewall or proxy restrictions, download the JAR manually\n"+
@@ -129,6 +141,11 @@ func EnsureJAR(override, version string) (string, error) {
 						"  FHIRLINT_JAR=/path/to/validator_cli.jar fhirlint validate\n\n",
 					jarURLForVersion(version), jarSourceRepo,
 				)
+			}
+			if errors.Is(err, errVerification) {
+				// The download is not what went wrong; saying so would send the
+				// reader looking in the wrong place.
+				return "", err
 			}
 			return "", fmt.Errorf("downloading JAR: %w", err)
 		}
@@ -351,10 +368,7 @@ func downloadJARFrom(url, dest, pinned string) error {
 
 	result, err := verifyJAR(tmp, version)
 	if err != nil {
-		return fmt.Errorf(
-			"the downloaded validator JAR failed verification — it may be corrupted or tampered with.\n"+
-				"Discarded; any previously cached JAR is untouched.\n"+
-				"Details: %w", err)
+		return fmt.Errorf("%w for %s: %w", errVerification, describeVersion(version), err)
 	}
 
 	if err := os.Rename(tmp, dest); err != nil {
@@ -445,4 +459,54 @@ func JARSourceRepo() string {
 // JARReleasesURL returns the releases page for the validator JAR.
 func JARReleasesURL() string {
 	return filepath.ToSlash(jarSourceRepo + "/releases")
+}
+
+// describeVersion names a release for a message, for the case where the
+// download tracked "latest" and never revealed which release that was.
+func describeVersion(version string) string {
+	if version == "" {
+		return "the latest validator release"
+	}
+	return "validator " + version
+}
+
+// printVerificationAdvice explains a failed signature or digest check and says
+// what to do about it.
+//
+// Deliberately does not offer --jar. It is the escape hatch the generic
+// download advice reaches for, and here it would mean installing by hand the
+// very file that just failed its check. Pinning a release that does verify
+// keeps the check switched on, so that is what this suggests.
+func printVerificationAdvice(w io.Writer, version string) {
+	_, _ = fmt.Fprintf(w,
+		"\nThe JAR downloaded completely and then failed verification, so this is not\n"+
+			"a network or firewall problem. Two things produce it:\n"+
+			"\n"+
+			"  - upstream attached a JAR that does not match the signature it published\n"+
+			"  - the download was altered between the release and this machine\n"+
+			"\n"+
+			"fhirlint cannot tell those apart, so it refuses the JAR either way and keeps\n"+
+			"whatever was cached before.\n\n")
+
+	if cached := ValidatorVersion(); cached != "unknown" && cached != version {
+		_, _ = fmt.Fprintf(w,
+			"Your cached validator %s is untouched and still in use. To stay on it and\n"+
+				"stop retrying the failing release:\n"+
+				"  --validator-version %s\n"+
+				"  FHIRLINT_VALIDATOR_VERSION=%s\n\n", cached, cached, cached)
+	} else {
+		// No version named here on purpose. A number baked into shipped code
+		// goes stale silently, which is how the .sha256 URL survived for months
+		// in #358. The releases link below is always current.
+		_, _ = fmt.Fprintf(w,
+			"There is no cached JAR to fall back on. Pin an earlier release that verifies:\n"+
+				"  --validator-version <release>\n"+
+				"  FHIRLINT_VALIDATOR_VERSION=<release>\n\n")
+	}
+
+	_, _ = fmt.Fprintf(w,
+		"Releases: %s/releases\n"+
+			"If the release itself is at fault, it is worth reporting upstream — check\n"+
+			"whether the .asc was uploaded before the .jar it is meant to sign.\n\n",
+		jarSourceRepo)
 }
