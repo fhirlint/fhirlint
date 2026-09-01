@@ -195,3 +195,91 @@ func TestAPIURL(t *testing.T) {
 		t.Errorf("apiURL() = %q", got)
 	}
 }
+
+// --- rejected releases (#377) ----------------------------------------------
+
+func TestRejection_RoundTrip(t *testing.T) {
+	isolate(t)
+	RecordRejection("owner/repo", "6.10.3", "the PGP signature did not verify")
+
+	r, ok := LookupRejection("owner/repo", "6.10.3")
+	if !ok {
+		t.Fatal("want the rejection back")
+	}
+	if r.Reason != "the PGP signature did not verify" {
+		t.Errorf("reason = %q", r.Reason)
+	}
+	if time.Since(r.When) > time.Minute {
+		t.Errorf("when = %v, want roughly now", r.When)
+	}
+}
+
+func TestRejection_OnlyForTheVersionRecorded(t *testing.T) {
+	isolate(t)
+	RecordRejection("owner/repo", "6.10.3", "bad")
+
+	if _, ok := LookupRejection("owner/repo", "6.10.2"); ok {
+		t.Error("a rejection must not leak onto another version")
+	}
+	if _, ok := LookupRejection("other/repo", "6.10.3"); ok {
+		t.Error("a rejection must not leak onto another repo")
+	}
+}
+
+// An upstream fix should stop the annotation without anyone editing the cache.
+func TestRejection_ClearedOnSuccess(t *testing.T) {
+	isolate(t)
+	RecordRejection("owner/repo", "6.10.3", "bad")
+	ClearRejection("owner/repo", "6.10.3")
+
+	if _, ok := LookupRejection("owner/repo", "6.10.3"); ok {
+		t.Error("a cleared rejection must not come back")
+	}
+}
+
+func TestRejection_ClearIsSafeWhenNoneRecorded(t *testing.T) {
+	isolate(t)
+	ClearRejection("owner/repo", "6.10.3") // must not panic or create anything
+	if _, ok := LookupRejection("owner/repo", "6.10.3"); ok {
+		t.Error("clearing nothing must not invent a rejection")
+	}
+}
+
+// Recording a rejection must not cost the cached release lookups.
+func TestRejection_PreservesRepoEntries(t *testing.T) {
+	isolate(t)
+	seed(t, cacheFile{Repos: map[string]entry{
+		"owner/repo": {LastChecked: time.Now(), LatestVersion: "6.10.3"},
+	}})
+
+	RecordRejection("owner/repo", "6.10.3", "bad")
+
+	got, ok := readEntry("owner/repo")
+	if !ok || got.LatestVersion != "6.10.3" {
+		t.Errorf("the repo entry was lost: %+v (ok=%v)", got, ok)
+	}
+	if _, ok := LookupRejection("owner/repo", "6.10.3"); !ok {
+		t.Error("the rejection was not stored")
+	}
+}
+
+// And the reverse: a release lookup must not drop rejections.
+func TestRejection_SurvivesAReleaseLookup(t *testing.T) {
+	isolate(t)
+	serveRelease(t, "6.10.4")
+	RecordRejection("owner/repo", "6.10.3", "bad")
+
+	Latest("owner/repo")
+
+	if _, ok := LookupRejection("owner/repo", "6.10.3"); !ok {
+		t.Error("writing a release entry dropped the rejection")
+	}
+}
+
+func TestRejection_EmptyVersionIsIgnored(t *testing.T) {
+	isolate(t)
+	RecordRejection("owner/repo", "", "bad") // nothing to key on
+	if _, ok := LookupRejection("owner/repo", ""); ok {
+		t.Error("an empty version must not be recorded")
+	}
+}

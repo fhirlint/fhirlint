@@ -59,7 +59,7 @@ func printUpdateNotice() {
 			name:    "validator",
 			current: validatorCurrentVersion(),
 			latest:  latest,
-			action:  "run: fhirlint update",
+			action:  validatorAction(latest),
 		})
 	}
 	if len(pending) == 0 {
@@ -139,3 +139,18 @@ func validatorUpdate() string { return validator.CheckForUpdate() }
 
 // validatorCurrentVersion is the JAR version the notice compares against.
 func validatorCurrentVersion() string { return validator.ValidatorVersion() }
+
+// validatorAction is what to do about a pending validator release.
+//
+// A release that was downloaded and refused here still gets a row: someone
+// stuck on an older JAR while a newer one exists should be able to see why,
+// rather than have the tool go quiet for reasons it will not explain. What the
+// row must stop doing is recommending an action that fails (#377).
+func validatorAction(latest string) string {
+	reason, when, rejected := validator.JARRejection(latest)
+	if !rejected {
+		return "run: fhirlint update"
+	}
+	return fmt.Sprintf("%s here on %s; retry with: fhirlint update",
+		reason, when.Format("2006-01-02"))
+}

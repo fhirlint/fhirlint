@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/cache"
+	"github.com/fhirlint/fhirlint/internal/updatecheck"
+	"time"
 )
 
 const (
@@ -368,8 +370,13 @@ func downloadJARFrom(url, dest, pinned string) error {
 
 	result, err := verifyJAR(tmp, version)
 	if err != nil {
+		// Remember the refusal so the update notice stops recommending this
+		// release. Only from here: a network failure says nothing about it.
+		updatecheck.RecordRejection(jarRepo, version, rejectionReason(err))
 		return fmt.Errorf("%w for %s: %w", errVerification, describeVersion(version), err)
 	}
+	// It installed, so whatever was wrong with it before is not wrong now.
+	updatecheck.ClearRejection(jarRepo, version)
 
 	if err := os.Rename(tmp, dest); err != nil {
 		return err
@@ -509,4 +516,27 @@ func printVerificationAdvice(w io.Writer, version string) {
 			"If the release itself is at fault, it is worth reporting upstream — check\n"+
 			"whether the .asc was uploaded before the .jar it is meant to sign.\n\n",
 		jarSourceRepo)
+}
+
+// rejectionReason turns a verification failure into the short line the update
+// notice shows. The sentinels carry the wording, so it stays in one place.
+func rejectionReason(err error) string {
+	switch {
+	case errors.Is(err, ErrSignatureMismatch):
+		return ErrSignatureMismatch.Error()
+	case errors.Is(err, ErrDigestMismatch):
+		return ErrDigestMismatch.Error()
+	default:
+		return "it failed verification"
+	}
+}
+
+// JARRejection reports whether a validator release was refused on this machine,
+// and why.
+func JARRejection(version string) (reason string, when time.Time, ok bool) {
+	r, found := updatecheck.LookupRejection(jarRepo, version)
+	if !found {
+		return "", time.Time{}, false
+	}
+	return r.Reason, r.When, true
 }
