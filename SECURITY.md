@@ -38,7 +38,9 @@ The security-relevant question is whether untrusted input can make fhirlint do s
   1. **The detached PGP signature** (`validator_cli.jar.asc`) against the HL7 release signing key, which fhirlint pins in-tree. This is the only check that means anything if the release channel itself is compromised, because it binds the JAR to a maintainer's key rather than to something GitHub also serves.
   2. **The SHA-256 digest GitHub records for the release asset**, when no signature verifies. This travels the same channel as the download, so it proves the transfer was not corrupted or truncated — not that the release is genuine. It is recorded as the weaker method it is.
 
-  A signature that is present and does not verify, or a digest that does not match, deletes the download and fails with an explicit error. It is never used, and a matching digest never launders a failed signature.
+  A signature that is present and does not verify, or a digest that does not match, discards the download and fails. It is never used, and a matching digest never launders a failed signature. The error says what to do about it: keep the JAR you already have, or pin a release that does verify. It deliberately does not point at `--jar`, which would install the rejected file with no check at all.
+
+  Note this fires for an upstream mistake as readily as for an attack. A release whose `.asc` was uploaded before the JAR it is meant to sign produces exactly the same result, and fhirlint cannot tell the two apart, so it refuses either way.
 - **An unverified JAR is never silent.** Releases before 6.6.0 carry neither a signature nor a digest, and either request can fail, so being unable to verify is not fatal. But it prints a warning at download time, and `fhirlint version` marks the JAR `(NOT verified)` for as long as it stays cached. You can always tell which you have, and which check produced it.
 - **`fhirlint update` and `fhirlint audit`** report advisories that affect the version you actually have, not the whole history of the project.
 - **Exit codes follow findings.** `--fail-on` controls the threshold; a run that finds errors at or above it exits non-zero.
