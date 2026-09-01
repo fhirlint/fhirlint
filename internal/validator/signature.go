@@ -35,6 +35,14 @@ var hl7SigningKey []byte
 // unnoticed.
 const hl7SigningKeyFingerprint = "85D1C17CF1152107B272386C8FDFA68281399B5D"
 
+// The two ways a JAR can be known-bad. Callers record which one fired, so the
+// update notice can say why a release was rejected without re-deriving it from
+// a message (#377).
+var (
+	ErrSignatureMismatch = errors.New("the PGP signature did not verify")
+	ErrDigestMismatch    = errors.New("the SHA-256 digest did not match")
+)
+
 // verifyMethod records how a cached JAR was verified. It is persisted, so the
 // values are part of the on-disk format.
 type verifyMethod string
@@ -245,8 +253,8 @@ func verifyJARSignatureURL(jarPath, sigURL string) (jarVerification, error) {
 		// A readable signature that does not verify. The JAR is not what was
 		// signed; this is the one outcome that condemns the download.
 		return jarVerification{}, fmt.Errorf(
-			"the PGP signature does not verify against the pinned HL7 key (%s): %w",
-			hl7SigningKeyFingerprint, err)
+			"%w against the pinned HL7 key (%s): %w",
+			ErrSignatureMismatch, hl7SigningKeyFingerprint, err)
 	}
 }
 
@@ -304,7 +312,7 @@ func verifyJARDigestURL(jarPath, apiURL string) (jarVerification, error) {
 	}
 	if !strings.EqualFold(got, want) {
 		return jarVerification{}, fmt.Errorf(
-			"SHA-256 mismatch against the GitHub release asset: got %s, want %s", got, want)
+			"%w against the GitHub release asset: got %s, want %s", ErrDigestMismatch, got, want)
 	}
 	return jarVerification{method: verifiedDigest}, nil
 }

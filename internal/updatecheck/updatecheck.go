@@ -39,6 +39,64 @@ type entry struct {
 // single API call does not replace.
 type cacheFile struct {
 	Repos map[string]entry `json:"repos"`
+	// Rejected records releases that were downloaded and refused, keyed by repo
+	// and then by version. Without it the update notice can only ask whether a
+	// newer release exists, not whether it can be installed, and goes on
+	// recommending one that fails (#377).
+	Rejected map[string]map[string]Rejection `json:"rejected,omitempty"`
+}
+
+// Rejection is a release that failed verification on this machine.
+type Rejection struct {
+	// Reason is short and user-facing; it goes straight into the notice.
+	Reason string    `json:"reason"`
+	When   time.Time `json:"when"`
+}
+
+// RecordRejection remembers that a release was refused, so the notice can say
+// so instead of recommending it. Errors are dropped: failing to write this must
+// never turn into a second failure on top of the one being reported.
+func RecordRejection(repo, version, reason string) {
+	if version == "" {
+		return // nothing to key on
+	}
+	mutate(func(f *cacheFile) {
+		if f.Rejected == nil {
+			f.Rejected = map[string]map[string]Rejection{}
+		}
+		if f.Rejected[repo] == nil {
+			f.Rejected[repo] = map[string]Rejection{}
+		}
+		f.Rejected[repo][version] = Rejection{Reason: reason, When: time.Now()}
+	})
+}
+
+// ClearRejection forgets a rejection, called when that version installs
+// successfully. An upstream fix therefore stops being annotated on its own,
+// without anyone editing the cache by hand.
+func ClearRejection(repo, version string) {
+	if version == "" {
+		return
+	}
+	mutate(func(f *cacheFile) {
+		if f.Rejected[repo] == nil {
+			return
+		}
+		delete(f.Rejected[repo], version)
+		if len(f.Rejected[repo]) == 0 {
+			delete(f.Rejected, repo)
+		}
+	})
+}
+
+// LookupRejection reports whether a release was refused here.
+func LookupRejection(repo, version string) (Rejection, bool) {
+	f, err := readCache()
+	if err != nil {
+		return Rejection{}, false
+	}
+	r, ok := f.Rejected[repo][version]
+	return r, ok
 }
 
 // Latest returns the newest release tag for repo ("owner/name"), or "" when it
@@ -97,17 +155,43 @@ func apiURL(repo string) string {
 	return apiBase + "/repos/" + repo + "/releases/latest"
 }
 
-func readEntry(repo string) (entry, bool) {
+// readCache loads the whole file. A missing or unparseable file reads as empty
+// rather than as an error: this is a cache, and losing it costs one lookup.
+func readCache() (cacheFile, error) {
 	path, err := cache.UpdateCheckPath()
 	if err != nil {
-		return entry{}, false
+		return cacheFile{}, err
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // known cache path
 	if err != nil {
-		return entry{}, false
+		return cacheFile{}, err
 	}
 	var f cacheFile
 	if err := json.Unmarshal(data, &f); err != nil {
+		return cacheFile{}, err
+	}
+	return f, nil
+}
+
+// mutate applies fn to the cache file and writes it back, leaving every part it
+// does not touch in place.
+func mutate(fn func(*cacheFile)) {
+	path, err := cache.UpdateCheckPath()
+	if err != nil {
+		return
+	}
+	f, _ := readCache() // an unreadable cache starts over rather than blocking
+	fn(&f)
+	data, err := json.Marshal(f)
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(path, data, 0600)
+}
+
+func readEntry(repo string) (entry, bool) {
+	f, err := readCache()
+	if err != nil {
 		return entry{}, false
 	}
 	e, ok := f.Repos[repo]
@@ -117,22 +201,10 @@ func readEntry(repo string) (entry, bool) {
 // writeEntry updates one repo's entry, leaving the others in place. Errors are
 // dropped: failing to cache a courtesy lookup is not worth interrupting a run.
 func writeEntry(repo string, e entry) {
-	path, err := cache.UpdateCheckPath()
-	if err != nil {
-		return
-	}
-	var f cacheFile
-	if data, readErr := os.ReadFile(path); readErr == nil { //nolint:gosec // known cache path
-		_ = json.Unmarshal(data, &f)
-	}
-	if f.Repos == nil {
-		f.Repos = map[string]entry{}
-	}
-	f.Repos[repo] = e
-
-	data, err := json.Marshal(f)
-	if err != nil {
-		return
-	}
-	_ = os.WriteFile(path, data, 0600)
+	mutate(func(f *cacheFile) {
+		if f.Repos == nil {
+			f.Repos = map[string]entry{}
+		}
+		f.Repos[repo] = e
+	})
 }

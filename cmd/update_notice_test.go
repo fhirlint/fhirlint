@@ -3,7 +3,11 @@ package cmd
 import (
 	"testing"
 
+	"github.com/fhirlint/fhirlint/internal/cache"
+	"github.com/fhirlint/fhirlint/internal/updatecheck"
 	"github.com/spf13/viper"
+	"strings"
+	"time"
 )
 
 // clearNoticeEnv removes every ambient reason to suppress the notice, so each
@@ -98,5 +102,51 @@ func TestFhirlintUpdate_DoesNotCompareLexically(t *testing.T) {
 
 	if _, _, ok := fhirlintUpdate(); ok {
 		t.Error("v1.10.0 is newer than v1.9.0; a lexical comparison would wrongly offer a downgrade")
+	}
+}
+
+// --- a rejected release still shows, but stops recommending itself (#377) ---
+
+func TestValidatorAction_NoRejection(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
+	if got := validatorAction("6.10.3"); got != "run: fhirlint update" {
+		t.Errorf("validatorAction() = %q, want the plain update line", got)
+	}
+}
+
+func TestValidatorAction_RejectedNamesTheReasonAndDate(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
+	updatecheck.RecordRejection("hapifhir/org.hl7.fhir.core", "6.10.3",
+		"the PGP signature did not verify")
+
+	got := validatorAction("6.10.3")
+	if !strings.Contains(got, "the PGP signature did not verify") {
+		t.Errorf("want the reason, got %q", got)
+	}
+	if !strings.Contains(got, time.Now().Format("2006-01-02")) {
+		t.Errorf("want the date, got %q", got)
+	}
+	// The retry has to stay reachable, or an upstream fix never gets picked up.
+	if !strings.Contains(got, "fhirlint update") {
+		t.Errorf("want the retry to remain available, got %q", got)
+	}
+}
+
+// The row itself must survive. Hiding it would leave someone stuck on an older
+// JAR with no explanation.
+func TestValidatorAction_RejectionDoesNotHideTheRow(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
+	updatecheck.RecordRejection("hapifhir/org.hl7.fhir.core", "6.10.3", "nope")
+	if got := validatorAction("6.10.3"); got == "" {
+		t.Error("a rejected release must still produce an action line")
+	}
+}
+
+// A rejection recorded for one release must not silence a different one.
+func TestValidatorAction_OtherVersionUnaffected(t *testing.T) {
+	t.Setenv(cache.DirEnvVar, t.TempDir())
+	updatecheck.RecordRejection("hapifhir/org.hl7.fhir.core", "6.10.3", "nope")
+	if got := validatorAction("6.10.4"); got != "run: fhirlint update" {
+		t.Errorf("validatorAction(6.10.4) = %q, want the plain update line", got)
 	}
 }
