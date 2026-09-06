@@ -22,7 +22,10 @@ type Node struct {
 	// Repeated marks a package already expanded elsewhere in the tree.
 	Repeated bool `json:"repeated,omitempty"`
 	// Truncated marks a node whose dependencies exist but were cut off by maxDepth.
-	Truncated bool    `json:"truncated,omitempty"`
+	Truncated bool `json:"truncated,omitempty"`
+	// Ambiguous marks a range whose candidates do not order against each other,
+	// so the version shown is a stable guess and not a resolution.
+	Ambiguous bool    `json:"ambiguous,omitempty"`
 	Children  []*Node `json:"children,omitempty"`
 }
 
@@ -83,27 +86,35 @@ func buildNode(name, version, constraint string, depth, maxDepth int, idx []Pack
 
 	for _, dep := range deps {
 		want := pkg.Dependencies[dep]
-		n.Children = append(n.Children,
-			buildNode(dep, ResolveInstalled(dep, want, idx), want, depth+1, maxDepth, idx, seen))
+		resolved, certain := ResolveInstalled(dep, want, idx)
+		child := buildNode(dep, resolved, want, depth+1, maxDepth, idx, seen)
+		child.Ambiguous = !certain
+		n.Children = append(n.Children, child)
 	}
 	return n
 }
 
 // ResolveInstalled picks the installed version satisfying a constraint, or ""
-// when nothing matches.
+// when nothing matches. certain is false when the pick had to fall back on
+// string order because the candidates do not order against each other.
 //
 // An exact constraint is looked up directly. A range ("1.5.x") is matched by
 // prefix against what is installed, newest first — making visible the
 // "whatever is on disk" behaviour a run ends up with, rather than pretending
 // the manifest decided it.
-func ResolveInstalled(name, constraint string, idx []Package) string {
+//
+// "Newest" is a numeric comparison, not a string one. Sorting "1.5.9" and
+// "1.5.10" as strings puts 1.5.9 last and quietly resolves the range to the
+// older package, which is what this function did until #390. The MII modules
+// version as YYYY.0.N and reach double digits in normal use.
+func ResolveInstalled(name, constraint string, idx []Package) (version string, certain bool) {
 	if IsExactVersion(constraint) {
 		for _, p := range idx {
 			if strings.EqualFold(p.Name, name) && p.Version == constraint {
-				return constraint
+				return constraint, true
 			}
 		}
-		return ""
+		return "", true
 	}
 	prefix := strings.TrimRight(constraint, "x*")
 	var candidates []string
@@ -116,10 +127,33 @@ func ResolveInstalled(name, constraint string, idx []Package) string {
 		}
 	}
 	if len(candidates) == 0 {
-		return ""
+		return "", true
 	}
-	sort.Strings(candidates)
-	return candidates[len(candidates)-1]
+	return newest(candidates)
+}
+
+// newest returns the highest of a set of versions. certain is false when some
+// pair could not be ordered, in which case the answer is a stable guess rather
+// than a fact: a publisher that changed versioning scheme mid-prefix leaves
+// versions that genuinely have no order between them, and picking one silently
+// is the habit this file is being cured of.
+func newest(versions []string) (version string, certain bool) {
+	// Stable starting point so the result does not depend on directory order.
+	sorted := append([]string(nil), versions...)
+	sort.Strings(sorted)
+
+	best, certain := sorted[0], true
+	for _, v := range sorted[1:] {
+		cmp, ok := CompareVersions(v, best)
+		if !ok {
+			certain = false
+			continue // keep the string-order winner for this pair
+		}
+		if cmp > 0 {
+			best = v
+		}
+	}
+	return best, certain
 }
 
 // IsExactVersion reports whether a dependency constraint names exactly one version.

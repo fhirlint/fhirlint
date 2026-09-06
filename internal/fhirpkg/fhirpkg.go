@@ -126,10 +126,18 @@ func List(withSizes bool) ([]Package, error) {
 		pkgs = append(pkgs, p)
 	}
 
+	// Versions order numerically, not as strings: "1.5.10" is newer than
+	// "1.5.9" and has to sort after it. Grouped() depends on this ordering to
+	// pick a group's display name, so getting it wrong here is not only a
+	// cosmetic listing problem (#390).
 	sort.Slice(pkgs, func(i, j int) bool {
 		if a, b := foldName(pkgs[i].Name), foldName(pkgs[j].Name); a != b {
 			return a < b
 		}
+		if cmp, ok := CompareVersions(pkgs[i].Version, pkgs[j].Version); ok {
+			return cmp < 0
+		}
+		// Unorderable against each other; fall back to something stable.
 		return pkgs[i].Version < pkgs[j].Version
 	})
 	return pkgs, nil
@@ -181,8 +189,8 @@ func Grouped(pkgs []Package) []Group {
 		}
 		if g.Name != p.Name {
 			g.MixedCase = true
-			// Versions arrive in ascending order, so the last spelling seen is
-			// the newest one — which is what upstream publishes under today and
+			// List sorts versions ascending, so the last spelling seen is the
+			// newest one — which is what upstream publishes under today and
 			// what a user would type.
 			g.Name = p.Name
 		}

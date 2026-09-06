@@ -44,8 +44,13 @@ func TestResolveInstalled(t *testing.T) {
 		{"b", "2.0.0", "2.0.0"},  // case-insensitive name match
 		{"missing", "1.0.0", ""}, // unknown package
 	} {
-		if got := ResolveInstalled(tc.name, tc.constraint, idx); got != tc.want {
+		got, certain := ResolveInstalled(tc.name, tc.constraint, idx)
+		if got != tc.want {
 			t.Errorf("ResolveInstalled(%q, %q) = %q, want %q", tc.name, tc.constraint, got, tc.want)
+		}
+		if !certain {
+			t.Errorf("ResolveInstalled(%q, %q) reported an ambiguous pick among orderable versions",
+				tc.name, tc.constraint)
 		}
 	}
 }
@@ -186,5 +191,142 @@ func TestTree_DepthLimit(t *testing.T) {
 	}
 	if _, _, truncated := Counts(full); truncated {
 		t.Error("an unlimited walk must not report truncation")
+	}
+}
+
+// The bug this file's ordering was fixed for: "1.5.10" sorts before "1.5.9" as
+// a string, so the newest match was never last (#390).
+func TestResolveInstalled_DoubleDigitSegments(t *testing.T) {
+	idx := []Package{
+		{Manifest: Manifest{Name: "p", Version: "1.5.2"}},
+		{Manifest: Manifest{Name: "p", Version: "1.5.9"}},
+		{Manifest: Manifest{Name: "p", Version: "1.5.10"}},
+	}
+	got, certain := ResolveInstalled("p", "1.5.x", idx)
+	if got != "1.5.10" {
+		t.Errorf("ResolveInstalled = %q, want 1.5.10 (string order would give 1.5.9)", got)
+	}
+	if !certain {
+		t.Error("these versions order fine; the pick must not be reported as a guess")
+	}
+}
+
+// MII modules version as YYYY.0.N and reach double digits in normal use.
+func TestResolveInstalled_MIIVersionScheme(t *testing.T) {
+	idx := []Package{
+		{Manifest: Manifest{Name: "m", Version: "2025.0.9"}},
+		{Manifest: Manifest{Name: "m", Version: "2025.0.11"}},
+		{Manifest: Manifest{Name: "m", Version: "2025.0.2"}},
+	}
+	if got, _ := ResolveInstalled("m", "2025.0.x", idx); got != "2025.0.11" {
+		t.Errorf("ResolveInstalled = %q, want 2025.0.11", got)
+	}
+}
+
+// A publisher that changed scheme mid-prefix leaves versions with no order
+// between them. Picking one is unavoidable; doing it silently is not.
+func TestResolveInstalled_IncomparableCandidatesAreReported(t *testing.T) {
+	idx := []Package{
+		{Manifest: Manifest{Name: "p", Version: "1.5.2"}},
+		{Manifest: Manifest{Name: "p", Version: "1.5.Q1"}}, // not two integers, so unorderable
+	}
+	got, certain := ResolveInstalled("p", "1.5.x", idx)
+	if got == "" {
+		t.Fatal("want some candidate to be chosen")
+	}
+	if certain {
+		t.Error("a pick among unorderable versions must not be reported as certain")
+	}
+}
+
+// An exact constraint is a lookup, never a guess.
+func TestResolveInstalled_ExactIsAlwaysCertain(t *testing.T) {
+	idx := []Package{{Manifest: Manifest{Name: "p", Version: "1.5.2"}}}
+	if got, certain := ResolveInstalled("p", "1.5.2", idx); got != "1.5.2" || !certain {
+		t.Errorf("got %q certain=%v, want 1.5.2 certain", got, certain)
+	}
+	if got, certain := ResolveInstalled("p", "9.9.9", idx); got != "" || !certain {
+		t.Errorf("a missing exact version is a fact, not a guess: %q certain=%v", got, certain)
+	}
+}
+
+// The tree has to carry the uncertainty out to whoever renders it.
+func TestTree_MarksAnAmbiguousRange(t *testing.T) {
+	root := fakeCache(t)
+	install(t, root, "app#1.0.0", Manifest{Dependencies: map[string]string{"base": "1.5.x"}}, 0)
+	install(t, root, "base#1.5.2", Manifest{}, 0)
+	install(t, root, "base#1.5.Q1", Manifest{}, 0)
+
+	n, err := Tree("app", "1.0.0", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(n.Children) != 1 {
+		t.Fatalf("want one child, got %d", len(n.Children))
+	}
+	if !n.Children[0].Ambiguous {
+		t.Error("a range resolved across unorderable versions must be marked ambiguous")
+	}
+}
+
+// And an ordinary range must not be marked, or the marker means nothing.
+func TestTree_DoesNotMarkAnOrderableRange(t *testing.T) {
+	root := fakeCache(t)
+	install(t, root, "app#1.0.0", Manifest{Dependencies: map[string]string{"base": "1.5.x"}}, 0)
+	install(t, root, "base#1.5.9", Manifest{}, 0)
+	install(t, root, "base#1.5.10", Manifest{}, 0)
+
+	n, err := Tree("app", "1.0.0", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Children[0].Ambiguous {
+		t.Error("orderable versions must not be marked ambiguous")
+	}
+	if n.Children[0].Version != "1.5.10" {
+		t.Errorf("resolved to %q, want 1.5.10", n.Children[0].Version)
+	}
+}
+
+// List sorts versions ascending, and Grouped depends on that to name a group.
+func TestList_SortsVersionsNumerically(t *testing.T) {
+	root := fakeCache(t)
+	install(t, root, "p#1.5.9", Manifest{}, 0)
+	install(t, root, "p#1.5.10", Manifest{}, 0)
+	install(t, root, "p#1.5.2", Manifest{}, 0)
+
+	pkgs, err := List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range pkgs {
+		got = append(got, p.Version)
+	}
+	want := []string{"1.5.2", "1.5.9", "1.5.10"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("List order = %v, want %v", got, want)
+		}
+	}
+}
+
+// Grouped takes its display name from the newest entry, so a mixed-case package
+// whose newest version is double-digit must still name the newer spelling.
+func TestGrouped_NamesTheNewestSpellingWithDoubleDigits(t *testing.T) {
+	root := fakeCache(t)
+	install(t, root, "KBV.Basis#1.5.9", Manifest{}, 0)
+	install(t, root, "kbv.basis#1.5.10", Manifest{}, 0)
+
+	pkgs, err := List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := Grouped(pkgs)
+	if len(groups) != 1 {
+		t.Fatalf("want one folded group, got %d", len(groups))
+	}
+	if groups[0].Name != "kbv.basis" {
+		t.Errorf("group name = %q, want kbv.basis (the newer 1.5.10 spelling)", groups[0].Name)
 	}
 }
