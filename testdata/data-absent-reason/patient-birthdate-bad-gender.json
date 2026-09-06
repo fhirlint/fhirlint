@@ -1,0 +1,12 @@
+{
+  "resourceType": "Patient",
+  "id": "dar-with-error",
+  "name": [{ "family": "Musterfrau" }],
+  "gender": "not-a-gender",
+  "_birthDate": {
+    "extension": [{
+      "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+      "valueCode": "unknown"
+    }]
+  }
+}
