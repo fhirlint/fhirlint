@@ -1914,13 +1914,22 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 |-------|-------------|
 | `kbv-basis` | `kbv.basis#1.9.0` |
 | `kbv-patient` | `kbv.basis#1.9.0` |
-| `mii` | all six MII Kerndatensatz modules (see below) |
+| `mii` | all 15 MII Kerndatensatz modules (see below) |
 | `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` |
 | `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` |
 | `mii-diagnose` | `de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1` |
 | `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` |
+| `mii-icu` | `de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2` |
+| `mii-onkologie` | `de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3` |
+| `mii-biobank` | `de.medizininformatikinitiative.kerndatensatz.biobank#2026.0.1` |
+| `mii-consent` | `de.medizininformatikinitiative.kerndatensatz.consent#2026.0.0` |
+| `mii-molgen` | `de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4` |
+| `mii-patho` | `de.medizininformatikinitiative.kerndatensatz.patho#2026.0.2` |
+| `mii-studie` | `de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2` |
+| `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` |
+| `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` |
 | `diga` | `kbv.mio.diga#1.1.0` |
 | `isik` | all five gematik ISiK modules (see below) |
 | `isik-basis` | `de.gematik.isik-basismodul#4.0.3` |
@@ -1930,11 +1939,13 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 | `isik-dokumentenaustausch` | `de.gematik.isik-dokumentenaustausch#4.0.1` |
 
 An alias can stand for more than one package. The MII publishes no umbrella
-package — the Kerndatensatz ships module by module — so `mii` loads all six
+package — the Kerndatensatz ships module by module — so `mii` loads all 15
 modules, and the `mii-*` aliases name them individually. The modules are not on
-a common release train, so `mii` pulls two versions of the shared
-`kerndatensatz.meta` package; if that matters for your project, name the modules
-you actually need instead.
+a common release train: person, fall, diagnose and prozedur are on `2025.0.x`
+and depend on `kerndatensatz.meta` `2025.0.x`, the rest are on `2026.0.x` and
+depend on meta `2026.0.x`. So `mii` pulls two versions of the shared meta
+package. The validator accepts that; if it matters for your project, name the
+modules you actually need instead of taking the set.
 
 `isik` works the same way and carries the same caveat. The five modules share a
 4.0.x train, but `isik-vitalparameter` pins `de.basisprofil.r4` 1.5.3 while the

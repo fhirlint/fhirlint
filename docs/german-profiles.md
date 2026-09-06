@@ -27,13 +27,22 @@ fhirlint profiles
 |-------|-----------|--------|
 | `kbv-basis` | `kbv.basis#1.9.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
 | `kbv-patient` | `kbv.basis#1.9.0` | KBV Patient profile specifically |
-| `mii` | all six modules below | MII core dataset, complete |
+| `mii` | all 15 modules below | MII core dataset, complete |
 | `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` | Patient, Practitioner, Organization |
 | `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` | Encounter |
 | `mii-diagnose` | `de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1` | Condition |
 | `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` | Procedure |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
+| `mii-icu` | `de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2` | Intensive care: ventilation, ECMO, device metrics |
+| `mii-onkologie` | `de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3` | Oncology: staging, therapy, tumour documentation |
+| `mii-biobank` | `de.medizininformatikinitiative.kerndatensatz.biobank#2026.0.1` | Specimen and biobank data |
+| `mii-consent` | `de.medizininformatikinitiative.kerndatensatz.consent#2026.0.0` | Broad consent |
+| `mii-molgen` | `de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4` | Molecular genetics |
+| `mii-patho` | `de.medizininformatikinitiative.kerndatensatz.patho#2026.0.2` | Pathology findings |
+| `mii-studie` | `de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2` | Clinical study metadata |
+| `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` | Microbiology |
+| `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` | Imaging |
 | `diga` | `kbv.mio.diga#1.1.0` | KBV MIO DiGA Toolkit profiles |
 | `isik` | all five modules below | gematik ISiK, complete |
 | `isik-basis` | `de.gematik.isik-basismodul#4.0.3` | Patient, Encounter, Practitioner, Organization, Coverage, Condition, Procedure, … (18 resource types) |

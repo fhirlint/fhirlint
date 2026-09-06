@@ -27,12 +27,19 @@ var Aliases = map[string][]string{
 	// run combining `diga` with `kbv-basis` loads two versions of kbv.basis.
 	"diga": {"kbv.mio.diga#1.1.0"},
 
-	// MII Kerndatensatz, module by module. The modules are not on a common
-	// release train — person/fall/diagnose/prozedur are on 2025.0.x and depend
-	// on kerndatensatz.meta 2025.0.x, while laborbefund/medikation are on
-	// 2026.0.x and depend on meta 2026.0.x. Loading `mii` therefore pulls two
-	// versions of the meta package; the JAR accepts that, but a project that
-	// wants one coherent train should name the modules it needs instead.
+	// MII Kerndatensatz, module by module. The MII publishes no umbrella
+	// package, so `mii` only means anything as a set (#334).
+	//
+	// The modules are not on one release train, and adding the remaining nine
+	// in #387 widened the split rather than closing it: person, fall, diagnose
+	// and prozedur are on 2025.0.x and depend on kerndatensatz.meta 2025.0.x,
+	// while everything else is on 2026.0.x and depends on meta 2026.0.x. So
+	// `mii` pulls two versions of the meta package. The validator accepts it.
+	// A project that needs one coherent train should name the modules it wants
+	// instead of taking the set.
+	//
+	// Versions are dist-tags.latest, not the highest number published — the
+	// rule the uk-core comment records.
 	"mii": {
 		"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1",
@@ -40,13 +47,31 @@ var Aliases = map[string][]string{
 		"de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3",
 		"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2",
+		"de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3",
+		"de.medizininformatikinitiative.kerndatensatz.biobank#2026.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.consent#2026.0.0",
+		"de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4",
+		"de.medizininformatikinitiative.kerndatensatz.patho#2026.0.2",
+		"de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2",
+		"de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2",
+		"de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0",
 	},
-	"mii-person":      {"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"},
-	"mii-fall":        {"de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1"},
-	"mii-diagnose":    {"de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1"},
-	"mii-prozedur":    {"de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1"},
-	"mii-laborbefund": {"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"},
-	"mii-medikation":  {"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1"},
+	"mii-person":        {"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"},
+	"mii-fall":          {"de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1"},
+	"mii-diagnose":      {"de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1"},
+	"mii-prozedur":      {"de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1"},
+	"mii-laborbefund":   {"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"},
+	"mii-medikation":    {"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1"},
+	"mii-icu":           {"de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2"},
+	"mii-onkologie":     {"de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3"},
+	"mii-biobank":       {"de.medizininformatikinitiative.kerndatensatz.biobank#2026.0.1"},
+	"mii-consent":       {"de.medizininformatikinitiative.kerndatensatz.consent#2026.0.0"},
+	"mii-molgen":        {"de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4"},
+	"mii-patho":         {"de.medizininformatikinitiative.kerndatensatz.patho#2026.0.2"},
+	"mii-studie":        {"de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2"},
+	"mii-mikrobiologie": {"de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2"},
+	"mii-bildgebung":    {"de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0"},
 
 	// gematik ISiK — the interoperability profiles German hospitals implement.
 	//
