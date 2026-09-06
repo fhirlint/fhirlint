@@ -37,3 +37,7 @@ dist/
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Playwright MCP session artifacts (console logs, page snapshots).
+# Browsing byproducts, not project files — they were committed by accident.
+.playwright-mcp/
