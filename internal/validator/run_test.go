@@ -625,3 +625,55 @@ func TestSSRFRefusedError_MentionsTheExemptionWhenAlreadyOptedIn(t *testing.T) {
 		t.Errorf("must not suggest a flag that is already set:\n%s", out)
 	}
 }
+
+// The two causes of a skipped check need telling apart: no size limit helps an
+// unavailable code system, and raising one is the wrong advice for it (#391).
+func TestSkippedCheckClassification(t *testing.T) {
+	for id, wantBudget := range map[string]bool{
+		"VALUESET_INC_TOO_MANY_CODES":           true,
+		"CONCEPTMAP_VS_TOO_MANY_CODES":          true,
+		"CODESYSTEM_CS_SUPP_TOO_MANY_CODES":     true,
+		"UNKNOWN_CODESYSTEM":                    false,
+		"UNKNOWN_CODESYSTEM_VERSION_NONE":       false,
+		"UNKNOWN_CODESYSTEM_CODING_NOT_CHECKED": false,
+		"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE":   false,
+	} {
+		if !IsSkippedCheck(id) {
+			t.Errorf("%s: must count as a skipped check", id)
+		}
+		if got := IsBudgetSkippedCheck(id); got != wantBudget {
+			t.Errorf("%s: IsBudgetSkippedCheck = %v, want %v", id, got, wantBudget)
+		}
+		if got := IsUnresolvedCodeSystem(id); got == wantBudget {
+			t.Errorf("%s: IsUnresolvedCodeSystem = %v, want %v", id, got, !wantBudget)
+		}
+	}
+}
+
+// Every id the validator words this situation with has to be recognised, or a
+// run reports "checked" when it checked nothing.
+func TestUnresolvedCodeSystem_CoversEveryValidatorWording(t *testing.T) {
+	// Taken from Messages.properties in org.hl7.fhir.core 6.10.4.
+	for _, id := range []string{
+		"UNKNOWN_CODESYSTEM",
+		"UNKNOWN_CODESYSTEM_VERSION",
+		"UNKNOWN_CODESYSTEM_VERSION_UNK",
+		"UNKNOWN_CODESYSTEM_VERSION_NONE",
+		"UNKNOWN_CODESYSTEM_CODING_NOT_CHECKED",
+		"UNKNOWN_CODESYSTEM_EXP",
+		"UNKNOWN_CODESYSTEM_VERSION_EXP",
+		"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE",
+	} {
+		if !IsUnresolvedCodeSystem(id) {
+			t.Errorf("%s is not recognised as an unresolved code system", id)
+		}
+	}
+}
+
+func TestSkippedCheck_IgnoresUnrelatedIDs(t *testing.T) {
+	for _, id := range []string{"", "dom-6", "UNKNOWN_CODE_IN_VERSION", "Type_Specific_Checks_DT_Code"} {
+		if IsSkippedCheck(id) {
+			t.Errorf("%q must not count as a skipped check", id)
+		}
+	}
+}

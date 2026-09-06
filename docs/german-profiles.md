@@ -7,6 +7,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [Built-in aliases](#built-in-aliases)
 - [KBV — Kassenärztliche Bundesvereinigung](#kbv--kassenärztliche-bundesvereinigung)
 - [MII — Medizininformatik-Initiative](#mii--medizininformatik-initiative)
+- [Terminology: ICD-10-GM, OPS and ATC](#terminology-icd-10-gm-ops-and-atc-are-not-checked-by-default)
 - [ISiK — gematik hospital interoperability](#isik--gematik-hospital-interoperability)
 - [DiGA — Digitale Gesundheitsanwendungen](#diga--digitale-gesundheitsanwendungen)
 - [Combining profiles](#combining-profiles)
@@ -160,6 +161,30 @@ fhirlint validate patient.json \
   --ig kbv.basis#1.5.0 \
   --ig de.medizininformatikinitiative.kerndatensatz.person#2025.0.1
 ```
+
+---
+
+## Terminology: ICD-10-GM, OPS and ATC are not checked by default
+
+The German base profiles bind to code systems whose content nobody publishes freely. `de.basisprofil.r4` declares them with `content=not-present`:
+
+```
+http://fhir.de/CodeSystem/bfarm/alpha-id      content=not-present
+http://fhir.de/CodeSystem/bfarm/atc           content=not-present
+http://fhir.de/CodeSystem/bfarm/icd-10-gm     content=not-present
+http://fhir.de/CodeSystem/bfarm/ops           content=not-present
+```
+
+The concepts live in `bfarm.terminologien.*` packages on the BfArM's registry, behind a token. Checked against the alternatives:
+
+| Source | Has ICD-10-GM, OPS, ATC, Alpha-ID |
+|---|---|
+| `packages.fhir.org` | the packages are not published there |
+| `tx.fhir.org` | code systems not present |
+| `tx.fhir.de` (Ontoserver, HL7 Germany) | 837 code systems, none German |
+| `terminologien.bfarm.de/packages` | yes, behind a token |
+
+So a German project is in this state by default, and it is not a misconfiguration. See the [README section](../README.md#german-code-systems-are-not-checked-by-default) for what a run looks like and the two ways to get real checking.
 
 ---
 

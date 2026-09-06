@@ -268,23 +268,64 @@ func jvmArgs(jarPath string) []string {
 // the meaning "check every code, however many there are".
 const UnsetCodeSystemSizeLimit = -1
 
-// SkippedCheckMessageIDs are the messages the validator issues when it declines
-// to check a set of codes because there are more of them than
-// -codesystem-validation-size-limit allows.
+// SkippedCheckMessageIDs are the messages that report a check the validator did
+// not run, rather than a problem with the resource.
 //
-// They arrive as hints, which is how a whole class of checks can silently stop
-// running: filter hints out, as most projects do, and a run where nothing was
-// checked looks exactly like a run where everything passed. Reporters use this
-// list to say so regardless of the severity filter (#338).
+// They share a failure mode: filter them out, as most projects do, and a run
+// where nothing was checked looks exactly like a run where everything passed.
+// Reporters use this list to count them regardless of the severity filter.
+//
+// Two causes, both of which produce that shape.
+//
+// The budget messages fire when a set of codes is larger than
+// -codesystem-validation-size-limit allows, so the validator checks none of
+// them (#338). They arrive as hints.
+//
+// The unresolved-code-system messages fire when the code system itself is not
+// available, so no code in it can be checked. They arrive as warnings, which is
+// no better: a German project is in this state by default, because the content
+// of ICD-10-GM, OPS, ATC and Alpha-ID is not on any public registry or
+// terminology server (#391). `fhirlint explain UNKNOWN_CODESYSTEM` spells that
+// out.
 var SkippedCheckMessageIDs = []string{
+	// Budget: more codes than the limit allows.
 	"VALUESET_INC_TOO_MANY_CODES",       // a ValueSet include
 	"CONCEPTMAP_VS_TOO_MANY_CODES",      // a ConceptMap group
 	"CODESYSTEM_CS_SUPP_TOO_MANY_CODES", // a CodeSystem supplement
+
+	// Unresolved: the code system is not available at all. The validator words
+	// these eight ways depending on what it knows about versions and context;
+	// all of them mean the same thing for the reader.
+	"UNKNOWN_CODESYSTEM",
+	"UNKNOWN_CODESYSTEM_VERSION",
+	"UNKNOWN_CODESYSTEM_VERSION_UNK",
+	"UNKNOWN_CODESYSTEM_VERSION_NONE",
+	"UNKNOWN_CODESYSTEM_CODING_NOT_CHECKED",
+	"UNKNOWN_CODESYSTEM_EXP",
+	"UNKNOWN_CODESYSTEM_VERSION_EXP",
+	"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE",
 }
 
 // IsSkippedCheck reports whether a message id is one of the above.
 func IsSkippedCheck(messageID string) bool {
-	for _, id := range SkippedCheckMessageIDs {
+	return IsBudgetSkippedCheck(messageID) || IsUnresolvedCodeSystem(messageID)
+}
+
+// IsBudgetSkippedCheck reports a check skipped because the code set was larger
+// than -codesystem-validation-size-limit allows.
+func IsBudgetSkippedCheck(messageID string) bool {
+	return matchesAnyID(messageID, SkippedCheckMessageIDs[:3])
+}
+
+// IsUnresolvedCodeSystem reports a check skipped because the code system was
+// not available at all. The remedy differs from the budget case, so reporters
+// tell the two apart rather than offering one fix for both (#391).
+func IsUnresolvedCodeSystem(messageID string) bool {
+	return matchesAnyID(messageID, SkippedCheckMessageIDs[3:])
+}
+
+func matchesAnyID(messageID string, ids []string) bool {
+	for _, id := range ids {
 		if strings.EqualFold(messageID, id) {
 			return true
 		}

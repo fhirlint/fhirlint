@@ -108,6 +108,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 func TerminalSummary(results []*validator.Result, minSeverity string) int {
 	total, fatalCount, errCount, warnCount, suppCount := 0, 0, 0, 0, 0
 	skippedChecks := 0
+	unresolvedCodeSystems := 0
 	for _, r := range results {
 		for _, issue := range filterIssues(r.Issues, minSeverity) {
 			total++
@@ -127,8 +128,11 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 		// Suppressed issues are already out of r.Issues, so a project that
 		// deliberately suppressed the hint is not nagged about it.
 		for _, issue := range r.Issues {
-			if validator.IsSkippedCheck(issue.MessageID) {
+			switch {
+			case validator.IsBudgetSkippedCheck(issue.MessageID):
 				skippedChecks++
+			case validator.IsUnresolvedCodeSystem(issue.MessageID):
+				unresolvedCodeSystems++
 			}
 		}
 	}
@@ -160,6 +164,13 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 		fmt.Println(warningStyle.Render(fmt.Sprintf(
 			"Checks skipped: %d — too many codes to check against a code system. See --codesystem-size-limit.",
 			skippedChecks)))
+	}
+	if unresolvedCodeSystems > 0 {
+		// Same class of problem, different remedy: nothing was checked because
+		// the code system itself was unavailable, and no size limit will help.
+		fmt.Println(warningStyle.Render(fmt.Sprintf(
+			"Codes unchecked: %d — a code system was not available. See: fhirlint explain UNKNOWN_CODESYSTEM",
+			unresolvedCodeSystems)))
 	}
 	return total
 }
