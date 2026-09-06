@@ -2073,7 +2073,19 @@ Updates available:
 
 The lookup is cached for 24 hours, times out after 3 seconds, and fails silently — it never delays or breaks a run. The notice goes to stderr, so it never contaminates a report on stdout.
 
-It stays quiet when there is nobody to act on it: with `CI` set, when stderr is not a terminal, under `--offline`, and whenever `FHIRLINT_NO_UPDATE_NOTIFIER` is set to anything:
+**Advisories are reported separately, and are harder to silence.** When a published security advisory affects the validator you have installed, a second line appears:
+
+```
+Security: 2 published advisory/advisories affect validator 6.9.11 (high or worse). Run: fhirlint audit
+```
+
+It is its own block rather than a column on the validator row, because it has to appear whether or not a newer release exists, and because being behind and being exposed are different things.
+
+This matters most for pinned projects. An advisory is usually published well after the release it describes, so a pin that was clean in July can be affected in September without anything changing on your side. The lookup is cached for 24 hours like the release check, and only counts advisories that affect **your** version.
+
+It stays visible with `CI` set and in a redirected log, unlike the update rows. A pipeline cannot upgrade itself, but whoever reads the log can act, and a pinned project is exactly the one that misses the news. Only `--offline` and `FHIRLINT_NO_UPDATE_NOTIFIER` silence it.
+
+The update rows stay quiet when there is nobody to act on them: with `CI` set, when stderr is not a terminal, under `--offline`, and whenever `FHIRLINT_NO_UPDATE_NOTIFIER` is set to anything:
 
 ```bash
 export FHIRLINT_NO_UPDATE_NOTIFIER=1
@@ -2083,7 +2095,7 @@ Builds installed with `go install` or built from source are not compared against
 
 ### Moving the cache
 
-`FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version and verification-status files, and the `--cache` result cache:
+`FHIRLINT_CACHE_DIR` relocates everything fhirlint caches — the JAR, the version, verification-status and update-check files, and the `--cache` result cache:
 
 ```bash
 export FHIRLINT_CACHE_DIR=/mnt/build-cache/fhirlint

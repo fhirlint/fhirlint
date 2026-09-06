@@ -59,6 +59,16 @@ func UpdateCheckPath() (string, error) {
 	return filepath.Join(dir, "update_check.json"), nil
 }
 
+// AdvisoryCheckPath is where the last advisory lookup is remembered, so the
+// notice printed after every run does not fetch the advisory list each time.
+func AdvisoryCheckPath() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "advisory_check.json"), nil
+}
+
 // ChecksumStatusPath is where the outcome of the JAR checksum verification is
 // recorded, so it can be reported later without re-downloading.
 func ChecksumStatusPath() (string, error) {

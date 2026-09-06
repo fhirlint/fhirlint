@@ -150,3 +150,37 @@ func TestValidatorAction_OtherVersionUnaffected(t *testing.T) {
 		t.Errorf("validatorAction(6.10.4) = %q, want the plain update line", got)
 	}
 }
+
+// --- advisory notice (#385) ------------------------------------------------
+
+// The advisory line is deliberately harder to silence than the update rows:
+// a pipeline cannot upgrade itself, but whoever reads the log can act.
+func TestAdvisoryNoticeSuppressed_NotByCIOrARedirectedLog(t *testing.T) {
+	clearNoticeEnv(t)
+	t.Setenv("CI", "true")
+
+	if advisoryNoticeSuppressed() {
+		t.Error("CI must not hide a security advisory, even though it hides update rows")
+	}
+	// go test has no terminal on stderr, so this call also covers the non-TTY
+	// case that updateNoticeSuppressed does suppress on.
+	if !updateNoticeSuppressed() {
+		t.Error("precondition: the update rows should be suppressed here")
+	}
+}
+
+func TestAdvisoryNoticeSuppressed_ByOptOut(t *testing.T) {
+	clearNoticeEnv(t)
+	t.Setenv(noUpdateNotifierEnvVar, "1")
+	if !advisoryNoticeSuppressed() {
+		t.Errorf("%s must silence the advisory line too", noUpdateNotifierEnvVar)
+	}
+}
+
+func TestAdvisoryNoticeSuppressed_ByOffline(t *testing.T) {
+	clearNoticeEnv(t)
+	viper.Set("offline", true)
+	if !advisoryNoticeSuppressed() {
+		t.Error("offline forbids the lookup the advisory line needs")
+	}
+}
