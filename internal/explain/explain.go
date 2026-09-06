@@ -20,14 +20,35 @@ type Rule struct {
 
 // Lookup returns the rule for id (case-insensitive) and whether it is known.
 func Lookup(id string) (Rule, bool) {
-	r, ok := rules[strings.ToLower(strings.TrimSpace(id))]
+	key := strings.ToLower(strings.TrimSpace(id))
+	if target, ok := aliases[key]; ok {
+		key = target
+	}
+	r, ok := rules[key]
 	return r, ok
 }
 
 // Known reports whether a built-in explanation exists for id.
 func Known(id string) bool {
-	_, ok := rules[strings.ToLower(strings.TrimSpace(id))]
+	_, ok := Lookup(id)
 	return ok
+}
+
+// aliases map a message id onto the rule that explains it.
+//
+// The validator words one situation several ways depending on what it knows —
+// whether a version was named, whether any version is known, whether it was
+// expanding a value set. The distinctions matter to the validator and not to
+// the reader, who needs the same explanation in every case. Only the id printed
+// in the output is any use to look up, so all of them have to resolve (#391).
+var aliases = map[string]string{
+	"unknown_codesystem_version":            "unknown_codesystem",
+	"unknown_codesystem_version_unk":        "unknown_codesystem",
+	"unknown_codesystem_version_none":       "unknown_codesystem",
+	"unknown_codesystem_coding_not_checked": "unknown_codesystem",
+	"unknown_codesystem_exp":                "unknown_codesystem",
+	"unknown_codesystem_version_exp":        "unknown_codesystem",
+	"unknown_codesystem_version_exp_none":   "unknown_codesystem",
 }
 
 // IDs returns the sorted list of message IDs that have a built-in explanation.

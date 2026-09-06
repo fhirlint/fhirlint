@@ -81,3 +81,38 @@ func TestRulesWellFormed(t *testing.T) {
 		}
 	}
 }
+
+// The id printed in the output is the only one a reader can look up, and the
+// validator prints seven variants of the same situation (#391).
+func TestLookup_UnknownCodeSystemVariantsAllResolve(t *testing.T) {
+	for _, id := range []string{
+		"UNKNOWN_CODESYSTEM",
+		"UNKNOWN_CODESYSTEM_VERSION",
+		"UNKNOWN_CODESYSTEM_VERSION_UNK",
+		"UNKNOWN_CODESYSTEM_VERSION_NONE",
+		"UNKNOWN_CODESYSTEM_CODING_NOT_CHECKED",
+		"UNKNOWN_CODESYSTEM_EXP",
+		"UNKNOWN_CODESYSTEM_VERSION_EXP",
+		"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE",
+		"unknown_codesystem_version_none", // case-insensitive, like every other id
+	} {
+		r, ok := Lookup(id)
+		if !ok {
+			t.Errorf("%s has no explanation, but the validator prints it", id)
+			continue
+		}
+		if r.ID != "UNKNOWN_CODESYSTEM" {
+			t.Errorf("%s resolved to %q, want the shared explanation", id, r.ID)
+		}
+	}
+}
+
+// An alias must not shadow a real rule or invent one.
+func TestLookup_AliasesDoNotBreakOtherIDs(t *testing.T) {
+	if _, ok := Lookup("UNKNOWN_CODESYSTEM_NOT_A_REAL_ID"); ok {
+		t.Error("an unrelated id must stay unknown")
+	}
+	if r, ok := Lookup("dom-6"); !ok || r.ID != "dom-6" {
+		t.Errorf("an ordinary rule must still resolve, got %+v ok=%v", r, ok)
+	}
+}

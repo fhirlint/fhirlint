@@ -1302,6 +1302,8 @@ Checks skipped: 2 — too many codes to check against a code system. See --codes
 
 The cap is 1000 by default. A German project validating against ICD-10-GM, OPS or ATC is over it immediately, so a green run there is not evidence that the codes are valid — it can mean nobody looked. fhirlint counts these hints separately in the summary for that reason: they arrive at hint severity, which most projects filter out, and the message saying a check did not run would otherwise be the first thing hidden.
 
+Raising the cap will not help if the code system is not available in the first place, which for [German code systems is the default](#german-code-systems-are-not-checked-by-default). That case is counted and reported separately, because the remedy is different.
+
 ```bash
 # Check them all, however many there are
 fhirlint validate ./ig/ --codesystem-size-limit 0
@@ -1313,6 +1315,33 @@ fhirlint validate ./ig/ --codesystem-size-limit 5000
 Expect a remote terminology server to be slow about it — one round trip per code. Recording once with [`fhirlint tx warm`](#offline-terminology) and replaying makes repeat runs cheap.
 
 `fhirlint explain VALUESET_INC_TOO_MANY_CODES` (also `CONCEPTMAP_VS_TOO_MANY_CODES`, `CODESYSTEM_CS_SUPP_TOO_MANY_CODES`) spells this out offline. The CodeSystem-supplement form is new in validator 6.10.2: a supplement that used to be checked can stop being checked after upgrading.
+
+### German code systems are not checked by default
+
+`de.basisprofil.r4` declares ICD-10-GM, OPS, ATC and Alpha-ID with `content=not-present`: it defines the code systems but ships none of their concepts. The content is published only as `bfarm.terminologien.*` packages on the [BfArM's own registry](https://terminologien.bfarm.de/), behind a token. It is not on `packages.fhir.org`, and neither `tx.fhir.org` nor `tx.fhir.de` serves those code systems, so there is no server to point at that has them.
+
+A run therefore looks like this:
+
+```
+Files: 1  Valid: 1  Errors: 0  Warnings: 0
+Codes unchecked: 1 — a code system was not available. See: fhirlint explain UNKNOWN_CODESYSTEM
+```
+
+The finding arrives as a warning and the resource still counts as valid, so filtering to errors would hide it entirely. fhirlint counts it separately for that reason: **a green run is not evidence that your ICD-10-GM codes are valid** unless you arranged the content.
+
+Two ways to arrange it. Install the terminology package into `~/.fhir/packages` yourself and name it like any other IG:
+
+```bash
+fhirlint validate ./fhir/ --ig bfarm.terminologien.icd10gm#<version>
+```
+
+Or run a terminology server loaded with the content. A local one over plain HTTP needs [`--allow-insecure-tx`](#using-your-own-terminology-server-over-http):
+
+```bash
+fhirlint validate ./fhir/ --terminology-server http://localhost:8080/fhir --allow-insecure-tx
+```
+
+`fhirlint explain UNKNOWN_CODESYSTEM` says the same thing at the terminal, and every wording the validator uses for it resolves to that explanation.
 
 ### Air-gapped runs (`--offline`)
 

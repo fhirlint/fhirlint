@@ -128,6 +128,36 @@ var rules = map[string]Rule{
 		HowToFix: "Make the first `entry.resource` a MessageHeader when `Bundle.type` is\n" +
 			"`message`.",
 	},
+	"unknown_codesystem": {
+		ID:        "UNKNOWN_CODESYSTEM",
+		Title:     "The code system is not available, so the code was not checked",
+		DefinedIn: "HL7 Validator (terminology resolution)",
+		Description: "The validator could not obtain a definition for the code system, so\n" +
+			"it checked nothing in it. Like the size-limit messages, this reports\n" +
+			"a check that did not run rather than a problem with your resource:\n" +
+			"a clean result here is not evidence that the code is valid.\n\n" +
+			"It arrives as a warning, and the resource still counts as valid, so\n" +
+			"a run can look green while none of its codes were verified.\n\n" +
+			"For German projects this is the default state, not a\n" +
+			"misconfiguration. de.basisprofil.r4 declares ICD-10-GM, OPS, ATC and\n" +
+			"Alpha-ID with content=not-present, meaning it defines the code\n" +
+			"systems but ships none of their concepts. The content is published\n" +
+			"only as bfarm.terminologien.* packages on the BfArM's own registry,\n" +
+			"behind a token. It is not on packages.fhir.org, and neither\n" +
+			"tx.fhir.org nor tx.fhir.de serves those code systems.",
+		HowToFix: "There is no public server to point at, so there are two routes.\n\n" +
+			"Install the terminology package into ~/.fhir/packages yourself,\n" +
+			"from https://terminologien.bfarm.de/, and name it like any other\n" +
+			"IG:\n\n" +
+			"  fhirlint validate ./fhir/ --ig bfarm.terminologien.icd10gm#<version>\n\n" +
+			"Or run a terminology server loaded with the content and point at\n" +
+			"it. A local one over plain HTTP needs --allow-insecure-tx:\n\n" +
+			"  fhirlint validate ./fhir/ \\\n" +
+			"    --terminology-server http://localhost:8080/fhir --allow-insecure-tx\n\n" +
+			"If neither is available, know that the codes are unchecked rather\n" +
+			"than believing a green run. fhirlint counts these separately in the\n" +
+			"summary for that reason.",
+	},
 	"valueset_inc_too_many_codes": {
 		ID:        "VALUESET_INC_TOO_MANY_CODES",
 		Title:     "Too many codes in a ValueSet include to check them all",
