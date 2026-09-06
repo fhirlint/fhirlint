@@ -11,6 +11,7 @@ package jarsettings
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 )
@@ -82,4 +83,28 @@ func Write(servers []Server) (path string, cleanup func(), err error) {
 		return "", nil, fmt.Errorf("writing validator settings: %w", err)
 	}
 	return path, cleanup, nil
+}
+
+// InsecureServer describes a terminology server the run may reach over plain
+// HTTP or on a private network.
+//
+// Validator 6.10.0 added SSRF protection that refuses both, which is right by
+// default and wrong for the server someone is deliberately pointing at: a
+// loopback replay server, or a Blaze/HAPI/Ontoserver instance on the local
+// network. The exemption names one URL. Turning the protection off outright
+// (-ssrf-protection-enabled false) would also work and is much worse, because
+// it lifts the check for every other request the run makes.
+//
+// The URL must carry its port. Prefix matching was tightened when
+// CVE-2026-34361 was fixed, so a host-only entry no longer covers a
+// port-bearing URL, which is why these files are generated per run.
+func InsecureServer(rawURL string) (Server, error) {
+	if _, err := url.Parse(rawURL); err != nil {
+		return Server{}, fmt.Errorf("invalid server URL %q: %w", rawURL, err)
+	}
+	return Server{
+		URL:                 rawURL,
+		AllowHTTP:           true,
+		AllowPrivateNetwork: true,
+	}, nil
 }

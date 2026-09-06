@@ -1350,6 +1350,33 @@ fhirlint lsp --offline
 
 `lsp --offline --server <url>` is the one case where it does nothing: that server belongs to another process, started with whatever policy its owner chose, and the run says so instead of implying otherwise.
 
+### Using your own terminology server over HTTP
+
+A local Blaze, HAPI, Ontoserver or Snowstorm usually answers on plain HTTP:
+
+```bash
+fhirlint validate ./fhir/ --terminology-server http://localhost:8080/fhir --allow-insecure-tx
+```
+
+The flag is needed because validator 6.10.0 and later refuse plain-HTTP and private-network destinations outright, as protection against server-side request forgery. Without it the run stops before reading a resource:
+
+```
+The validator refused to contact http://localhost:8080/fhir.
+  Refusing to fetch from non-https URL: http://localhost:8080/fhir/metadata
+This is not a connection failure. Validator 6.10.0 and later block plain HTTP
+and private-network destinations, so a proxy or a different URL will not help.
+```
+
+`--allow-insecure-tx` exempts **exactly that URL** by generating a `fhir-settings.json` for the run. Every other request the validator makes keeps the protection. fhirlint never passes `-ssrf-protection-enabled false`, which would lift it for the whole run.
+
+The exemption is announced on stderr, because a run that weakens a security control should not look like one that did not:
+
+```
+Exempting http://localhost:8080/fhir from the validator's SSRF protection (--allow-insecure-tx).
+```
+
+Credentials are a separate matter: fhirlint refuses to send terminology credentials over plain HTTP at all, whatever this flag says.
+
 ### Authenticating to a terminology server
 
 A terminology server that is not `tx.fhir.org` usually wants a credential. fhirlint reads it from the environment — one variable per scheme, and the one that is set decides the scheme:
@@ -1798,7 +1825,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--tx-cache` | — | Terminology cache directory (`n/a` to disable) |
 | `--tx-offline` | `false` | Replay recorded terminology responses; an unrecorded request is an error |
 | `--tx-dir` | `.fhirlint-tx/` | Directory holding the terminology recording |
-| `--allow-insecure-tx` | `false` | Suppress warning when terminology server uses HTTP |
+| `--allow-insecure-tx` | `false` | Use a plain-HTTP terminology server: exempts that one URL from the validator's SSRF protection and drops the warning |
 | `--tx-log` | — | Write terminology request log to file |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |

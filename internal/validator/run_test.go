@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/cache"
+	"io"
 )
 
 // fixtureOO loads a testdata/fixtures/*.json file as an operationOutcome.
@@ -562,5 +563,65 @@ func TestTailLines(t *testing.T) {
 	short := "one\ntwo"
 	if got := tailLines(short, 5); got != short {
 		t.Errorf("tailLines(%q) = %q, want it unchanged", short, got)
+	}
+}
+
+// Captured from the real JAR: SSRF protection declining a plain-HTTP
+// destination. It arrives through the same capability-statement failure as a
+// genuine connection problem, which is why the two have to be told apart.
+const txSSRFStderr = "org.hl7.fhir.exceptions.FHIRException: Error fetching the server's " +
+	"capability statement: Refusing to fetch from non-https URL: http://127.0.0.1:8080/fhir/metadata\n"
+
+func TestTxUnreachableError_SSRFIsNotAnUnreachableServer(t *testing.T) {
+	err := txUnreachableError(txSSRFStderr, Options{TerminologyServer: "http://127.0.0.1:8080/fhir"})
+	if err == nil {
+		t.Fatal("an SSRF refusal must still be reported")
+	}
+	if !strings.Contains(err.Error(), "SSRF") {
+		t.Errorf("the error must name the real cause, got: %v", err)
+	}
+	if strings.Contains(err.Error(), "unreachable") {
+		t.Errorf("the server was reachable; calling it unreachable sends the reader the wrong way: %v", err)
+	}
+}
+
+// A real connection failure must keep its old wording, or the fix has traded
+// one wrong diagnosis for another.
+func TestTxUnreachableError_ConnectionFailureStillReadsAsUnreachable(t *testing.T) {
+	err := txUnreachableError(txRefusedStderr, Options{TerminologyServer: "http://127.0.0.1:9/fhir"})
+	if err == nil || !strings.Contains(err.Error(), "unreachable") {
+		t.Errorf("a refused connection must still report as unreachable, got: %v", err)
+	}
+}
+
+// Opting in and still being refused means the exemption never reached the JAR,
+// which is a fhirlint bug rather than something the user can fix by trying
+// harder. The message has to say so.
+func TestSSRFRefusedError_MentionsTheExemptionWhenAlreadyOptedIn(t *testing.T) {
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+	done := make(chan string)
+	go func() {
+		var b strings.Builder
+		_, _ = io.Copy(&b, r)
+		done <- b.String()
+	}()
+	_ = txUnreachableError(txSSRFStderr, Options{
+		TerminologyServer: "http://127.0.0.1:8080/fhir",
+		AllowInsecureTx:   true,
+	})
+	_ = w.Close()
+	os.Stderr = orig
+	out := <-done
+
+	if !strings.Contains(out, "did not take effect") {
+		t.Errorf("want the message to say the exemption failed, got:\n%s", out)
+	}
+	if strings.Contains(out, "  --allow-insecure-tx  ") {
+		t.Errorf("must not suggest a flag that is already set:\n%s", out)
 	}
 }

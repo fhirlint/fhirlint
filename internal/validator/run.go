@@ -606,6 +606,13 @@ func txUnreachableError(stderr string, opts Options) error {
 		detail = detail[:i]
 	}
 
+	// An SSRF refusal is not an unreachable server, and the generic advice
+	// below does not apply to it: no proxy helps, the URL was not wrong, and
+	// the server answers fine. Tell those apart (#386).
+	if strings.Contains(detail, ssrfRefusal) {
+		return ssrfRefusedError(server, detail, opts)
+	}
+
 	fmt.Fprintf(os.Stderr, "Cannot reach the terminology server %s.\n", server)
 	// For an unresolvable host the detail is just the hostname, which the line
 	// above already named — printing it again reads like a mistake.
@@ -617,6 +624,36 @@ func txUnreachableError(stderr string, opts Options) error {
 	fmt.Fprintln(os.Stderr, "  --terminology-server <url>    point at a reachable server")
 	fmt.Fprintln(os.Stderr, "  --no-terminology-server       validate without terminology checks")
 	return errors.New("terminology server unreachable")
+}
+
+// ssrfRefusal is how the validator words a destination its SSRF protection
+// blocks. Added in 6.10.0, alongside the protection itself.
+const ssrfRefusal = "Refusing to fetch from non-https URL"
+
+// ssrfRefusedError explains a destination the validator blocked on principle.
+//
+// The server is reachable; the validator declined to talk to it because the URL
+// is plain HTTP, or resolves onto a private network, or both. Someone pointing
+// at a local terminology server means to do exactly that.
+func ssrfRefusedError(server, detail string, opts Options) error {
+	fmt.Fprintf(os.Stderr, "The validator refused to contact %s.\n", server)
+	fmt.Fprintf(os.Stderr, "  %s\n", detail)
+	fmt.Fprintln(os.Stderr,
+		"This is not a connection failure. Validator 6.10.0 and later block plain HTTP\n"+
+			"and private-network destinations, so a proxy or a different URL will not help.")
+	if opts.AllowInsecureTx {
+		// Already opted in and still refused: the exemption did not reach the
+		// JAR, which is a fhirlint problem rather than a user one.
+		fmt.Fprintln(os.Stderr,
+			"\n--allow-insecure-tx was given but the exemption did not take effect.\n"+
+				"Check whether a -fhir-settings argument of your own is overriding it.")
+	} else {
+		fmt.Fprintln(os.Stderr,
+			"\nIf this is your own terminology server and you meant to use it over HTTP:\n"+
+				"  --allow-insecure-tx           exempt exactly this URL, nothing else\n"+
+				"  --no-terminology-server       validate without terminology checks")
+	}
+	return errors.New("terminology server refused by SSRF protection")
 }
 
 // trimJavaFrames keeps the exception message and the first few stack frames,

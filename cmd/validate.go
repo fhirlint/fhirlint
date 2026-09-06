@@ -667,6 +667,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	defer txAuthCleanup()
 
+	txExemptCleanup, txExemptErr := applyInsecureTxExemption(&opts, flagValidatorArg, os.Stderr)
+	if txExemptErr != nil {
+		return txExemptErr
+	}
+	defer txExemptCleanup()
+
 	if flagOffline {
 		if err := applyOffline(&opts, os.Stderr); err != nil {
 			return err
@@ -3121,5 +3127,52 @@ func applyTerminologyAuth(opts *validator.Options, validatorArgs []string, w io.
 	// did not, and the variable name is the thing to check when a server
 	// rejects the credential.
 	_, _ = fmt.Fprintf(w, "Authenticating to %s (%s)\n", opts.TerminologyServer, creds.Describe())
+	return cleanup, nil
+}
+
+// applyInsecureTxExemption lets a run reach a plain-HTTP terminology server.
+//
+// Validator 6.10.0 refuses plain HTTP and private networks, so pointing
+// --terminology-server at a local Blaze, HAPI or Ontoserver fails before any
+// resource is read. --allow-insecure-tx used to only silence fhirlint's own
+// warning about the same URL, which read like the way out and was not (#386).
+// It now carries the exemption too: "I know this is HTTP and I want it anyway"
+// is one intent, not two.
+//
+// Scoped to the named server. Nothing else in the run loses the protection.
+func applyInsecureTxExemption(opts *validator.Options, validatorArgs []string, w io.Writer) (func(), error) {
+	noop := func() {}
+
+	if !opts.AllowInsecureTx || opts.NoTerminologyServer {
+		return noop, nil
+	}
+	if !strings.HasPrefix(opts.TerminologyServer, "http://") {
+		return noop, nil
+	}
+	// Replay and credentials each write their own settings file, and the
+	// validator reads exactly one. Replay already exempts its own loopback
+	// server; the credentials path refuses plain HTTP outright, so it never
+	// reaches here with an http:// URL.
+	if opts.FHIRSettings != "" {
+		return noop, nil
+	}
+	if err := ensureNoUserFHIRSettings(validatorArgs); err != nil {
+		return noop, err
+	}
+
+	entry, err := jarsettings.InsecureServer(opts.TerminologyServer)
+	if err != nil {
+		return noop, err
+	}
+	path, cleanup, err := jarsettings.Write([]jarsettings.Server{entry})
+	if err != nil {
+		return noop, err
+	}
+	opts.FHIRSettings = path
+	// Said out loud: a run that weakens a security control, however narrowly,
+	// should never look like one that did not.
+	_, _ = fmt.Fprintf(w,
+		"Exempting %s from the validator's SSRF protection (--allow-insecure-tx).\n",
+		opts.TerminologyServer)
 	return cleanup, nil
 }
