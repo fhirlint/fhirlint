@@ -1943,11 +1943,8 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 |-------|-------------|
 | `kbv-basis` | `kbv.basis#1.9.0` |
 | `kbv-patient` | `kbv.basis#1.9.0` |
-| `mii` | all 15 MII Kerndatensatz modules (see below) |
-| `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` |
-| `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` |
-| `mii-diagnose` | `de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1` |
-| `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` |
+| `mii` | all 12 MII Kerndatensatz packages (see below) |
+| `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` |
 | `mii-icu` | `de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2` |
@@ -1960,49 +1957,23 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 | `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` |
 | `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` |
 | `diga` | `kbv.mio.diga#1.1.0` |
-| `isik` | all five gematik ISiK modules (see below) |
-| `isik-basis` | `de.gematik.isik-basismodul#4.0.3` |
-| `isik-medikation` | `de.gematik.isik-medikation#4.0.3` |
-| `isik-terminplanung` | `de.gematik.isik-terminplanung#4.0.3` |
-| `isik-vitalparameter` | `de.gematik.isik-vitalparameter#4.0.2` |
-| `isik-dokumentenaustausch` | `de.gematik.isik-dokumentenaustausch#4.0.1` |
+| `isik` | `de.gematik.isik#6.0.0` (all ISiK modules, one package) |
 
 An alias can stand for more than one package. The MII publishes no umbrella
-package — the Kerndatensatz ships module by module — so `mii` loads all 15
-modules, and the `mii-*` aliases name them individually. The modules are not on
-a common release train: person, fall, diagnose and prozedur are on `2025.0.x`
-and depend on `kerndatensatz.meta` `2025.0.x`, the rest are on `2026.0.x` and
-depend on meta `2026.0.x`. So `mii` pulls two versions of the shared meta
-package. The validator accepts that; if it matters for your project, name the
-modules you actually need instead of taking the set.
+package — the Kerndatensatz ships module by module — so `mii` loads all 12
+packages, and the `mii-*` aliases name them individually.
 
-`isik` works the same way and carries the same caveat. The five modules share a
-4.0.x train, but `isik-vitalparameter` pins `de.basisprofil.r4` 1.5.3 while the
-others pin 1.5.2, so the set loads two versions of the German base profiles.
-`isik-medikation` additionally depends on `hl7.fhir.uv.ips` 1.1.0, which is not
-the version the `ips` alias pins (2.0.1) — combining the two in one run loads
-both.
+`mii-base` covers what `mii-person`, `mii-fall`, `mii-diagnose` and
+`mii-prozedur` used to. Those four modules stop at `2025.0.1`; their profiles
+moved wholesale into `kerndatensatz.base` for the 2026 train, and the newer
+modules depend on base rather than on them.
 
-`de.gematik.isik-labor` has no alias on purpose: the registry serves only a
-`4.0.0-rc` for it, with no `dist-tags.latest`, so there is no published release
-to pin. Name it explicitly if you need the release candidate.
-
-**International profiles:**
-
-| Alias | Resolves to | Covers |
-|-------|-------------|--------|
-| `us-core` | `hl7.fhir.us.core#9.0.0` | US Core (HL7 US Realm) |
-| `ips` | `hl7.fhir.uv.ips#2.0.1` | International Patient Summary |
-| `ipa` | `hl7.fhir.uv.ipa#1.1.0` | International Patient Access |
-| `uk-core` | `fhir.r4.ukcore.stu2#2.0.2` | UK Core (NHS England, STU2) |
-
-```bash
-# List all available aliases
-fhirlint profiles
-
-# Validate against an international profile alias
-fhirlint validate patient.json --profile us-core
-```
+`isik` is a single package. The per-module `de.gematik.isik-*` packages froze at
+`4.0.x`, which is ISiK Stufe 4; from Stufe 5 on, gematik ships everything as
+`de.gematik.isik`. At `6.0.0` that carries 178 profiles across 39 resource types,
+including the ICU and laboratory content that never had its own published
+package. There are no `isik-<module>` aliases, because there is no longer a
+separate package to narrow a load to.
 
 ---
 

@@ -146,7 +146,11 @@ const miiModulePrefix = "de.medizininformatikinitiative.kerndatensatz."
 // Adding a new module stays a manual step.
 //
 // meta is excluded on purpose: it is a shared dependency the modules pull in
-// themselves, not a module anyone validates against.
+// themselves, not a module anyone validates against. So are the modules
+// kerndatensatz.base replaced: a registry serves a superseded package forever,
+// so "everything catalogued must be aliased" would demand we pin them again.
+// This test failed exactly that way when #398 removed them, which is the
+// clearest evidence that the exclusion has to be explicit rather than inferred.
 func TestMIISetCoversTheCatalogedModules(t *testing.T) {
 	published, err := publishedMIIModules()
 	if err != nil {
@@ -166,7 +170,7 @@ func TestMIISetCoversTheCatalogedModules(t *testing.T) {
 
 	var missing []string
 	for _, name := range published {
-		if name == miiModulePrefix+"meta" {
+		if name == miiModulePrefix+"meta" || supersededMIIModules[name] {
 			continue
 		}
 		if !aliased[name] {
@@ -212,4 +216,91 @@ func publishedMIIModules() ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+// supersededMIIModules are packages upstream replaced. They stay in the
+// registry and in its catalog, so the coverage test has to be told.
+//
+// Adding to this list is a deliberate step, the same as adding a module. That
+// is the point: nothing here can be derived, and pretending otherwise is what
+// let the `mii` alias carry four superseded pins into v1.12.0 (#398).
+var supersededMIIModules = map[string]bool{
+	// Replaced by kerndatensatz.base 2026.0.1, "Basismodule Person, Diagnose,
+	// Prozedur, Fall v2026+". Its ten profiles are exactly these four modules'.
+	miiModulePrefix + "person":   true,
+	miiModulePrefix + "fall":     true,
+	miiModulePrefix + "diagnose": true,
+	miiModulePrefix + "prozedur": true,
+}
+
+// TestNoAliasIsSupersededByAShorterPackage looks for the shape that hid the
+// ISiK problem: a package family consolidated under a shorter name.
+//
+// de.gematik.isik-basismodul sat at 4.0.3 while de.gematik.isik was at 6.0.0,
+// and every existing check passed because each package was at its own latest
+// (#398). Probing the prefix catches that without needing a catalog, which is
+// incomplete, or publication dates, which no registry endpoint carries.
+//
+// It reports rather than decides. A shorter name is not proof of supersession —
+// hl7.fhir.us.core and hl7.fhir.uv.ips have shorter relatives that are
+// unrelated — so this fails loudly enough to be looked at and no further.
+func TestNoAliasIsSupersededByAShorterPackage(t *testing.T) {
+	ids, byID := aliasIndex()
+	seen := map[string]bool{}
+
+	for _, id := range ids {
+		name, version, ok := strings.Cut(id, "#")
+		if !ok {
+			continue
+		}
+		// Only the "-module" form, which is how both consolidations were named.
+		idx := strings.LastIndex(name, "-")
+		if idx < 0 {
+			continue
+		}
+		parent := name[:idx]
+		if seen[parent] {
+			continue
+		}
+		seen[parent] = true
+
+		latest, err := latestVersionOf(parent)
+		if err != nil || latest == "" {
+			continue // no such package, which is the normal case
+		}
+		if cmp, comparable := igaudit.CompareVersions(latest, version); comparable && cmp > 0 {
+			t.Errorf("%s (%s) may be superseded: %s exists at %s\n"+
+				"  check whether the family was consolidated before assuming the pin is current",
+				name, named(byID, id), parent, latest)
+		}
+	}
+}
+
+// latestVersionOf returns a package's dist-tags.latest, or "" when the registry
+// does not serve it.
+func latestVersionOf(name string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), auditTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://packages.fhir.org/"+name, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return "", nil
+	}
+	var doc struct {
+		DistTags struct {
+			Latest string `json:"latest"`
+		} `json:"dist-tags"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
+		return "", nil
+	}
+	return doc.DistTags.Latest, nil
 }

@@ -30,21 +30,18 @@ var Aliases = map[string][]string{
 	// MII Kerndatensatz, module by module. The MII publishes no umbrella
 	// package, so `mii` only means anything as a set (#334).
 	//
-	// The modules are not on one release train, and adding the remaining nine
-	// in #387 widened the split rather than closing it: person, fall, diagnose
-	// and prozedur are on 2025.0.x and depend on kerndatensatz.meta 2025.0.x,
-	// while everything else is on 2026.0.x and depends on meta 2026.0.x. So
-	// `mii` pulls two versions of the meta package. The validator accepts it.
-	// A project that needs one coherent train should name the modules it wants
-	// instead of taking the set.
+	// person, fall, diagnose and prozedur are gone: they stop at 2025.0.1 and
+	// their profiles moved wholesale into kerndatensatz.base for the 2026 train
+	// ("Basismodule Person, Diagnose, Prozedur, Fall v2026+"). The ten profiles
+	// in base are exactly the four modules' ten. The 2026 modules already
+	// depend on base rather than on them, so the set now sits on one train and
+	// pulls one version of kerndatensatz.meta — the split documented here
+	// before #398 was a supersession mistaken for a release-train difference.
 	//
 	// Versions are dist-tags.latest, not the highest number published — the
 	// rule the uk-core comment records.
 	"mii": {
-		"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1",
-		"de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1",
-		"de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1",
-		"de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.base#2026.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3",
 		"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2",
@@ -57,10 +54,9 @@ var Aliases = map[string][]string{
 		"de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2",
 		"de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0",
 	},
-	"mii-person":        {"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"},
-	"mii-fall":          {"de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1"},
-	"mii-diagnose":      {"de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1"},
-	"mii-prozedur":      {"de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1"},
+	// base carries Patient, Encounter, Condition, Procedure and Vitalstatus —
+	// what mii-person, mii-fall, mii-diagnose and mii-prozedur used to name.
+	"mii-base":          {"de.medizininformatikinitiative.kerndatensatz.base#2026.0.1"},
 	"mii-laborbefund":   {"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"},
 	"mii-medikation":    {"de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1"},
 	"mii-icu":           {"de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2"},
@@ -75,31 +71,18 @@ var Aliases = map[string][]string{
 
 	// gematik ISiK — the interoperability profiles German hospitals implement.
 	//
-	// The modules share a 4.0.x train but not their base-profile pin:
-	// isik-vitalparameter wants de.basisprofil.r4 1.5.3 while the others want
-	// 1.5.2, so loading the full set pulls two versions of the German base
-	// profiles. The JAR accepts that — the same situation `mii` has with
-	// kerndatensatz.meta — but a project that wants one coherent set should
-	// name the modules it needs instead.
+	// One package, not five. The per-module de.gematik.isik-* packages are
+	// frozen at 4.0.x, which is ISiK Stufe 4; the spec tags in
+	// gematik/spec-ISiK-Basismodul make the mapping explicit (v.5.0.0 is
+	// "ISiK Stufe 5", v.6.0.0 is "ISiK Stufe 6"). From Stufe 5 on, everything
+	// ships as de.gematik.isik, which at 6.0.0 carries 178 profiles across 39
+	// resource types — the five modules held 131 between them — and adds the
+	// ICU and laboratory content that never had its own published package.
 	//
-	// isik-medikation also depends on hl7.fhir.uv.ips 1.1.0, which collides
-	// with the `ips` alias below (2.0.1) if a run combines the two.
-	//
-	// de.gematik.isik-labor is absent on purpose: its only published version is
-	// 4.0.0-rc and its dist-tags are empty, so there is no release to pin. An
-	// alias pointing at a package the registry does not serve is #335 again.
-	"isik": {
-		"de.gematik.isik-basismodul#4.0.3",
-		"de.gematik.isik-medikation#4.0.3",
-		"de.gematik.isik-terminplanung#4.0.3",
-		"de.gematik.isik-vitalparameter#4.0.2",
-		"de.gematik.isik-dokumentenaustausch#4.0.1",
-	},
-	"isik-basis":               {"de.gematik.isik-basismodul#4.0.3"},
-	"isik-medikation":          {"de.gematik.isik-medikation#4.0.3"},
-	"isik-terminplanung":       {"de.gematik.isik-terminplanung#4.0.3"},
-	"isik-vitalparameter":      {"de.gematik.isik-vitalparameter#4.0.2"},
-	"isik-dokumentenaustausch": {"de.gematik.isik-dokumentenaustausch#4.0.1"},
+	// There are therefore no isik-<module> aliases any more: there is nothing
+	// left to narrow a load to, and an alias that pretended otherwise would
+	// resolve to the whole package anyway (#398).
+	"isik": {"de.gematik.isik#6.0.0"},
 
 	// International profiles
 	"us-core": {"hl7.fhir.us.core#9.0.0"}, // US Core (HL7 US Realm)

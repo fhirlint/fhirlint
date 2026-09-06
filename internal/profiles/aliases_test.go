@@ -16,7 +16,7 @@ func TestResolve_KnownAliases(t *testing.T) {
 		{"kbv-basis", []string{"kbv.basis#1.9.0"}},
 		{"kbv-patient", []string{"kbv.basis#1.9.0"}},
 		{"diga", []string{"kbv.mio.diga#1.1.0"}},
-		{"mii-person", []string{"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1"}},
+		{"mii-laborbefund", []string{"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"}},
 		{"mii-laborbefund", []string{"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3"}},
 		{"us-core", []string{"hl7.fhir.us.core#9.0.0"}},
 		{"ips", []string{"hl7.fhir.uv.ips#2.0.1"}},
@@ -56,7 +56,8 @@ func TestResolve_MIIExpandsToModules(t *testing.T) {
 // drifts from the aggregate means one of the two pins was bumped and the other
 // forgotten, which is invisible until a run loads two versions of one package.
 func TestAliases_ModuleAliasesMatchAggregate(t *testing.T) {
-	for _, set := range []string{"mii", "isik"} {
+	// isik is a single package since #398, so mii is the only set alias.
+	for _, set := range []string{"mii"} {
 		aggregate := Resolve(set)
 		if len(aggregate) < 2 {
 			t.Fatalf("%q should be a multi-package alias, got %v", set, aggregate)
@@ -80,7 +81,7 @@ func TestAliases_ModuleAliasesMatchAggregate(t *testing.T) {
 // Each module of a set alias should have its own alias, or the set is the only
 // way to reach it and a project wanting one module has to load all of them.
 func TestAliases_EverySetMemberHasAModuleAlias(t *testing.T) {
-	for _, set := range []string{"mii", "isik"} {
+	for _, set := range []string{"mii"} {
 		covered := map[string]bool{}
 		for alias, pkgs := range Aliases {
 			if strings.HasPrefix(alias, set+"-") && len(pkgs) == 1 {
@@ -140,27 +141,40 @@ func captureStdout(t *testing.T, f func()) string {
 	return <-done
 }
 
-// The ISiK modules share a 4.0.x train but not their base-profile pin, and
-// isik-medikation pulls an IPS version that differs from the `ips` alias. Both
-// are documented on the table; this pins the shape those comments describe so a
-// future edit cannot quietly change it.
-func TestAliases_ISiKSetIsTheDocumentedFiveModules(t *testing.T) {
+// ISiK consolidated upstream: the per-module packages froze at Stufe 4 while
+// the spec moved to one package for Stufe 5 and 6. Pinning the old set again
+// would be a silent two-stage regression, so the shape is asserted (#398).
+func TestAliases_ISiKIsTheConsolidatedPackage(t *testing.T) {
 	got := Resolve("isik")
-	want := []string{
-		"de.gematik.isik-basismodul#4.0.3",
-		"de.gematik.isik-medikation#4.0.3",
-		"de.gematik.isik-terminplanung#4.0.3",
-		"de.gematik.isik-vitalparameter#4.0.2",
-		"de.gematik.isik-dokumentenaustausch#4.0.1",
+	if len(got) != 1 || got[0] != "de.gematik.isik#6.0.0" {
+		t.Errorf("isik = %q, want the single consolidated package", got)
 	}
-	if !slices.Equal(got, want) {
-		t.Errorf("isik = %q, want %q", got, want)
+	if Expands("isik") {
+		t.Error("isik is one package; reporting it as expanding would mislead callers that cannot take a set")
 	}
-	// isik-labor has only a 4.0.0-rc and no dist-tag, so it must not be pinned.
+	// The superseded per-module packages must not come back, under any alias.
 	for alias, pkgs := range Aliases {
 		for _, p := range pkgs {
-			if strings.Contains(p, "isik-labor") {
-				t.Errorf("alias %q pins %q, which has no published release", alias, p)
+			if strings.HasPrefix(p, "de.gematik.isik-") {
+				t.Errorf("alias %q pins %q, a package frozen at ISiK Stufe 4", alias, p)
+			}
+		}
+	}
+}
+
+// The four MII modules that stopped at 2025.0.1 were replaced by base; pinning
+// them again would quietly load a superseded set (#398).
+func TestAliases_MIIUsesBaseNotTheSupersededModules(t *testing.T) {
+	if !slices.Contains(Resolve("mii"), "de.medizininformatikinitiative.kerndatensatz.base#2026.0.1") {
+		t.Error("the mii set must carry kerndatensatz.base")
+	}
+	for alias, pkgs := range Aliases {
+		for _, p := range pkgs {
+			for _, gone := range []string{"kerndatensatz.person", "kerndatensatz.fall",
+				"kerndatensatz.diagnose", "kerndatensatz.prozedur"} {
+				if strings.Contains(p, gone) {
+					t.Errorf("alias %q pins %q, which base 2026.0.1 replaced", alias, p)
+				}
 			}
 		}
 	}
@@ -204,10 +218,10 @@ func TestResolve_ReturnsCopy(t *testing.T) {
 }
 
 func TestResolveAll_FlattensAndPassesThrough(t *testing.T) {
-	got := ResolveAll([]string{"us-core", "mii-person", "custom.package#1.0.0"})
+	got := ResolveAll([]string{"us-core", "mii-laborbefund", "custom.package#1.0.0"})
 	want := []string{
 		"hl7.fhir.us.core#9.0.0",
-		"de.medizininformatikinitiative.kerndatensatz.person#2025.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3",
 		"custom.package#1.0.0",
 	}
 	if !slices.Equal(got, want) {

@@ -71,7 +71,7 @@ func TestResolveCompareSide_MultiPackageAliasRejected(t *testing.T) {
 	if err == nil {
 		t.Fatal("err = nil, want a rejection for a multi-package alias")
 	}
-	for _, want := range []string{"several packages", "kerndatensatz.person"} {
+	for _, want := range []string{"several packages", "kerndatensatz.base"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("err = %q, want it to mention %q", err, want)
 		}
