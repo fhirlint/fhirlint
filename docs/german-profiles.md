@@ -28,11 +28,8 @@ fhirlint profiles
 |-------|-----------|--------|
 | `kbv-basis` | `kbv.basis#1.9.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
 | `kbv-patient` | `kbv.basis#1.9.0` | KBV Patient profile specifically |
-| `mii` | all 15 modules below | MII core dataset, complete |
-| `mii-person` | `de.medizininformatikinitiative.kerndatensatz.person#2025.0.1` | Patient, Practitioner, Organization |
-| `mii-fall` | `de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1` | Encounter |
-| `mii-diagnose` | `de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1` | Condition |
-| `mii-prozedur` | `de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1` | Procedure |
+| `mii` | all 12 packages below | MII core dataset, complete |
+| `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` | Patient, Encounter, Condition, Procedure, Vitalstatus — replaces person/fall/diagnose/prozedur |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
 | `mii-icu` | `de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2` | Intensive care: ventilation, ECMO, device metrics |
@@ -45,12 +42,7 @@ fhirlint profiles
 | `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` | Microbiology |
 | `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` | Imaging |
 | `diga` | `kbv.mio.diga#1.1.0` | KBV MIO DiGA Toolkit profiles |
-| `isik` | all five modules below | gematik ISiK, complete |
-| `isik-basis` | `de.gematik.isik-basismodul#4.0.3` | Patient, Encounter, Practitioner, Organization, Coverage, Condition, Procedure, … (18 resource types) |
-| `isik-medikation` | `de.gematik.isik-medikation#4.0.3` | Medication, MedicationRequest, MedicationStatement, MedicationAdministration |
-| `isik-terminplanung` | `de.gematik.isik-terminplanung#4.0.3` | Appointment, Schedule, Slot, HealthcareService |
-| `isik-vitalparameter` | `de.gematik.isik-vitalparameter#4.0.2` | Observation (66 vital-sign profiles) |
-| `isik-dokumentenaustausch` | `de.gematik.isik-dokumentenaustausch#4.0.1` | DocumentReference, document Bundle |
+| `isik` | `de.gematik.isik#6.0.0` | gematik ISiK, one package: 178 profiles across 39 resource types |
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
 
@@ -191,50 +183,35 @@ So a German project is in this state by default, and it is not a misconfiguratio
 ## ISiK — gematik hospital interoperability
 
 ISiK ("Informationstechnische Systeme im Krankenhaus") is the gematik profile
-set for hospital interoperability, published module by module as
-`de.gematik.isik-*`. All five modules are R4 and share a 4.0.x train.
-
-### Validate against ISiK
+set for hospital interoperability. Since Stufe 5 it ships as **one package**,
+`de.gematik.isik`.
 
 ```bash
-# The whole set
 fhirlint validate patient.json --profile isik
 
-# One module
-fhirlint validate observation.json --profile isik-vitalparameter
-
-# Equivalent with the full package reference
-fhirlint validate patient.json --ig de.gematik.isik-basismodul#4.0.3
+# Equivalent
+fhirlint validate patient.json --ig de.gematik.isik#6.0.0
 ```
 
-### Two version overlaps to know about
+### One package, not five
 
-The modules do not agree on their base-profile pin. `isik-vitalparameter`
-depends on `de.basisprofil.r4` 1.5.3 while the other modules depend on 1.5.2, so
-`--profile isik` loads two versions of the German base profiles. The validator
-accepts that; pin `de.basisprofil.r4` explicitly if your project needs one
-version throughout.
+The per-module packages (`de.gematik.isik-basismodul`, `-medikation`,
+`-terminplanung`, `-vitalparameter`, `-dokumentenaustausch`) are frozen at
+`4.0.x`, which is ISiK Stufe 4. The spec tags make the mapping explicit:
+[`v.5.0.0`](https://github.com/gematik/spec-ISiK-Basismodul/releases) is titled
+"ISiK Stufe 5" and `v.6.0.0` is "ISiK Stufe 6".
 
-`isik-medikation` depends on `hl7.fhir.uv.ips` 1.1.0, which is not the version
-the `ips` alias pins (2.0.1). Combining `--profile isik --profile ips` therefore
-loads both IPS versions.
+`de.gematik.isik` 6.0.0 carries 178 profiles across 39 resource types, against
+131 in the five old modules combined, and adds ICU (Device, DeviceMetric) and
+laboratory content that never had its own published package.
 
-`fhirlint packages tree` shows what a module actually pulls in, resolved against
-what is in your cache:
+There are no `isik-<module>` aliases. There is no separate package left to
+narrow a load to, and an alias suggesting otherwise would resolve to the whole
+package anyway.
 
-```bash
-fhirlint packages tree de.gematik.isik-medikation#4.0.3
-```
-
-### isik-labor is not aliased
-
-The registry serves only a `4.0.0-rc` for `de.gematik.isik-labor`, with no
-`dist-tags.latest` — there is no published release to pin, so it gets no alias.
-Name it explicitly if you need the release candidate:
-
-```bash
-fhirlint validate labor.json --ig de.gematik.isik-labor#4.0.0-rc
-```
+fhirlint's aliases pinned the Stufe 4 modules until v1.12.0; if you were relying
+on `isik-medikation` or similar, use `--profile isik` and select the profile you
+need per resource.
 
 ---
 
