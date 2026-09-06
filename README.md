@@ -448,7 +448,7 @@ fhirlint validate ./ --skip-non-fhir
 # Skipped 3 non-FHIR file(s) (--skip-non-fhir)
 ```
 
-A file is only dropped when it parses cleanly **and** demonstrably lacks the FHIR marker — a `resourceType` for JSON, the `http://hl7.org/fhir` namespace for XML. Anything malformed, truncated or unreadable is still validated and still fails, so a broken resource can never disappear from the report by mistake. The number of skipped files is always printed to stderr. Line-delimited exports and mapping files are never skipped — a bulk export is FHIR by definition, and a mapping file is not something to second-guess from its first bytes.
+A file is only dropped when it parses cleanly **and** demonstrably lacks the FHIR marker — a `resourceType` for JSON, the `http://hl7.org/fhir` namespace for XML. That verdict does not depend on file size: the top-level keys are walked without reading their values, so a package's `.index.json` is skipped whether it lists five files or five thousand. Anything malformed, truncated or unreadable is still validated and still fails, so a broken resource can never disappear from the report by mistake. The number of skipped files is always printed to stderr. Line-delimited exports and mapping files are never skipped — a bulk export is FHIR by definition, and a mapping file is not something to second-guess from its first bytes.
 
 The flag is opt-in: without it, non-FHIR input is reported as before.
 
