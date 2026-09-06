@@ -44,6 +44,9 @@ func printTree(root *fhirpkg.Node) {
 	if inexact > 0 {
 		fmt.Printf("%d declared as a version range; the resolved version shown is what is installed now.\n", inexact)
 	}
+	if n := countAmbiguous(root); n > 0 {
+		fmt.Printf("%d could not be ordered against the other installed versions; those are a guess.\n", n)
+	}
 }
 
 func printTreeNode(n *fhirpkg.Node, prefix string, last bool) {
@@ -56,6 +59,11 @@ func printTreeNode(n *fhirpkg.Node, prefix string, last bool) {
 	switch {
 	case !n.Installed:
 		label += "#" + n.Constraint + "   MISSING"
+	case n.Ambiguous:
+		// The candidates do not order against each other, so this is a stable
+		// guess. Presenting it like a resolution would be the same silent
+		// confidence #390 was about.
+		label += "#" + n.Version + "   (declared " + n.Constraint + ", ambiguous)"
 	case !n.Exact:
 		label += "#" + n.Version + "   (declared " + n.Constraint + ")"
 	default:
@@ -69,4 +77,16 @@ func printTreeNode(n *fhirpkg.Node, prefix string, last bool) {
 	for i, c := range n.Children {
 		printTreeNode(c, prefix+cont, i == len(n.Children)-1)
 	}
+}
+
+// countAmbiguous counts ranges whose candidates had no order between them.
+func countAmbiguous(n *fhirpkg.Node) int {
+	total := 0
+	if n.Ambiguous {
+		total++
+	}
+	for _, c := range n.Children {
+		total += countAmbiguous(c)
+	}
+	return total
 }
