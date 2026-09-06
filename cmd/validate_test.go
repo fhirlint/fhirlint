@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -252,17 +254,90 @@ func TestLooksLikeFHIR_UnreadableFileIsKept(t *testing.T) {
 	}
 }
 
-func TestLooksLikeFHIR_ResourceTypeBeyondPeekWindowIsKept(t *testing.T) {
+func TestLooksLikeFHIR_ResourceTypeAfterALargeValueIsFound(t *testing.T) {
 	dir := t.TempDir()
-	// A valid FHIR resource whose resourceType sits past the peek window: the
-	// decode fails, so it must be kept rather than wrongly dropped.
-	big := `{"text":"` + strings.Repeat("x", fhirPeekBytes) + `","resourceType":"Patient"}`
+	// A resource whose resourceType sits behind a value far larger than the
+	// old 4 KB window. Walking the top-level keys steps over that value, so
+	// this is now recognised as a resource rather than merely kept because
+	// the answer was unreachable.
+	big := `{"text":"` + strings.Repeat("x", 64*1024) + `","resourceType":"Patient"}`
 	p := filepath.Join(dir, "big.json")
 	if err := os.WriteFile(p, []byte(big), 0600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 	if !looksLikeFHIR(p) {
-		t.Error("a resource larger than the peek window must be kept, not dropped")
+		t.Error("a resource whose resourceType follows a large value must be recognised")
+	}
+}
+
+// TestLooksLikeFHIR_LargeIndexJSONIsSkipped is the regression from #401: every
+// FHIR package ships a .index.json, and one listing a few hundred files runs
+// well past the old peek window. Deciding from a fixed prefix kept it, so
+// validating a package's examples reported a spurious fatal for a file
+// --skip-non-fhir exists to drop.
+func TestLooksLikeFHIR_LargeIndexJSONIsSkipped(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(`{"index-version":2,"files":[`)
+	for i := 0; i < 400; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		// Each entry carries a nested resourceType — the marker must only
+		// count at the top level.
+		fmt.Fprintf(&b, `{"filename":"Patient-%d.json","resourceType":"Patient","id":"p%d"}`, i, i)
+	}
+	b.WriteString(`]}`)
+
+	if len(b.String()) <= 4096 {
+		t.Fatalf("fixture must exceed the old 4 KB window, got %d bytes", len(b.String()))
+	}
+
+	p := filepath.Join(t.TempDir(), ".index.json")
+	if err := os.WriteFile(p, []byte(b.String()), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if looksLikeFHIR(p) {
+		t.Error(".index.json is not a resource and must be skipped regardless of its size")
+	}
+}
+
+// TestLooksLikeFHIR_NonFHIRXMLBehindALargeProlog covers the XML half of #401:
+// the scanner answers from the first start element, but a prolog longer than
+// the read bound used to truncate the token stream and keep the file.
+func TestLooksLikeFHIR_NonFHIRXMLBehindALargeProlog(t *testing.T) {
+	doc := `<!--` + strings.Repeat("x", 8192) + `-->` +
+		`<project xmlns="http://maven.apache.org/POM/4.0.0"/>`
+	p := filepath.Join(t.TempDir(), "pom.xml")
+	if err := os.WriteFile(p, []byte(doc), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if looksLikeFHIR(p) {
+		t.Error("non-FHIR XML must be skipped however long its prolog is")
+	}
+}
+
+func TestLooksLikeFHIR_NestedResourceTypeIsNotTheMarker(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "wrapper.json")
+	if err := os.WriteFile(p, []byte(`{"payload":{"resourceType":"Patient"}}`), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if looksLikeFHIR(p) {
+		t.Error("resourceType nested inside a value must not count as the marker")
+	}
+}
+
+// TestJSONLooksLikeFHIR_TruncatedObjectIsKept pins the one case that must
+// still err towards true: the read ends mid-object, so the absence of the
+// marker is a gap rather than an answer. Driving the scanner through a short
+// reader tests that boundary without materialising a file the size of the
+// real bound.
+func TestJSONLooksLikeFHIR_TruncatedObjectIsKept(t *testing.T) {
+	doc := `{"text":"aaaaaaaaaaaaaaaaaaaa","resourceType":"Patient"}`
+	if !jsonLooksLikeFHIR(io.LimitReader(strings.NewReader(doc), 12)) {
+		t.Error("an object cut off by the read bound must be kept, not dropped")
+	}
+	if !jsonLooksLikeFHIR(strings.NewReader(doc)) {
+		t.Error("the same document read in full must be recognised")
 	}
 }
 

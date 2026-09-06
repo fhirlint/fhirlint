@@ -1505,9 +1505,19 @@ func peekResourceType(filePath string) string {
 	return v.ResourceType
 }
 
-// fhirPeekBytes is how much of a file looksLikeFHIR inspects. FHIR resources
-// carry their marker in the first object/element, so a small prefix is enough.
-const fhirPeekBytes = 4096
+// fhirPeekBytes bounds how much of a file looksLikeFHIR reads. Both scanners
+// stop as soon as they can answer, so this is not the point at which the
+// answer changes — it only caps pathological input. A resource is recognised
+// from its first top-level key, and a non-resource from the end of its first
+// object, neither of which requires buffering the values in between.
+//
+// The bound is generous because the scan is streaming and costs constant
+// memory, and because the files that run long are exactly the ones worth
+// deciding: a resource answers on its first key, while a large non-resource
+// pays a full walk — around 50 ms for the 4 MB .index.json of a big package —
+// to save a JVM validation that costs far more. 64 MiB clears the largest
+// JSON observed in a package cache (35 MB) with room to spare.
+const fhirPeekBytes = 64 << 20 // 64 MiB
 
 // fhirXMLNamespace is the namespace every FHIR XML resource is served in.
 const fhirXMLNamespace = "http://hl7.org/fhir"
@@ -1520,6 +1530,13 @@ const fhirXMLNamespace = "http://hl7.org/fhir"
 // demonstrably lacks the FHIR marker is rejected. Anything malformed,
 // truncated or unreadable is kept, so a genuinely broken resource still
 // reaches the validator and fails loudly instead of vanishing from the report.
+//
+// "Demonstrably lacks the marker" is decided by walking the top-level keys
+// rather than decoding the document, because the two questions are not
+// symmetric: a prefix is enough to recognise a resource, but ruling one out
+// means reaching the end of the top-level object. Deciding it from a fixed
+// prefix kept every non-resource larger than that prefix, .index.json in
+// every FHIR package among them.
 func looksLikeFHIR(filePath string) bool {
 	f, err := os.Open(filePath) //nolint:gosec // path already resolved by the caller
 	if err != nil {
@@ -1529,19 +1546,7 @@ func looksLikeFHIR(filePath string) bool {
 
 	switch strings.ToLower(filepath.Ext(filePath)) {
 	case ".json":
-		var v any
-		if err := json.NewDecoder(io.LimitReader(f, fhirPeekBytes)).Decode(&v); err != nil {
-			// Malformed, or valid but larger than the peek window: not our call.
-			return true
-		}
-		obj, ok := v.(map[string]any)
-		if !ok {
-			// Valid JSON that is not an object (array, scalar, null). A FHIR
-			// resource is always an object, so this is definitively not one.
-			return false
-		}
-		rt, _ := obj["resourceType"].(string)
-		return rt != ""
+		return jsonLooksLikeFHIR(io.LimitReader(f, fhirPeekBytes))
 	case ".xml":
 		dec := xml.NewDecoder(io.LimitReader(f, fhirPeekBytes))
 		for {
@@ -1559,6 +1564,75 @@ func looksLikeFHIR(filePath string) bool {
 		// second-guess from the first bytes of the file.
 		return true
 	}
+}
+
+// jsonLooksLikeFHIR reports whether r holds a JSON object carrying a non-empty
+// top-level resourceType. It walks the top-level keys and steps over their
+// values without buffering them, so the answer does not depend on how large
+// those values are — and a nested resourceType, as found in every entry of a
+// package .index.json, is never mistaken for the marker.
+func jsonLooksLikeFHIR(r io.Reader) bool {
+	dec := json.NewDecoder(r)
+
+	tok, err := dec.Token()
+	if err != nil {
+		return true // malformed or truncated — let the validator report it
+	}
+	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
+		// Valid JSON that is not an object (array, scalar, null). A FHIR
+		// resource is always an object, so this is definitively not one.
+		return false
+	}
+
+	for dec.More() {
+		keyTok, err := dec.Token()
+		if err != nil {
+			return true
+		}
+		if key, _ := keyTok.(string); key == "resourceType" {
+			valTok, err := dec.Token()
+			if err != nil {
+				return true
+			}
+			rt, _ := valTok.(string)
+			return rt != ""
+		}
+		if err := skipJSONValue(dec); err != nil {
+			return true
+		}
+	}
+	// A well-formed object whose top-level keys are exhausted without a
+	// resourceType. Unlike a truncated read this is an answer, not a gap.
+	return false
+}
+
+// skipJSONValue consumes exactly one value from dec, descending through nested
+// objects and arrays so the decoder is left positioned on the next key.
+func skipJSONValue(dec *json.Decoder) error {
+	tok, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	if _, ok := tok.(json.Delim); !ok {
+		return nil // scalar: already consumed
+	}
+	// An opening '{' or '[' — Token only ever yields those two as an opener
+	// here, so walk to its matching close.
+	for depth := 1; depth > 0; {
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if d, ok := tok.(json.Delim); ok {
+			switch d {
+			case '{', '[':
+				depth++
+			case '}', ']':
+				depth--
+			}
+		}
+	}
+	return nil
 }
 
 // filterFHIRPaths drops non-FHIR files when --skip-non-fhir is set and reports
