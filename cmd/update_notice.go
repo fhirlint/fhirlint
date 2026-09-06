@@ -38,10 +38,41 @@ type pendingUpdate struct {
 // separate paragraphs after every run, which is twice the noise for the same
 // information (#360).
 func printUpdateNotice() {
-	if updateNoticeSuppressed() {
+	var pending []pendingUpdate
+	if !updateNoticeSuppressed() {
+		pending = collectPendingUpdates()
+	}
+	advisory := advisoryLine()
+	if len(pending) == 0 && advisory == "" {
 		return
 	}
 
+	// Align the arrows so two rows read as a table rather than as prose.
+	nameWidth, versionWidth := 0, 0
+	for _, p := range pending {
+		nameWidth = max(nameWidth, len(p.name))
+		versionWidth = max(versionWidth, len(p.current+" → "+p.latest))
+	}
+
+	var b strings.Builder
+	if len(pending) > 0 {
+		b.WriteString("\nUpdates available:\n")
+		for _, p := range pending {
+			versions := p.current + " → " + p.latest
+			fmt.Fprintf(&b, "  %-*s  %-*s  %s\n", nameWidth, p.name, versionWidth, versions, p.action)
+		}
+	}
+	// Its own block, not a column on the validator row. Being behind and being
+	// exposed are different things, and the advisory line has to appear even
+	// when there is no newer release to sit next to (#385).
+	if advisory != "" {
+		b.WriteString("\n" + advisory + "\n")
+	}
+	fmt.Fprint(os.Stderr, b.String())
+}
+
+// collectPendingUpdates gathers the components that have a newer release.
+func collectPendingUpdates() []pendingUpdate {
 	var pending []pendingUpdate
 	if current, latest, ok := fhirlintUpdate(); ok {
 		pending = append(pending, pendingUpdate{
@@ -62,24 +93,38 @@ func printUpdateNotice() {
 			action:  validatorAction(latest),
 		})
 	}
-	if len(pending) == 0 {
-		return
-	}
+	return pending
+}
 
-	// Align the arrows so two rows read as a table rather than as prose.
-	nameWidth, versionWidth := 0, 0
-	for _, p := range pending {
-		nameWidth = max(nameWidth, len(p.name))
-		versionWidth = max(versionWidth, len(p.current+" → "+p.latest))
+// advisoryLine reports published advisories affecting the installed validator,
+// or "" when there are none or the lookup said nothing.
+func advisoryLine() string {
+	if advisoryNoticeSuppressed() {
+		return ""
 	}
+	s, ok := validator.AffectingAdvisories()
+	if !ok || s.Count == 0 {
+		return ""
+	}
+	severity := ""
+	if s.Highest != "" {
+		severity = " (" + s.Highest + " or worse)"
+	}
+	return fmt.Sprintf(
+		"Security: %d published advisory/advisories affect validator %s%s. Run: fhirlint audit",
+		s.Count, s.Version, severity)
+}
 
-	var b strings.Builder
-	b.WriteString("\nUpdates available:\n")
-	for _, p := range pending {
-		versions := p.current + " → " + p.latest
-		fmt.Fprintf(&b, "  %-*s  %-*s  %s\n", nameWidth, p.name, versionWidth, versions, p.action)
-	}
-	fmt.Fprint(os.Stderr, b.String())
+// advisoryNoticeSuppressed is deliberately weaker than updateNoticeSuppressed.
+//
+// The update rows are hidden in CI and off a terminal because a pipeline runs a
+// pinned version it cannot upgrade, so the row is noise. That reasoning does not
+// carry over: a pipeline cannot act on a security advisory either, but the
+// person reading the log can, and a pinned project is exactly the one that
+// misses the news. So this stays visible in CI and in a redirected log, and
+// only an explicit opt-out or --offline silences it (#385).
+func advisoryNoticeSuppressed() bool {
+	return os.Getenv(noUpdateNotifierEnvVar) != "" || viper.GetBool("offline")
 }
 
 // updateNoticeSuppressed reports whether the notice should be withheld.
