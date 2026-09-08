@@ -2154,7 +2154,7 @@ Entries that name no registry version — a bare package name, a local directory
 
 The audit is scoped to your project, not to the machine. It never audits the whole [package cache](#the-fhir-package-cache), which accumulates across every project that machine has ever validated.
 
-In `--format json`, `igSource` names the file the packages came from and `igUnpinned` lists the entries that could not be checked. `lockFile` keeps naming the lock file only, so consumers reading that field are unaffected.
+In `--format json`, `igSource` names the file the packages came from and `igUnpinned` lists the entries that could not be checked. `lockFile` keeps naming the lock file only, so consumers reading that field are unaffected. Each package entry carries `untaggedNewer`, the same list as the note described below.
 
 A package is reported as:
 
@@ -2165,8 +2165,11 @@ A package is reported as:
 | `deprecated upstream` | the publisher marked this version deprecated |
 | `registry latest is X (versions not comparable)` | the versions differ but could not be ordered |
 | `ahead of registry latest` | you pinned a version newer than the registry's `latest`, e.g. a pre-release |
+| `also on the registry, not tagged latest: X` | released versions newer than both your pin and `latest`, which the publisher has not made current |
 
-The last two are worth explaining. FHIR IG versions are usually semver, but the registry does not enforce it, so fhirlint only calls a package *outdated* when it could actually establish that your pin is older. When a publisher switches versioning scheme, you are told the versions differ rather than being given a confident but invented direction.
+The `versions not comparable` and `ahead` rows are worth explaining. FHIR IG versions are usually semver, but the registry does not enforce it, so fhirlint only calls a package *outdated* when it could actually establish that your pin is older. When a publisher switches versioning scheme, you are told the versions differ rather than being given a confident but invented direction.
+
+The final row is a note rather than a finding, and it can appear under a package that is otherwise `current`. fhirlint pins and compares against `dist-tags.latest` — what the publisher says is current — not against the highest number on the registry, because publishing a tarball and blessing it are separate acts. The gap between the two is real and can last a long time: at the time of writing, `fhir.r4.ukcore.stu2` serves 2.1.0 while tagging 2.0.2, and `de.medizininformatikinitiative.kerndatensatz.icu` serves 2026.0.3 and 2027.0.0 while tagging 2026.0.2. Nothing is wrong with a pin that follows the tag, but you should be able to see the difference without reading the packument yourself. Pre-releases are excluded from this list, as are versions that could not be ordered.
 
 ### Exit codes
 

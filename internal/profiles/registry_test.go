@@ -116,6 +116,17 @@ func TestAliasesUpToDate(t *testing.T) {
 			t.Logf("alias %s → %s is ahead of the registry's latest (%s), which is normal for a pre-release pin",
 				named(byID, p.ID), p.ID, p.Latest)
 		}
+
+		// Logged, never failed. Upstream publishing a release without tagging it
+		// is upstream's business, and the pin follows the tag on purpose — a
+		// t.Errorf here would leave the weekly monitor permanently red for
+		// something nobody should act on. It is worth reading, though: it is the
+		// only signal that a pin matching latest is not the same as a pin on the
+		// newest release (#406).
+		if len(p.UntaggedNewer) > 0 {
+			t.Logf("alias %s → %s: the registry also serves %s, which upstream has not tagged latest",
+				named(byID, p.ID), p.ID, strings.Join(p.UntaggedNewer, ", "))
+		}
 	}
 }
 

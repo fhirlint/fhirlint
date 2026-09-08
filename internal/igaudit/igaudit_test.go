@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -249,5 +250,87 @@ func TestCompareVersions(t *testing.T) {
 		if ok && got != tc.want {
 			t.Errorf("CompareVersions(%q, %q) = %d, want %d", tc.a, tc.b, got, tc.want)
 		}
+	}
+}
+
+// A pin that matches dist-tags.latest is not the same as a pin on the newest
+// release. Both cases below are real: fhir.r4.ukcore.stu2 serves 2.1.0 while
+// tagging 2.0.2, and de.medizininformatikinitiative.kerndatensatz.icu serves
+// 2026.0.3 and 2027.0.0 while tagging 2026.0.2. packages.fhir.org and
+// packages.simplifier.net agree on both, so it is upstream declining to move
+// the tag rather than a mirror lagging (#406).
+func TestAuditUntaggedNewer(t *testing.T) {
+	c := registry(t, map[string]string{
+		"ukcore.pkg": packument("2.0.2", "2.0.1", "2.0.2", "2.1.0"),
+		"icu.pkg": packument("2026.0.2",
+			"2026.0.1", "2026.0.2", "2026.0.2-rc.1", "2026.0.3", "2027.0.0", "2027.0.0-ballot.rc1"),
+		"kbv.pkg":   packument("1.9.0", "1.8.0", "1.9.0", "1.9.0-Expansions", "1.9.0-Resources"),
+		"quiet.pkg": packument("1.6.0", "1.4.0", "1.6.0"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{
+		"ukcore.pkg#2.0.2", "icu.pkg#2026.0.2", "kbv.pkg#1.9.0", "quiet.pkg#1.4.0",
+	})
+
+	// Current by the tag, and still two releases behind what is downloadable.
+	p := findPackage(t, r, "ukcore.pkg#2.0.2")
+	mustEqualVersions(t, "ukcore.pkg", p.UntaggedNewer, []string{"2.1.0"})
+	if p.IsProblem() || p.Outdated {
+		t.Errorf("ukcore.pkg: got problem=%v outdated=%v, want false/false — the pin follows the tag on purpose",
+			p.IsProblem(), p.Outdated)
+	}
+
+	// Pre-releases are not releases: 2026.0.2-rc.1 is older than the pin anyway,
+	// but 2027.0.0-ballot.rc1 would qualify on version order alone.
+	p = findPackage(t, r, "icu.pkg#2026.0.2")
+	mustEqualVersions(t, "icu.pkg", p.UntaggedNewer, []string{"2026.0.3", "2027.0.0"})
+
+	// KBV ships split artifacts beside a release. They carry a suffix, so they
+	// are excluded for the same reason a ballot is — neither is a version to
+	// point anyone at.
+	p = findPackage(t, r, "kbv.pkg#1.9.0")
+	mustEqualVersions(t, "kbv.pkg", p.UntaggedNewer, nil)
+
+	// Nothing beyond the tag: the field stays empty rather than repeating latest.
+	p = findPackage(t, r, "quiet.pkg#1.4.0")
+	mustEqualVersions(t, "quiet.pkg", p.UntaggedNewer, nil)
+	if !p.Outdated {
+		t.Errorf("quiet.pkg: got outdated=%v, want true", p.Outdated)
+	}
+}
+
+// An outdated pin already has a finding telling it to move to latest. Repeating
+// latest in the untagged list would double-report it, so the list starts above
+// latest even when the pin sits below it.
+func TestAuditUntaggedNewerExcludesLatestOnAnOutdatedPin(t *testing.T) {
+	c := registry(t, map[string]string{
+		"ukcore.pkg": packument("2.0.2", "2.0.1", "2.0.2", "2.1.0"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"ukcore.pkg#2.0.1"})
+
+	p := findPackage(t, r, "ukcore.pkg#2.0.1")
+	if !p.Outdated || p.Latest != "2.0.2" {
+		t.Fatalf("ukcore.pkg: got outdated=%v latest=%q, want true/2.0.2", p.Outdated, p.Latest)
+	}
+	mustEqualVersions(t, "ukcore.pkg", p.UntaggedNewer, []string{"2.1.0"})
+}
+
+// A version the comparator cannot order is skipped rather than guessed at,
+// matching how Differs reports instead of assuming.
+func TestAuditUntaggedNewerSkipsIncomparableVersions(t *testing.T) {
+	c := registry(t, map[string]string{
+		"odd.pkg": packument("1.0.0", "1.0.0", "2025-Q1", "1.1.0"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"odd.pkg#1.0.0"})
+
+	mustEqualVersions(t, "odd.pkg", findPackage(t, r, "odd.pkg#1.0.0").UntaggedNewer, []string{"1.1.0"})
+}
+
+func mustEqualVersions(t *testing.T, name string, got, want []string) {
+	t.Helper()
+	if !slices.Equal(got, want) {
+		t.Errorf("%s: UntaggedNewer = %v, want %v", name, got, want)
 	}
 }
