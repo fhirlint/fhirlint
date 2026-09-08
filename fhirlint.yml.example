@@ -109,7 +109,7 @@ ignore:
 # Watch mode: re-validate on file changes (single = changed files only, all = all files)
 # watch: single
 
-# Polling interval for watch mode in milliseconds (default: JAR default ~1000ms)
+# Polling interval for watch mode in milliseconds (default: 1000)
 # watch-interval: 500
 
 # Cache validation results per file hash (opt-in)
