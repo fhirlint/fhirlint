@@ -1343,6 +1343,39 @@ fhirlint validate ./fhir/ --terminology-server http://localhost:8080/fhir --allo
 
 `fhirlint explain UNKNOWN_CODESYSTEM` says the same thing at the terminal, and every wording the validator uses for it resolves to that explanation.
 
+### Validating an IG's own examples (`--package-baseline`)
+
+Point fhirlint at a package's examples and the error count is not interpretable on its own. Many IGs deliberately ship **invalid** instances to demonstrate what their invariants catch. `de.fhir.medication#2.0.0-ballot` has 563 examples and 327 of them fail — which reads as a broken package and is not.
+
+Nothing in the resources says which is which. The `ImplementationGuide` lists all 563 with an empty `description`, and `exampleBoolean` only states *that* something is an example. Filenames do not carry it either: 368 of those examples are named `INV-…`, `Invalid-…` or `Warning-…`, but only 327 fail, because the 41 `Warning-…` cases legitimately produce warnings only.
+
+The publisher's own QA run does carry it. Recent IG Publisher versions write `package/other/validation-summary.json` into the tarball, keyed by `ResourceType/id`:
+
+```json
+"MedicationDispense/Example-MD-Cov-bedarf-doseRange": { "errors": 0, "warnings": 4 }
+```
+
+fhirlint reads it automatically for any file validated straight out of the FHIR package cache, and reports the comparison:
+
+```
+Files: 563  Valid: 236  Errors: 327  Warnings: 1108
+Package baseline: 563 resource(s) checked against de.fhir.medication#2.0.0-ballot
+  agrees with the published build (327 expected failure(s))
+```
+
+`--package-baseline` turns that into an exit code: resources the published build already recorded errors for stop failing the run, and anything beyond the baseline still does.
+
+```bash
+fhirlint validate ~/.fhir/packages/de.fhir.medication#2.0.0-ballot/package/example/ \
+  --ig de.fhir.medication#2.0.0-ballot --package-baseline
+```
+
+Three things worth knowing:
+
+- **It is off by default.** Not failing on errors because a third-party artefact said they were fine is a decision to make deliberately.
+- **A large delta is usually about your environment, not the package.** Errors this run finds and the published build did not are often a missing `hl7.fhir.tools` dependency, a different terminology server, or absent CQL libraries — `Type_Specific_Checks_DT_URL_Resolve`, `UNKNOWN_CODESYSTEM_VERSION` and `MEASURE_M_CRITERIA_CQL_NO_LIB` dominate. The reverse case (`the build found and this run did not`) is reported too, and means this run checked *less*, since the package itself cannot have changed.
+- **Not every package has one.** 113 of 198 packages in a representative cache ship the file, essentially newer IG Publisher output. `de.basisprofil.r4`, `de.gematik.isik#6.0.0` and `hl7.fhir.uv.ips#2.0.1` do not. Without a baseline fhirlint says nothing and reports exactly as before.
+
 ### Pinning code system versions (`--expansion-parameters`)
 
 ICD-10-GM, OPS and Alpha-ID are annual editions. The German profiles bind to them without naming a version, so expansion follows whatever edition the terminology server currently holds. The same resources can therefore validate differently either side of a year change, with nothing in your repository having moved.
@@ -1881,6 +1914,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--require-suppress-reason` | `false` | Fail when a suppression rule has no `reason` |
 | `--baseline` | — | Baseline file — only new issues (regressions) fail the build |
 | `--generate-baseline` | — | Generate a baseline file from current issues |
+| `--package-baseline` | `false` | Trust an IG package's own QA baseline: resources it already records errors for do not fail the run |
 | `--no-terminology-server` | `false` | Disable terminology server — no data sent to `tx.fhir.org` |
 | `--terminology-server` | — | Custom terminology server URL |
 | `--tx-cache` | — | Terminology cache directory (`n/a` to disable) |
@@ -1943,6 +1977,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `suppress` | list | `--suppress` |
 | `show-suppressed` | bool | `--show-suppressed` |
 | `baseline` | string | `--baseline` |
+| `package-baseline` | bool | `--package-baseline` |
 | `no-terminology-server` | bool | `--no-terminology-server` |
 | `terminology-server` | string | `--terminology-server` |
 | `tx-cache` | string | `--tx-cache` |

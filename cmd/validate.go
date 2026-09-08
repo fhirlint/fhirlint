@@ -18,6 +18,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/baseline"
 	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/coverage"
+	"github.com/fhirlint/fhirlint/internal/igbaseline"
 	"github.com/fhirlint/fhirlint/internal/iglock"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/jarsettings"
@@ -80,6 +81,7 @@ var (
 	flagExclude                  []string
 	flagTxLog                    string
 	flagExpansionParameters      string
+	flagPackageBaseline          bool
 	flagJurisdiction             string
 	flagDisplayIssuesAreWarnings bool
 	flagPO                       []string
@@ -187,6 +189,8 @@ func init() {
 		"Write terminology server request log to this file (for debugging and auditing)")
 	validateCmd.Flags().StringVar(&flagExpansionParameters, "expansion-parameters", "",
 		"Parameters resource pinning code system and value set versions, e.g. ICD-10-GM 2026")
+	validateCmd.Flags().BoolVar(&flagPackageBaseline, "package-baseline", false,
+		"Trust an IG package's own QA baseline: resources it already records errors for do not fail the run")
 	validateCmd.Flags().StringVar(&flagLocale, "locale", "",
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
@@ -307,6 +311,7 @@ func init() {
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 	_ = viper.BindPFlag("tx-log", validateCmd.Flags().Lookup("tx-log"))
 	_ = viper.BindPFlag("expansion-parameters", validateCmd.Flags().Lookup("expansion-parameters"))
+	_ = viper.BindPFlag("package-baseline", validateCmd.Flags().Lookup("package-baseline"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("jurisdiction", validateCmd.Flags().Lookup("jurisdiction"))
@@ -386,6 +391,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("expansion-parameters") && viper.IsSet("expansion-parameters") {
 		flagExpansionParameters = viper.GetString("expansion-parameters")
+	}
+	if !cmd.Flags().Changed("package-baseline") && viper.IsSet("package-baseline") {
+		flagPackageBaseline = viper.GetBool("package-baseline")
 	}
 	if !cmd.Flags().Changed("locale") && viper.IsSet("locale") {
 		flagLocale = viper.GetString("locale")
@@ -937,6 +945,27 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Compare against the QA baseline the IG packages ship about themselves.
+	// Always computed, never noisy: a run over files that are not in the package
+	// cache produces an empty report and says nothing (#402).
+	pkgBaseline := igbaseline.Compare(results)
+	if flagPackageBaseline {
+		// applyOverridePostProcessing returns nil when no override matched, which
+		// is the ordinary case; this is the second contributor to the set.
+		if neverFailPaths == nil {
+			neverFailPaths = map[string]struct{}{}
+		}
+		// Expected failures stop counting towards the exit code, the same way an
+		// override's never-fail paths do. Deliberately opt-in: silently not
+		// failing on errors because a third-party artefact said they were fine
+		// is not something to do by default.
+		for file, status := range pkgBaseline.Status {
+			if status == igbaseline.StatusExpected {
+				neverFailPaths[file] = struct{}{}
+			}
+		}
+	}
+
 	// Generate (or update) the baseline from the current active issues.
 	if flagGenerateBaseline != "" {
 		bf := baseline.Generate(results)
@@ -971,6 +1000,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			reporter.TerminalSummary(results, flagSeverity)
+			printPackageBaseline(os.Stdout, pkgBaseline, flagPackageBaseline)
 		case "json":
 			outFile := outputFile("json")
 			if err := reporter.JSON(results, flagSeverity, outFile); err != nil {
@@ -3093,6 +3123,39 @@ func checkExitCode(results []*validator.Result, neverFailPaths map[string]struct
 		}
 	}
 	return nil
+}
+
+// printPackageBaseline reports how far a run disagrees with what the packages
+// said about themselves.
+//
+// Silent when no baseline covered anything, which is every run over a user's
+// own project. The interesting number is New: a package's own examples failing
+// in the way the publisher recorded is not information, and a count of 327
+// errors that is entirely expected is worse than no count at all.
+//
+// Missing is reported too, and is not good news despite sounding like it. The
+// package is a fixed artefact, so nothing in it got fixed between the
+// publisher's build and this run — errors the publisher found and this run did
+// not mean this run checked less: a missing dependency, a different terminology
+// server, no CQL.
+func printPackageBaseline(w io.Writer, rep *igbaseline.Report, enforced bool) {
+	if rep == nil || rep.Covered == 0 {
+		return
+	}
+
+	_, _ = fmt.Fprintf(w, "Package baseline: %d resource(s) checked against %s\n",
+		rep.Covered, strings.Join(rep.Packages, ", "))
+
+	switch {
+	case rep.New == 0 && rep.Missing == 0:
+		_, _ = fmt.Fprintf(w, "  agrees with the published build (%d expected failure(s))\n", rep.Expected)
+	default:
+		_, _ = fmt.Fprintf(w, "  %d expected, %d not in the published build, %d the build found and this run did not\n",
+			rep.Expected, rep.New, rep.Missing)
+	}
+	if enforced && rep.Expected > 0 {
+		_, _ = fmt.Fprintf(w, "  --package-baseline: %d expected failure(s) do not affect the exit code\n", rep.Expected)
+	}
 }
 
 // codeSystemSizeLimitOpt turns the flag's int sentinel into the optional value

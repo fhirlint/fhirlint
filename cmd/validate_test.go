@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fhirlint/fhirlint/internal/igbaseline"
 	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/resultcache"
 	"github.com/fhirlint/fhirlint/internal/suppress"
@@ -1196,5 +1198,75 @@ func TestRequireParsable(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("err = %q, want it to mention %q", err, want)
 		}
+	}
+}
+
+// The summary line is the whole point of #402: a run over a package's own
+// examples has to say how far it disagrees with the published build, and stay
+// silent when no baseline covered anything.
+func TestPrintPackageBaseline(t *testing.T) {
+	tests := []struct {
+		name     string
+		rep      *igbaseline.Report
+		enforced bool
+		want     []string
+		quiet    bool
+	}{
+		{
+			name:  "no baseline covered anything",
+			rep:   &igbaseline.Report{},
+			quiet: true,
+		},
+		{
+			name:  "nil report",
+			rep:   nil,
+			quiet: true,
+		},
+		{
+			name: "agrees with the published build",
+			rep: &igbaseline.Report{
+				Covered: 563, Expected: 327,
+				Packages: []string{"de.fhir.medication#2.0.0-ballot"},
+			},
+			want: []string{
+				"563 resource(s) checked against de.fhir.medication#2.0.0-ballot",
+				"agrees with the published build (327 expected failure(s))",
+			},
+		},
+		{
+			name: "a delta in both directions",
+			rep: &igbaseline.Report{
+				Covered: 100, Expected: 20, New: 5, Missing: 2,
+				Packages: []string{"some.pkg#1.0.0"},
+			},
+			want: []string{"20 expected, 5 not in the published build, 2 the build found and this run did not"},
+		},
+		{
+			name: "enforced says what it did to the exit code",
+			rep: &igbaseline.Report{
+				Covered: 10, Expected: 4,
+				Packages: []string{"some.pkg#1.0.0"},
+			},
+			enforced: true,
+			want:     []string{"--package-baseline: 4 expected failure(s) do not affect the exit code"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			printPackageBaseline(&buf, tt.rep, tt.enforced)
+			if tt.quiet {
+				if buf.Len() > 0 {
+					t.Errorf("want no output, got %q", buf.String())
+				}
+				return
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(buf.String(), want) {
+					t.Errorf("missing %q in:\n%s", want, buf.String())
+				}
+			}
+		})
 	}
 }
