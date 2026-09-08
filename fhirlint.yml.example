@@ -81,6 +81,14 @@ ignore:
 # Write a log of all terminology server HTTP requests to a file (for debugging and auditing)
 # tx-log: tx.log
 
+# Pin the code system and value set versions terminology expansion uses, with a
+# FHIR Parameters resource holding system-version entries. Without it, a run
+# follows whatever edition the terminology server currently holds — so the same
+# resources can validate differently either side of an ICD-10-GM or OPS year
+# change. The file replaces the validator's default expansion parameters rather
+# than adding to them.
+# expansion-parameters: expansion-params.json
+
 # Locale for validation messages (Java locale format: de, de-DE, fr, etc.)
 # Default: system locale
 # locale: de

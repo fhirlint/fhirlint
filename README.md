@@ -1343,6 +1343,38 @@ fhirlint validate ./fhir/ --terminology-server http://localhost:8080/fhir --allo
 
 `fhirlint explain UNKNOWN_CODESYSTEM` says the same thing at the terminal, and every wording the validator uses for it resolves to that explanation.
 
+### Pinning code system versions (`--expansion-parameters`)
+
+ICD-10-GM, OPS and Alpha-ID are annual editions. The German profiles bind to them without naming a version, so expansion follows whatever edition the terminology server currently holds. The same resources can therefore validate differently either side of a year change, with nothing in your repository having moved.
+
+`--expansion-parameters` takes a FHIR `Parameters` resource and makes the edition an explicit, reviewable decision:
+
+```json
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "system-version",
+      "valueUri": "http://fhir.de/CodeSystem/bfarm/icd-10-gm|2026" },
+    { "name": "system-version",
+      "valueUri": "http://fhir.de/CodeSystem/bfarm/ops|2026" }
+  ]
+}
+```
+
+```bash
+fhirlint validate ./fhir/ --expansion-parameters expansion-params.json
+```
+
+```yaml
+# fhirlint.yml
+expansion-parameters: expansion-params.json
+```
+
+Two things to know about it:
+
+- **The file replaces the validator's default expansion parameters, it does not extend them.** Everything the run needs has to be in it; nothing is inherited.
+- **It changes which terminology requests go out.** With [`--tx-offline`](#offline-terminology), record with the same file you validate with — `fhirlint tx warm` takes `--expansion-parameters` too. fhirlint fingerprints the file into the recording's manifest and warns when a replay was recorded with different parameters, which is usually the explanation for requests that suddenly come up missing.
+
 ### Air-gapped runs (`--offline`)
 
 `--tx-offline` covers terminology. `--offline` covers the rest of the run:
@@ -1856,6 +1888,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--tx-dir` | `.fhirlint-tx/` | Directory holding the terminology recording |
 | `--allow-insecure-tx` | `false` | Use a plain-HTTP terminology server: exempts that one URL from the validator's SSRF protection and drops the warning |
 | `--tx-log` | — | Write terminology request log to file |
+| `--expansion-parameters` | — | `Parameters` resource pinning code system and value set versions |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |
 | `--jurisdiction` | — | Jurisdiction for country-specific bindings, e.g. `urn:iso:std:iso:3166#DE` |
@@ -1915,6 +1948,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `tx-cache` | string | `--tx-cache` |
 | `allow-insecure-tx` | bool | `--allow-insecure-tx` |
 | `tx-log` | string | `--tx-log` |
+| `expansion-parameters` | string | `--expansion-parameters` |
 | `locale` | string | `--locale` |
 | `allow-example-urls` | bool | `--allow-example-urls` |
 | `jurisdiction` | string | `--jurisdiction` |

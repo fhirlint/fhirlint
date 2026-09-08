@@ -385,3 +385,49 @@ func TestRecorder_SendsUpstreamHeadersButDoesNotStoreThem(t *testing.T) {
 		t.Fatalf("recorded %d interaction(s), want 1", store.Len())
 	}
 }
+
+// The fingerprint identifies the file's contents, not its path: a recording is
+// meant to be committed and checked out somewhere else, where the path the
+// warming run used says nothing.
+func TestFingerprint(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a.json")
+	b := filepath.Join(dir, "b.json")
+	same := filepath.Join(dir, "same.json")
+	content := []byte(`{"resourceType":"Parameters"}`)
+	for path, c := range map[string][]byte{a: content, same: content, b: []byte(`{"resourceType":"Parameters","id":"x"}`)} {
+		if err := os.WriteFile(path, c, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	fpA, err := Fingerprint(a)
+	if err != nil {
+		t.Fatalf("Fingerprint(a): %v", err)
+	}
+	fpSame, err := Fingerprint(same)
+	if err != nil {
+		t.Fatalf("Fingerprint(same): %v", err)
+	}
+	if fpA != fpSame {
+		t.Errorf("same content at a different path fingerprinted differently: %q vs %q", fpA, fpSame)
+	}
+
+	fpB, err := Fingerprint(b)
+	if err != nil {
+		t.Fatalf("Fingerprint(b): %v", err)
+	}
+	if fpA == fpB {
+		t.Errorf("different content fingerprinted the same: %q", fpA)
+	}
+
+	// "no expansion parameters" needs to be distinguishable from "these
+	// expansion parameters" without a special case at the call site.
+	if fp, err := Fingerprint(""); err != nil || fp != "" {
+		t.Errorf(`Fingerprint("") = %q, %v; want "", nil`, fp, err)
+	}
+
+	if _, err := Fingerprint(filepath.Join(dir, "nope.json")); err == nil {
+		t.Error("missing file: got nil, want an error")
+	}
+}

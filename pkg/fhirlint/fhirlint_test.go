@@ -35,6 +35,7 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 		AllowExampleURLs:         true,
 		AllowInsecureTx:          true,
 		TxLog:                    "/tmp/tx.log",
+		ExpansionParameters:      "/tmp/expansion-params.json",
 		Jurisdiction:             "urn:iso:std:iso:3166#DE",
 		DisplayIssuesAreWarnings: true,
 		POFiles:                  []string{"validator-messages-de.po"},
@@ -76,6 +77,9 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 	}
 	if out.TxLog != "/tmp/tx.log" {
 		t.Errorf("TxLog: got %q", out.TxLog)
+	}
+	if out.ExpansionParameters != "/tmp/expansion-params.json" {
+		t.Errorf("ExpansionParameters: got %q", out.ExpansionParameters)
 	}
 	if out.Jurisdiction != "urn:iso:std:iso:3166#DE" {
 		t.Errorf("Jurisdiction: got %q", out.Jurisdiction)

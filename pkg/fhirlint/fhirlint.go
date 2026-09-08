@@ -78,6 +78,13 @@ type Options struct {
 	// the validator's built-in messages (e.g. "validator-messages-de.po").
 	POFiles []string
 
+	// ExpansionParameters is the path to a FHIR Parameters resource that pins
+	// code system and value set versions for terminology expansion, so that a
+	// run does not silently follow the terminology server to a new edition of
+	// ICD-10-GM, OPS or Alpha-ID. It replaces the validator's default expansion
+	// parameters rather than adding to them.
+	ExpansionParameters string
+
 	// JARPath overrides the auto-downloaded validator JAR with a local copy.
 	// Can also be set via the FHIRLINT_JAR environment variable.
 	JARPath string
@@ -310,6 +317,7 @@ func toInternalOpts(opts Options) validator.Options {
 		AllowExampleURLs:         opts.AllowExampleURLs,
 		AllowInsecureTx:          opts.AllowInsecureTx,
 		TxLog:                    opts.TxLog,
+		ExpansionParameters:      opts.ExpansionParameters,
 		Jurisdiction:             opts.Jurisdiction,
 		DisplayIssuesAreWarnings: opts.DisplayIssuesAreWarnings,
 		POFiles:                  opts.POFiles,

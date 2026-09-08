@@ -22,6 +22,8 @@ var (
 	flagTxWarmIG          []string
 	flagTxWarmProfile     []string
 	flagTxWarmServer      string
+
+	flagTxWarmExpansionParameters string
 )
 
 var txCmd = &cobra.Command{
@@ -58,6 +60,8 @@ func init() {
 		"IG package, e.g. kbv.basis#1.5.0 (repeatable)")
 	txWarmCmd.Flags().StringSliceVarP(&flagTxWarmProfile, "profile", "p", nil,
 		"Profile alias or URL (repeatable)")
+	txWarmCmd.Flags().StringVar(&flagTxWarmExpansionParameters, "expansion-parameters", "",
+		"Parameters resource pinning code system and value set versions — must match the validate run")
 	txWarmCmd.Flags().StringVar(&flagTxWarmServer, "terminology-server", "",
 		"Terminology server to record from (default: the validator's own default)")
 }
@@ -140,6 +144,10 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		// the recording would be complete only on the machine that made it.
 		TxCache:      "n/a",
 		FHIRSettings: settingsPath,
+		// Recorded runs have to ask the same questions the replayed ones will,
+		// and pinned code system versions change the questions. Without this,
+		// warming and validating with --expansion-parameters could never agree.
+		ExpansionParameters: flagTxWarmExpansionParameters,
 		// The proxy is loopback HTTP by design; the warning is about sending
 		// data unencrypted to a remote server, which is not what happens here.
 		AllowInsecureTx:  true,
@@ -152,11 +160,16 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("recording run failed: %w", err)
 	}
 
+	expansionFingerprint, err := txreplay.Fingerprint(flagTxWarmExpansionParameters)
+	if err != nil {
+		return err
+	}
 	if err := store.WriteManifest(txreplay.Manifest{
-		Upstream:         upstream,
-		FHIRVersion:      flagTxWarmFHIRVersion,
-		ValidatorVersion: validator.EffectiveValidatorVersion(viper.GetString("validator-version")),
-		Recorded:         time.Now().UTC().Format(time.RFC3339),
+		Upstream:            upstream,
+		FHIRVersion:         flagTxWarmFHIRVersion,
+		ValidatorVersion:    validator.EffectiveValidatorVersion(viper.GetString("validator-version")),
+		ExpansionParameters: expansionFingerprint,
+		Recorded:            time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
 		return err
 	}

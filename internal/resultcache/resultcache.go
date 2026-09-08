@@ -23,6 +23,13 @@ type KeyOpts struct {
 	FHIRVersion     string
 	Profiles        []string
 	IGs             []string
+
+	// ExpansionParameters is the fingerprint of the --expansion-parameters file,
+	// not its path. Pinning a code system to a different edition changes which
+	// codes validate, so two runs that differ only in that file must not share
+	// an entry — and moving the same file elsewhere must not throw the cache
+	// away (#407).
+	ExpansionParameters string
 }
 
 // Key computes a SHA-256 hex key from the file content and validation options.
@@ -44,11 +51,12 @@ func Key(filePath string, opts KeyOpts) (string, error) {
 	sort.Strings(profiles)
 	sort.Strings(igs)
 
-	_, _ = fmt.Fprintf(h, "\x00%s\x00%s\x00%s\x00%s",
+	_, _ = fmt.Fprintf(h, "\x00%s\x00%s\x00%s\x00%s\x00%s",
 		opts.FhirlintVersion,
 		opts.FHIRVersion,
 		strings.Join(profiles, ","),
 		strings.Join(igs, ","),
+		opts.ExpansionParameters,
 	)
 
 	return hex.EncodeToString(h.Sum(nil)), nil
