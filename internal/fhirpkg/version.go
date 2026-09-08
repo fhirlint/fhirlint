@@ -68,6 +68,19 @@ func CompareVersions(a, b string) (int, bool) {
 	}
 }
 
+// IsPreRelease reports whether a version carries a pre-release or build suffix,
+// i.e. anything after the first "-" or "+".
+//
+// Deliberately syntactic, because that is all the registry gives us. It is true
+// for what publishers mean by a pre-release ("2027.0.0-ballot.rc1") and also
+// for the split artifacts KBV publishes beside a release ("1.9.0-Expansions",
+// "1.9.0-Resources"). Both answers are the ones a caller asking "is this a
+// release I could point someone at?" wants.
+func IsPreRelease(v string) bool {
+	_, pre := splitPreRelease(v)
+	return pre != ""
+}
+
 func splitPreRelease(v string) (core, pre string) {
 	if i := strings.IndexAny(v, "-+"); i >= 0 {
 		return v[:i], v[i+1:]

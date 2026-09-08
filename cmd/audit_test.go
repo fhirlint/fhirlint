@@ -169,3 +169,31 @@ func TestPrintAuditJSON_NoLockFile(t *testing.T) {
 		t.Errorf("lockFile must be omitted when there is no lock file, got:\n%s", out)
 	}
 }
+
+// The untagged-newer note is not one of the classification cases — it rides
+// alongside whichever line the package got, and must not turn a current pin
+// into a problem (#406).
+func TestPrintIGTerminal_UntaggedNewer(t *testing.T) {
+	report := igaudit.Report{Packages: []igaudit.PackageReport{
+		{ID: "ukcore.pkg#2.0.2", Name: "ukcore.pkg", Version: "2.0.2", Latest: "2.0.2",
+			UntaggedNewer: []string{"2.1.0"}},
+		{ID: "icu.pkg#2026.0.2", Name: "icu.pkg", Version: "2026.0.2", Latest: "2026.0.2",
+			UntaggedNewer: []string{"2026.0.3", "2027.0.0"}},
+	}}
+
+	var got int
+	out := captureOutErr(t, func() { got = printIGTerminal(report, igSource{Label: "fhirlint.lock"}, nil) })
+
+	if got != 0 {
+		t.Errorf("problem count = %d, want 0 — a pin that follows the tag is not a finding", got)
+	}
+	for _, want := range []string{
+		"2.0.2 — current",
+		"also on the registry, not tagged latest: 2.1.0",
+		"also on the registry, not tagged latest: 2026.0.3, 2027.0.0",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in output:\n%s", want, out)
+		}
+	}
+}

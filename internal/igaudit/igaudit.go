@@ -77,6 +77,16 @@ type PackageReport struct {
 	// happens with pre-release pins. Not a problem, but worth showing.
 	Ahead bool `json:"ahead,omitempty"`
 
+	// UntaggedNewer lists final versions the registry serves that outrank both
+	// the pin and dist-tags.latest — published without being blessed.
+	//
+	// Not a problem: pinning the tag rather than the highest number is the right
+	// rule, and this is what upstream declined to make current. It is here
+	// because without it a pin can read as "current" for a year while newer
+	// releases sit on the registry, and finding that out took a hand-read of the
+	// packument (#406).
+	UntaggedNewer []string `json:"untaggedNewer,omitempty"`
+
 	Deprecated      bool   `json:"deprecated,omitempty"`
 	DeprecationNote string `json:"deprecationNote,omitempty"`
 
@@ -191,7 +201,11 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 	}
 
 	p.Latest = pkg.DistTags.Latest
-	if p.Latest == "" || p.Latest == version {
+	if p.Latest == "" {
+		return p
+	}
+	p.UntaggedNewer = pkg.untaggedNewer(version, p.Latest)
+	if p.Latest == version {
 		return p
 	}
 
@@ -219,6 +233,40 @@ type packument struct {
 	Versions map[string]struct {
 		Deprecated json.RawMessage `json:"deprecated"`
 	} `json:"versions"`
+}
+
+// untaggedNewer returns the final versions this packument serves that outrank
+// both the pinned version and the latest tag, oldest first.
+//
+// Both bounds are needed. Against latest alone, a pin that is merely outdated
+// would list the versions the Outdated finding is already about; against the
+// pin alone, latest itself would show up. What is left is exactly the set that
+// no existing field describes: released, downloadable, and not what upstream
+// says is current.
+//
+// Pre-releases are excluded, and so is anything CompareVersions cannot order —
+// consistent with Differs, which reports rather than guesses.
+func (p packument) untaggedNewer(version, latest string) []string {
+	var newer []string
+	for v := range p.Versions {
+		if fhirpkg.IsPreRelease(v) {
+			continue
+		}
+		if cmp, ok := fhirpkg.CompareVersions(v, latest); !ok || cmp <= 0 {
+			continue
+		}
+		if cmp, ok := fhirpkg.CompareVersions(v, version); !ok || cmp <= 0 {
+			continue
+		}
+		newer = append(newer, v)
+	}
+	sort.Slice(newer, func(i, j int) bool {
+		if cmp, ok := fhirpkg.CompareVersions(newer[i], newer[j]); ok {
+			return cmp < 0
+		}
+		return newer[i] < newer[j]
+	})
+	return newer
 }
 
 // deprecation reports whether the given version carries a deprecation marker.

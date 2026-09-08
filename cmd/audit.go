@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/igaudit"
@@ -309,6 +310,16 @@ func printIGTerminal(r igaudit.Report, src igSource, igErr error) int {
 			fmt.Printf("  ✓ %-*s  %s — ahead of registry latest (%s)\n", width, p.Name, p.Version, p.Latest)
 		default:
 			fmt.Printf("  ✓ %-*s  %s — current\n", width, p.Name, p.Version)
+		}
+
+		// Orthogonal to the line above rather than another case in it: a pin can
+		// be current, ahead or outdated and still have released versions sitting
+		// on the registry that upstream never tagged. Saying so is the whole of
+		// #406 — it is not a finding, it is the reason "current" can be true for
+		// a year while newer releases exist.
+		if len(p.UntaggedNewer) > 0 {
+			fmt.Printf("    %-*s  also on the registry, not tagged latest: %s\n",
+				width, "", strings.Join(p.UntaggedNewer, ", "))
 		}
 	}
 
