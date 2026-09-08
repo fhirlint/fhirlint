@@ -457,6 +457,25 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 	_, _ = fmt.Fprintln(w, "Use HTTPS or suppress this warning with --allow-insecure-tx.")
 }
 
+// watchArgs is the watch-mode half of the JAR's argument list, split out from
+// RunWatch so it can be asserted without starting a JVM (#405).
+//
+// intervalMS is fhirlint's --watch-interval and maps to -watch-scan-delay: "how
+// often the validator looks at the content to decide to run again", default
+// 1000ms. The names differ, and the validator's is the one that has to be sent.
+// It never had a -watch-interval — not in the picocli options, and not in the
+// Params.java they replaced, which already knew exactly -watch-mode,
+// -watch-scan-delay and -watch-settle-time. picocli rejects an unknown option
+// outright, so getting this wrong does not degrade watch mode, it ends the run
+// before the first file is read.
+func watchArgs(mode string, intervalMS int) []string {
+	args := []string{"-watch-mode", mode}
+	if intervalMS > 0 {
+		args = append(args, "-watch-scan-delay", strconv.Itoa(intervalMS))
+	}
+	return args
+}
+
 // RunWatch starts the JAR in watch mode and blocks until the process is killed (Ctrl-C).
 // mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
@@ -483,11 +502,7 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 	}
 
 	warnInsecureTerminologyServer(os.Stderr, opts)
-	args := buildArgs(jarPath, inputPaths, "", opts)
-	args = append(args, "-watch-mode", mode)
-	if intervalMS > 0 {
-		args = append(args, "-watch-interval", strconv.Itoa(intervalMS))
-	}
+	args := append(buildArgs(jarPath, inputPaths, "", opts), watchArgs(mode, intervalMS)...)
 
 	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled paths
 	cmd.Stdout = os.Stdout

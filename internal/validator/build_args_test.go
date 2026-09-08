@@ -592,3 +592,40 @@ func TestBuildArgs_CodeSystemSizeLimitUnsetPassesNothing(t *testing.T) {
 		}
 	}
 }
+
+// The watch arguments used to be built inline in RunWatch, where nothing could
+// assert them, and fhirlint sent -watch-interval for years — an option the
+// validator has never defined. picocli fails the run on an unknown option, so
+// the flag name is the whole feature (#405).
+func TestWatchArgs_Mode(t *testing.T) {
+	args := watchArgs("all", 0)
+
+	mustContainPair(t, args, "-watch-mode", "all")
+	if len(args) != 2 {
+		t.Errorf("watchArgs(all, 0) = %v, want the mode and nothing else", args)
+	}
+}
+
+func TestWatchArgs_IntervalIsScanDelay(t *testing.T) {
+	args := watchArgs("single", 500)
+
+	mustContainPair(t, args, "-watch-mode", "single")
+	mustContainPair(t, args, "-watch-scan-delay", "500")
+
+	for _, a := range args {
+		if a == "-watch-interval" {
+			t.Error("watchArgs sent -watch-interval; the validator only knows -watch-scan-delay")
+		}
+	}
+}
+
+func TestWatchArgs_ZeroIntervalOmitted(t *testing.T) {
+	for _, ms := range []int{0, -1} {
+		args := watchArgs("single", ms)
+		for _, a := range args {
+			if a == "-watch-scan-delay" {
+				t.Errorf("watchArgs(single, %d) sent -watch-scan-delay; %d means leave the JAR default alone", ms, ms)
+			}
+		}
+	}
+}

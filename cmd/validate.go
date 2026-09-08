@@ -198,7 +198,7 @@ func init() {
 		"Watch for file changes and re-validate: single (changed files only) or all (all files on any change)")
 	validateCmd.Flags().Lookup("watch").NoOptDefVal = "single"
 	validateCmd.Flags().IntVar(&flagWatchInterval, "watch-interval", 0,
-		"Polling interval for --watch in milliseconds (default: JAR default)")
+		"Polling interval for --watch in milliseconds (default: 1000)")
 	validateCmd.Flags().StringArrayVar(&flagSuppress, "suppress", nil,
 		"Silence a known issue: type:value (repeatable). Types: messageId, constraint, expression")
 	validateCmd.Flags().BoolVar(&flagShowSuppressed, "show-suppressed", false,
