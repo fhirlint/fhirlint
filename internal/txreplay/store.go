@@ -51,12 +51,39 @@ type Interaction struct {
 // changed how code systems are resolved, so a recording made with one version
 // can miss under another. Recording it turns an unexplained replay miss into a
 // warning that names the cause.
+// ExpansionParameters is there for the same reason, one step further out: with
+// -expansion-parameters the validator asks for pinned code system versions, so
+// a recording made without them, or with a different file, answers a different
+// set of questions. The content is fingerprinted rather than the path, because
+// the path says nothing once the recording is committed and checked out
+// somewhere else.
 type Manifest struct {
-	Upstream         string `json:"upstream"`
-	FHIRVersion      string `json:"fhirVersion,omitempty"`
-	ValidatorVersion string `json:"validatorVersion,omitempty"`
-	Recorded         string `json:"recorded"`
-	Entries          int    `json:"entries"`
+	Upstream            string `json:"upstream"`
+	FHIRVersion         string `json:"fhirVersion,omitempty"`
+	ValidatorVersion    string `json:"validatorVersion,omitempty"`
+	ExpansionParameters string `json:"expansionParameters,omitempty"`
+	Recorded            string `json:"recorded"`
+	Entries             int    `json:"entries"`
+}
+
+// Fingerprint reduces a file's contents to a short, stable identifier, for
+// recording which expansion parameters a recording was made with.
+//
+// An empty path fingerprints as empty, so "no expansion parameters" and "these
+// expansion parameters" are distinguishable and neither needs a special case at
+// the call site. An unreadable file is an error rather than an empty string:
+// silently recording "none" would let a drift check pass on a run that did use
+// a file.
+func Fingerprint(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	content, err := os.ReadFile(path) //nolint:gosec // G304: the path is the user's own --expansion-parameters argument
+	if err != nil {
+		return "", fmt.Errorf("fingerprinting %s: %w", path, err)
+	}
+	sum := sha256.Sum256(content)
+	return hex.EncodeToString(sum[:])[:12], nil
 }
 
 // Key identifies an interaction by what the validator asked for. Query

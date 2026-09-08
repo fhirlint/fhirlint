@@ -64,6 +64,12 @@
         "null"
       ]
     },
+    "expansion-parameters": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "extract": {
       "type": [
         "string",

@@ -79,6 +79,7 @@ var (
 	flagAllowInsecureTx          bool
 	flagExclude                  []string
 	flagTxLog                    string
+	flagExpansionParameters      string
 	flagJurisdiction             string
 	flagDisplayIssuesAreWarnings bool
 	flagPO                       []string
@@ -184,6 +185,8 @@ func init() {
 		"Terminology cache directory (pass n/a to disable, useful with actions/cache in CI)")
 	validateCmd.Flags().StringVar(&flagTxLog, "tx-log", "",
 		"Write terminology server request log to this file (for debugging and auditing)")
+	validateCmd.Flags().StringVar(&flagExpansionParameters, "expansion-parameters", "",
+		"Parameters resource pinning code system and value set versions, e.g. ICD-10-GM 2026")
 	validateCmd.Flags().StringVar(&flagLocale, "locale", "",
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
@@ -303,6 +306,7 @@ func init() {
 	_ = viper.BindPFlag("best-practice", validateCmd.Flags().Lookup("best-practice"))
 	_ = viper.BindPFlag("tx-cache", validateCmd.Flags().Lookup("tx-cache"))
 	_ = viper.BindPFlag("tx-log", validateCmd.Flags().Lookup("tx-log"))
+	_ = viper.BindPFlag("expansion-parameters", validateCmd.Flags().Lookup("expansion-parameters"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("jurisdiction", validateCmd.Flags().Lookup("jurisdiction"))
@@ -379,6 +383,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("tx-log") && viper.IsSet("tx-log") {
 		flagTxLog = viper.GetString("tx-log")
+	}
+	if !cmd.Flags().Changed("expansion-parameters") && viper.IsSet("expansion-parameters") {
+		flagExpansionParameters = viper.GetString("expansion-parameters")
 	}
 	if !cmd.Flags().Changed("locale") && viper.IsSet("locale") {
 		flagLocale = viper.GetString("locale")
@@ -596,6 +603,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		AllowExampleURLs:         flagAllowExampleURLs,
 		AllowInsecureTx:          flagAllowInsecureTx,
 		TxLog:                    flagTxLog,
+		ExpansionParameters:      flagExpansionParameters,
 		Jurisdiction:             flagJurisdiction,
 		DisplayIssuesAreWarnings: flagDisplayIssuesAreWarnings,
 		POFiles:                  flagPO,
@@ -658,7 +666,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		// incomplete recording — green here, failing on a clean CI runner.
 		opts.TxCache = "n/a"
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
-		warnValidatorVersionDrift(os.Stderr, store.ReadManifest(), validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
+		manifest := store.ReadManifest()
+		warnValidatorVersionDrift(os.Stderr, manifest, validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
+		if err := warnExpansionParametersDrift(os.Stderr, manifest, flagExpansionParameters); err != nil {
+			return err
+		}
 	}
 
 	txAuthCleanup, txAuthErr := applyTerminologyAuth(&opts, flagValidatorArg, os.Stderr)
@@ -1674,6 +1686,36 @@ func warnValidatorVersionDrift(w io.Writer, m *txreplay.Manifest, current string
 		m.ValidatorVersion, current)
 }
 
+// warnExpansionParametersDrift reports a replay whose recording was made with
+// different expansion parameters than this run uses.
+//
+// Not an error, because a replay miss already is one and this is the earlier,
+// more specific explanation for it: a pinned code system version changes which
+// terminology requests the validator makes, so a mismatch here is the likely
+// reason the misses are about to appear. Saying it up front beats leaving the
+// user to work out why a recording that was complete yesterday no longer is.
+//
+// A recording made before this field existed carries no fingerprint and is left
+// alone, the same way the validator-version check treats one.
+func warnExpansionParametersDrift(w io.Writer, m *txreplay.Manifest, path string) error {
+	if m == nil || m.ExpansionParameters == "" {
+		return nil
+	}
+	current, err := txreplay.Fingerprint(path)
+	if err != nil {
+		return err
+	}
+	if current == m.ExpansionParameters {
+		return nil
+	}
+	if path == "" {
+		_, _ = fmt.Fprintln(w, "warn: recording was made with --expansion-parameters, this run passes none — re-record, or pass the same file")
+		return nil
+	}
+	_, _ = fmt.Fprintln(w, "warn: recording was made with different --expansion-parameters than this run — re-record if requests come up missing")
+	return nil
+}
+
 // txMissError turns unreplayable terminology requests into an actionable error.
 // It returns nil when there were none.
 func txMissError(misses []txreplay.Miss, dir, arg string) error {
@@ -1988,11 +2030,16 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		cacheDir = dir
 	}
 
+	expansionFingerprint, err := txreplay.Fingerprint(opts.ExpansionParameters)
+	if err != nil {
+		return nil, err
+	}
 	keyOpts := resultcache.KeyOpts{
-		FhirlintVersion: fhirlintVersion(),
-		FHIRVersion:     opts.FHIRVersion,
-		Profiles:        opts.Profiles,
-		IGs:             opts.IGs,
+		FhirlintVersion:     fhirlintVersion(),
+		FHIRVersion:         opts.FHIRVersion,
+		Profiles:            opts.Profiles,
+		IGs:                 opts.IGs,
+		ExpansionParameters: expansionFingerprint,
 	}
 
 	keys := make([]string, len(paths))

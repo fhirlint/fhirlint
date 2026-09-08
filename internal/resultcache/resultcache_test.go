@@ -260,3 +260,48 @@ func TestClear_CountsOnlyWhatItRemoved(t *testing.T) {
 		t.Error("Clear must not remove files that are not cache entries")
 	}
 }
+
+// Pinning a code system to a different edition changes which codes validate, so
+// the entry must not be shared. The fingerprint goes into the key rather than
+// the path, so relocating the same file keeps the cache warm (#407).
+func TestKey_ExpansionParametersChangeTheKey(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "patient.json")
+	if err := os.WriteFile(file, []byte(`{"resourceType":"Patient"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	base := KeyOpts{FhirlintVersion: "1.12.1", FHIRVersion: "4.0.1"}
+	pinned2026 := base
+	pinned2026.ExpansionParameters = "aaaaaaaaaaaa"
+	pinned2027 := base
+	pinned2027.ExpansionParameters = "bbbbbbbbbbbb"
+
+	none, err := Key(file, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	k2026, err := Key(file, pinned2026)
+	if err != nil {
+		t.Fatal(err)
+	}
+	k2027, err := Key(file, pinned2027)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if k2026 == k2027 {
+		t.Error("two different expansion-parameter files produced the same cache key")
+	}
+	if none == k2026 {
+		t.Error("pinned and unpinned runs produced the same cache key")
+	}
+
+	again, err := Key(file, pinned2026)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again != k2026 {
+		t.Error("the same fingerprint produced a different key on a second call")
+	}
+}

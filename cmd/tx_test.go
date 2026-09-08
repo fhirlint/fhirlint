@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -140,5 +142,56 @@ func TestWarnValidatorVersionDrift(t *testing.T) {
 				t.Errorf("warned = %v, want %v (output: %q)", got, tt.wantWarn, buf.String())
 			}
 		})
+	}
+}
+
+// A recording made with pinned code system versions answers a different set of
+// questions than one made without, so a mismatch is the likely explanation for
+// replay misses that are about to appear (#407).
+func TestWarnExpansionParametersDrift(t *testing.T) {
+	dir := t.TempDir()
+	recorded := filepath.Join(dir, "recorded.json")
+	other := filepath.Join(dir, "other.json")
+	if err := os.WriteFile(recorded, []byte(`{"resourceType":"Parameters","id":"a"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(other, []byte(`{"resourceType":"Parameters","id":"b"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	recordedFP, err := txreplay.Fingerprint(recorded)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		manifest *txreplay.Manifest
+		path     string
+		wantWarn bool
+	}{
+		{"same file", &txreplay.Manifest{ExpansionParameters: recordedFP}, recorded, false},
+		{"different file", &txreplay.Manifest{ExpansionParameters: recordedFP}, other, true},
+		{"recording used parameters, run does not", &txreplay.Manifest{ExpansionParameters: recordedFP}, "", true},
+		{"older recording without the field", &txreplay.Manifest{}, recorded, false},
+		{"no manifest at all", nil, recorded, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := warnExpansionParametersDrift(&buf, tt.manifest, tt.path); err != nil {
+				t.Fatalf("warnExpansionParametersDrift: %v", err)
+			}
+			if got := buf.Len() > 0; got != tt.wantWarn {
+				t.Errorf("warned = %v, want %v (output: %q)", got, tt.wantWarn, buf.String())
+			}
+		})
+	}
+
+	// A path that cannot be read is an error rather than a silent "no drift":
+	// the run is about to fail on it anyway, and saying so here names the file.
+	err = warnExpansionParametersDrift(&bytes.Buffer{},
+		&txreplay.Manifest{ExpansionParameters: recordedFP}, filepath.Join(dir, "nope.json"))
+	if err == nil {
+		t.Error("unreadable file: got nil, want an error")
 	}
 }

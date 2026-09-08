@@ -100,6 +100,7 @@ type Options struct {
 	ValidatorVersion         string        // pin the auto-downloaded JAR to an upstream release (--validator-version)
 	ExtraArgs                []string      // raw arguments appended verbatim to the JAR invocation (--validator-arg)
 	FHIRSettings             string        // path to a fhir-settings.json for the JAR (-fhir-settings)
+	ExpansionParameters      string        // path to a Parameters resource pinning code system versions (-expansion-parameters)
 	Proxy                    ProxyConfig   // http/https proxy for the JAR's terminology calls (-proxy/-https-proxy/-auth)
 	ValidationTimeout        time.Duration // stop validating after this long, returning partial results (-validation-timeout); 0 = unbounded
 	MaxMessages              int           // stop after this many validation messages, returning partial results (-max-validation-messages); 0 = unbounded
@@ -151,6 +152,32 @@ func validateExtraArgs(extra []string) error {
 	return nil
 }
 
+// validateExpansionParameters rejects an unreadable -expansion-parameters path
+// before a JVM is started for it.
+//
+// The validator throws FHIRException("Unable to read expansion parameters ...")
+// out of ValidationEngine.loadExpansionParameters, which arrives as a JAR-side
+// failure with the stack trace attached — the class of error #351 was about. A
+// mistyped path is the common case here and deserves the plain answer.
+//
+// Existence and readability only. Whether the file parses as a Parameters
+// resource is the validator's judgement to make, and duplicating it here would
+// mean maintaining a second opinion about FHIR that could disagree with the
+// engine actually doing the work.
+func validateExpansionParameters(path string) error {
+	if path == "" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("--expansion-parameters: cannot read %s: %w", path, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("--expansion-parameters: %s is a directory, not a Parameters resource", path)
+	}
+	return nil
+}
+
 // buildArgs constructs the java -jar argument list for the given inputs and options.
 // Separated from Run() so it can be unit-tested without invoking the JAR.
 func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Options) []string {
@@ -185,6 +212,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.FHIRSettings != "" {
 		args = append(args, "-fhir-settings", opts.FHIRSettings)
+	}
+	if opts.ExpansionParameters != "" {
+		args = append(args, "-expansion-parameters", opts.ExpansionParameters)
 	}
 	if opts.Locale != "" {
 		args = append(args, "-locale", opts.Locale)
@@ -489,6 +519,9 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 	if err := validateBestPractice(opts.BestPractice); err != nil {
 		return err
 	}
+	if err := validateExpansionParameters(opts.ExpansionParameters); err != nil {
+		return err
+	}
 
 	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
 		return err
@@ -536,6 +569,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, err
 	}
 	if err := validateBestPractice(opts.BestPractice); err != nil {
+		return nil, err
+	}
+	if err := validateExpansionParameters(opts.ExpansionParameters); err != nil {
 		return nil, err
 	}
 

@@ -3,6 +3,8 @@ package validator
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -627,5 +629,52 @@ func TestWatchArgs_ZeroIntervalOmitted(t *testing.T) {
 				t.Errorf("watchArgs(single, %d) sent -watch-scan-delay; %d means leave the JAR default alone", ms, ms)
 			}
 		}
+	}
+}
+
+func TestBuildArgs_ExpansionParameters(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:         "4.0.1",
+		ExpansionParameters: "/tmp/expansion-params.json",
+	})
+
+	mustContainPair(t, args, "-expansion-parameters", "/tmp/expansion-params.json")
+}
+
+func TestBuildArgs_ExpansionParametersEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+
+	for _, a := range args {
+		if a == "-expansion-parameters" {
+			t.Error("-expansion-parameters passed with no file; the validator has its own defaults")
+		}
+	}
+}
+
+// The validator reports an unreadable file as a FHIRException with a stack
+// trace attached, arriving as "the JAR failed" rather than "you typed the path
+// wrong" (#351). A mistyped path is the common case, so it is answered here.
+func TestValidateExpansionParameters(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "params.json")
+	if err := os.WriteFile(file, []byte(`{"resourceType":"Parameters"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := validateExpansionParameters(""); err != nil {
+		t.Errorf("empty path: got %v, want nil — the option is optional", err)
+	}
+	if err := validateExpansionParameters(file); err != nil {
+		t.Errorf("readable file: got %v, want nil", err)
+	}
+
+	err := validateExpansionParameters(filepath.Join(dir, "nope.json"))
+	if err == nil || !strings.Contains(err.Error(), "--expansion-parameters") {
+		t.Errorf("missing file: got %v, want an error naming the flag", err)
+	}
+
+	err = validateExpansionParameters(dir)
+	if err == nil || !strings.Contains(err.Error(), "directory") {
+		t.Errorf("directory: got %v, want an error saying it is a directory", err)
 	}
 }
