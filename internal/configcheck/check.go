@@ -79,6 +79,7 @@ var topLevelKeys = map[string]keySpec{
 	"watch":                       {kind: kindEnum, values: []string{"single", "all"}},
 	"watch-interval":              {kind: kindInt},
 	"expansion-parameters":        {kind: kindString},
+	"package-baseline":            {kind: kindBool},
 	"suppress":                    {kind: kindSuppressList},
 	"severity-override":           {kind: kindSeverityOverrideList},
 	"show-suppressed":             {kind: kindBool},

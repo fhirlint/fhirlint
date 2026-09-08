@@ -89,6 +89,14 @@ ignore:
 # than adding to them.
 # expansion-parameters: expansion-params.json
 
+# Trust an IG package's own QA baseline. Recent IG Publisher versions record,
+# inside the tarball, which of a package's own resources their build found
+# errors in — many IGs ship deliberately invalid examples to demonstrate their
+# invariants. With this on, those resources no longer fail the run; anything the
+# published build did not record still does. Only affects files validated
+# straight out of the FHIR package cache.
+# package-baseline: true
+
 # Locale for validation messages (Java locale format: de, de-DE, fr, etc.)
 # Default: system locale
 # locale: de

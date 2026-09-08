@@ -832,3 +832,17 @@ func TestConfigFile_ExpansionParametersFromConfig(t *testing.T) {
 		t.Errorf("expansion-parameters = %q, want %q", got, "expansion-params.json")
 	}
 }
+
+func TestConfigFile_PackageBaselineFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "package-baseline: true\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if !viper.GetBool("package-baseline") {
+		t.Error("package-baseline = false, want true")
+	}
+}

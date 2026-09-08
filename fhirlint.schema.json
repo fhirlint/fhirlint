@@ -259,6 +259,9 @@
       },
       "type": "array"
     },
+    "package-baseline": {
+      "type": "boolean"
+    },
     "po": {
       "items": {
         "type": "string"
