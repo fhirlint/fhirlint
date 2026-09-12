@@ -2060,16 +2060,35 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		cacheDir = dir
 	}
 
+	// The file-valued options go into the key as content fingerprints rather
+	// than paths, so editing one invalidates the entry and moving it does not.
 	expansionFingerprint, err := txreplay.Fingerprint(opts.ExpansionParameters)
 	if err != nil {
 		return nil, err
 	}
+	settingsFingerprint, err := txreplay.Fingerprint(opts.FHIRSettings)
+	if err != nil {
+		return nil, err
+	}
+	var poFingerprints []string
+	for _, po := range opts.POFiles {
+		fp, err := txreplay.Fingerprint(po)
+		if err != nil {
+			return nil, err
+		}
+		poFingerprints = append(poFingerprints, fp)
+	}
+
 	keyOpts := resultcache.KeyOpts{
-		FhirlintVersion:     fhirlintVersion(),
-		FHIRVersion:         opts.FHIRVersion,
-		Profiles:            opts.Profiles,
-		IGs:                 opts.IGs,
+		FhirlintVersion: fhirlintVersion(),
+		// The version that will actually run, not the flag: an unset
+		// --validator-version means "whatever is installed", which `fhirlint
+		// update` changes without the command line changing (#417).
+		ValidatorVersion:    validator.EffectiveValidatorVersion(opts.ValidatorVersion),
+		Options:             opts,
 		ExpansionParameters: expansionFingerprint,
+		FHIRSettings:        settingsFingerprint,
+		POFiles:             poFingerprints,
 	}
 
 	keys := make([]string, len(paths))

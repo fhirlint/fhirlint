@@ -32,7 +32,13 @@ testdata/      fixtures for unit tests
 4. Add viper binding + config-merge block (follow existing pattern)
 5. Add field to `pkg/fhirlint/fhirlint.go` `Options` and pass through `toInternalOpts`
 6. Add entry to `fhirlint.yml.example`
-7. Tests: `internal/validator/build_args_test.go`, `cmd/config_test.go`, `pkg/fhirlint/fhirlint_test.go`
+7. Decide whether the flag changes the *result*. It joins the `--cache` key
+   automatically (the key covers all of `Options`), so there is nothing to do
+   unless it must be **excluded** — see `keyedOptions` in
+   `internal/resultcache/` — or it is a **file path**, which belongs in the key
+   as a `txreplay.Fingerprint`, not as a path. `TestKeyedOptions_EveryFieldHasBeenConsidered`
+   fails until the decision is recorded.
+8. Tests: `internal/validator/build_args_test.go`, `cmd/config_test.go`, `pkg/fhirlint/fhirlint_test.go`
 
 ### Tests
 
