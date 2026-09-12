@@ -23,7 +23,7 @@ jobs:
       # validate. fail-on never keeps the smoke test green regardless of the
       # fixtures' validity — we are testing the action wrapper, not the rules.
       - name: Run fhirlint action
-        uses: ./
+        uses: $/
         with:
           path: testdata/
           fail-on: never

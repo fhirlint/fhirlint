@@ -14,7 +14,7 @@ jobs:
   # checks the runs from when the commit landed on main. Nothing is published
   # unless they were green.
   require-green-ci:
-    uses: ./.github/workflows/require-green-ci.yml
+    uses: $/.github/workflows/require-green-ci.yml
     with:
       sha: ${{ github.sha }}
     permissions:

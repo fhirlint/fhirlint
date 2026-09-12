@@ -14,7 +14,7 @@ jobs:
   # Applies to workflow_dispatch too: a manual run republishes and re-signs
   # `latest`, so it gets the same gate rather than being an unchecked bypass.
   require-green-ci:
-    uses: ./.github/workflows/require-green-ci.yml
+    uses: $/.github/workflows/require-green-ci.yml
     with:
       sha: ${{ github.sha }}
     permissions:
