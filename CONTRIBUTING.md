@@ -4,7 +4,7 @@ Thanks for your interest in contributing! This document covers everything from s
 
 ## Prerequisites
 
-- **Go 1.25+** — [install](https://go.dev/dl/)
+- **Go 1.26+** — [install](https://go.dev/dl/)
 - **Java 11+** — required to run integration tests (`java -version` to check)
 - **golangci-lint v2** — for local linting (`go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`)
 
