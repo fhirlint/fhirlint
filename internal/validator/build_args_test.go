@@ -600,16 +600,16 @@ func TestBuildArgs_CodeSystemSizeLimitUnsetPassesNothing(t *testing.T) {
 // validator has never defined. picocli fails the run on an unknown option, so
 // the flag name is the whole feature (#405).
 func TestWatchArgs_Mode(t *testing.T) {
-	args := watchArgs("all", 0)
+	args := watchArgs(WatchConfig{Mode: "all"})
 
 	mustContainPair(t, args, "-watch-mode", "all")
 	if len(args) != 2 {
-		t.Errorf("watchArgs(all, 0) = %v, want the mode and nothing else", args)
+		t.Errorf("watchArgs(mode only) = %v, want the mode and nothing else", args)
 	}
 }
 
 func TestWatchArgs_IntervalIsScanDelay(t *testing.T) {
-	args := watchArgs("single", 500)
+	args := watchArgs(WatchConfig{Mode: "single", ScanDelayMS: 500})
 
 	mustContainPair(t, args, "-watch-mode", "single")
 	mustContainPair(t, args, "-watch-scan-delay", "500")
@@ -623,13 +623,45 @@ func TestWatchArgs_IntervalIsScanDelay(t *testing.T) {
 
 func TestWatchArgs_ZeroIntervalOmitted(t *testing.T) {
 	for _, ms := range []int{0, -1} {
-		args := watchArgs("single", ms)
+		args := watchArgs(WatchConfig{Mode: "single", ScanDelayMS: ms})
 		for _, a := range args {
 			if a == "-watch-scan-delay" {
-				t.Errorf("watchArgs(single, %d) sent -watch-scan-delay; %d means leave the JAR default alone", ms, ms)
+				t.Errorf("watchArgs(scan delay %d) sent -watch-scan-delay; %d means leave the JAR default alone", ms, ms)
 			}
 		}
 	}
+}
+
+// Settle time is the debounce after a change is seen, not the polling period.
+// It is the knob that helps when a generator writes a directory and validation
+// would otherwise start against a half-written tree (#425).
+func TestWatchArgs_SettleTime(t *testing.T) {
+	args := watchArgs(WatchConfig{Mode: "single", SettleTimeMS: 750})
+
+	mustContainPair(t, args, "-watch-mode", "single")
+	mustContainPair(t, args, "-watch-settle-time", "750")
+}
+
+func TestWatchArgs_ZeroSettleTimeOmitted(t *testing.T) {
+	for _, ms := range []int{0, -1} {
+		args := watchArgs(WatchConfig{Mode: "single", SettleTimeMS: ms})
+		for _, a := range args {
+			if a == "-watch-settle-time" {
+				t.Errorf("watchArgs(settle time %d) sent -watch-settle-time; %d means leave the JAR default alone", ms, ms)
+			}
+		}
+	}
+}
+
+// The two delays are independent and must not be confused for one another: the
+// struct exists so that transposing them is not a silent mistake, and this
+// pins which value lands on which flag.
+func TestWatchArgs_ScanDelayAndSettleTimeAreDistinct(t *testing.T) {
+	args := watchArgs(WatchConfig{Mode: "all", ScanDelayMS: 2000, SettleTimeMS: 750})
+
+	mustContainPair(t, args, "-watch-mode", "all")
+	mustContainPair(t, args, "-watch-scan-delay", "2000")
+	mustContainPair(t, args, "-watch-settle-time", "750")
 }
 
 func TestBuildArgs_ExpansionParameters(t *testing.T) {

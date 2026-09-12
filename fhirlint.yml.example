@@ -125,8 +125,14 @@ ignore:
 # Watch mode: re-validate on file changes (single = changed files only, all = all files)
 # watch: single
 
-# Polling interval for watch mode in milliseconds (default: 1000)
+# How often watch mode looks for changes, in milliseconds (default: 1000)
 # watch-interval: 500
+
+# How long watch mode waits after a change before re-validating, in
+# milliseconds (default: 100). Raise it when a generator writes many files at
+# once — SUSHI, an IG build — and re-validation starts against a half-written
+# tree. Raising watch-interval does not help there.
+# watch-settle-time: 750
 
 # Cache validation results per file hash (opt-in)
 # Skips re-validating files that haven't changed since the last run.

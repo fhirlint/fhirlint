@@ -468,6 +468,9 @@
     },
     "watch-interval": {
       "type": "integer"
+    },
+    "watch-settle-time": {
+      "type": "integer"
     }
   },
   "title": "fhirlint configuration",
