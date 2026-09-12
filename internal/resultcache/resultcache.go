@@ -11,25 +11,88 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
-// KeyOpts contains every option that affects validation output and must be part of the key.
+// KeyOpts carries everything outside the file's own bytes that decides what
+// the validator reports.
+//
+// The key is derived from the whole validator.Options value rather than from a
+// list of the fields that happen to matter. An allowlist has to be remembered
+// on every new flag, and #417 is what forgetting it looks like: --best-practice,
+// --jurisdiction, --locale and --display-issues-are-warnings each change the
+// result, none of them reached the key, and two runs differing only in those
+// shared an entry — the second silently inheriting the first one's findings and
+// exit code. A denylist fails the other way round: forgetting to exclude
+// something costs a cache hit, not a wrong answer.
 type KeyOpts struct {
 	FhirlintVersion string
-	FHIRVersion     string
-	Profiles        []string
-	IGs             []string
 
-	// ExpansionParameters is the fingerprint of the --expansion-parameters file,
-	// not its path. Pinning a code system to a different edition changes which
-	// codes validate, so two runs that differ only in that file must not share
-	// an entry — and moving the same file elsewhere must not throw the cache
-	// away (#407).
+	// ValidatorVersion is the *effective* JAR version, not the
+	// --validator-version flag. An empty flag means "whatever is installed",
+	// and `fhirlint update` changes that underneath an unchanged command line.
+	// Use validator.EffectiveValidatorVersion to resolve it.
+	ValidatorVersion string
+
+	// Options is the run's full option set. Fields that cannot change the
+	// result, and those represented below by a fingerprint, are dropped from
+	// the key by keyedOptions.
+	Options validator.Options
+
+	// Fingerprints of the file-valued options, standing in for their paths:
+	// editing one of these files must invalidate the entry, and moving the same
+	// file elsewhere must not throw it away (#407).
 	ExpansionParameters string
+	FHIRSettings        string
+	POFiles             []string
+}
+
+// keyedOptions returns the part of an Options value that belongs in the key.
+//
+// Only two reasons to drop a field: it provably cannot change what the
+// validator reports, or KeyOpts already carries it in a better form. Anything
+// else stays, including options whose effect is arguable — a needless cache
+// miss is the cheaper mistake.
+func keyedOptions(o validator.Options) validator.Options {
+	// Cannot change the result. Timeout bounds how long fhirlint waits before
+	// giving up, which produces an error rather than a verdict; TxLog is a
+	// debug artefact written beside the run. Note that ValidationTimeout and
+	// MaxMessages are *not* here: both cut a run short and return partial
+	// results, so they change what the user is shown.
+	o.Timeout = 0
+	o.TxLog = ""
+
+	// Carried by KeyOpts.ValidatorVersion, which resolves an explicit pin, an
+	// explicit JAR path and the installed default to the one thing that
+	// matters — the version that will actually run.
+	o.JARPath = ""
+	o.ValidatorVersion = ""
+
+	// Carried by KeyOpts as content fingerprints.
+	o.ExpansionParameters = ""
+	o.FHIRSettings = ""
+	o.POFiles = nil
+
+	// Order carries no meaning for these two, and sorting keeps one entry
+	// shared across argument orders. ExtraArgs is deliberately not sorted: it
+	// is handed to the JAR verbatim, where order does mean something. Neither
+	// are the POFiles fingerprints in KeyOpts, for the same reason — a later
+	// translation file overrides an earlier one.
+	o.Profiles = sortedCopy(o.Profiles)
+	o.IGs = sortedCopy(o.IGs)
+
+	return o
+}
+
+func sortedCopy(in []string) []string {
+	if in == nil {
+		return nil
+	}
+	out := append([]string(nil), in...)
+	sort.Strings(out)
+	return out
 }
 
 // Key computes a SHA-256 hex key from the file content and validation options.
@@ -46,18 +109,29 @@ func Key(filePath string, opts KeyOpts) (string, error) {
 		return "", err
 	}
 
-	profiles := append([]string(nil), opts.Profiles...)
-	igs := append([]string(nil), opts.IGs...)
-	sort.Strings(profiles)
-	sort.Strings(igs)
+	// A struct marshals in field-declaration order, so this is stable across
+	// runs and across Go versions in a way a map would not be.
+	canonical, err := json.Marshal(struct {
+		FhirlintVersion     string
+		ValidatorVersion    string
+		Options             validator.Options
+		ExpansionParameters string
+		FHIRSettings        string
+		POFiles             []string
+	}{
+		FhirlintVersion:     opts.FhirlintVersion,
+		ValidatorVersion:    opts.ValidatorVersion,
+		Options:             keyedOptions(opts.Options),
+		ExpansionParameters: opts.ExpansionParameters,
+		FHIRSettings:        opts.FHIRSettings,
+		POFiles:             opts.POFiles,
+	})
+	if err != nil {
+		return "", fmt.Errorf("building cache key: %w", err)
+	}
 
-	_, _ = fmt.Fprintf(h, "\x00%s\x00%s\x00%s\x00%s\x00%s",
-		opts.FhirlintVersion,
-		opts.FHIRVersion,
-		strings.Join(profiles, ","),
-		strings.Join(igs, ","),
-		opts.ExpansionParameters,
-	)
+	_, _ = h.Write([]byte{0})
+	_, _ = h.Write(canonical)
 
 	return hex.EncodeToString(h.Sum(nil)), nil
 }

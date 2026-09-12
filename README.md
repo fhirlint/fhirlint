@@ -1744,7 +1744,9 @@ Set `--fail-on never` if you genuinely want partial results accepted.
 
 ### Result caching
 
-`--cache` caches validation results per file content hash (keyed by content hash + FHIR version + profiles + IGs). Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.
+`--cache` caches validation results per file content hash. Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.
+
+The key covers the file's content and every option that changes what the validator reports — the FHIR version, profiles and IGs, but equally `--best-practice`, `--locale`, `--jurisdiction`, terminology settings, and the effective validator version, so an entry is never shared across runs that would legitimately disagree. Files passed by path (`--expansion-parameters`, `--fhir-settings`, `--po`) enter the key by content, so editing one invalidates the entry and moving it does not.
 
 ```bash
 fhirlint validate ./fhir/ --cache
