@@ -223,6 +223,20 @@ func TestConfigFile_DisplayIssuesAreWarningsFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_WatchSettleTimeFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "watch-settle-time: 750\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetInt("watch-settle-time"); got != 750 {
+		t.Errorf("watch-settle-time = %d, want 750", got)
+	}
+}
+
 func TestConfigFile_POFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()

@@ -487,29 +487,57 @@ func warnInsecureTerminologyServer(w io.Writer, opts Options) {
 	_, _ = fmt.Fprintln(w, "Use HTTPS or suppress this warning with --allow-insecure-tx.")
 }
 
+// WatchConfig carries the three watch-mode settings.
+//
+// Grouped rather than passed positionally because two of them are millisecond
+// counts: RunWatch(paths, opts, "all", 500, 100) is a call nobody can read, and
+// transposing the two costs a debugging session rather than a compile error
+// (#425).
+type WatchConfig struct {
+	Mode string // "single" or "all"
+
+	// ScanDelayMS is --watch-interval. 0 leaves the JAR's default in place.
+	ScanDelayMS int
+
+	// SettleTimeMS is --watch-settle-time. 0 leaves the JAR's default in place.
+	SettleTimeMS int
+}
+
 // watchArgs is the watch-mode half of the JAR's argument list, split out from
 // RunWatch so it can be asserted without starting a JVM (#405).
 //
-// intervalMS is fhirlint's --watch-interval and maps to -watch-scan-delay: "how
-// often the validator looks at the content to decide to run again", default
-// 1000ms. The names differ, and the validator's is the one that has to be sent.
-// It never had a -watch-interval — not in the picocli options, and not in the
-// Params.java they replaced, which already knew exactly -watch-mode,
+// The validator has exactly three watch options and fhirlint now sends all of
+// them. The two delays do different jobs and neither substitutes for the other:
+//
+//   - -watch-scan-delay (fhirlint's --watch-interval, default 1000ms) is how
+//     often the validator looks at the content to decide to run again.
+//   - -watch-settle-time (--watch-settle-time, default 100ms) is how long it
+//     waits after seeing a change before revalidating. Raising it is what helps
+//     when a generator writes a directory — SUSHI rewriting fsh-generated/, an
+//     IG build emitting hundreds of files — and the default debounce starts a
+//     run against a half-written tree. Raising the scan delay does not help
+//     there: it only notices the change later, then still settles for 100ms.
+//
+// The names differ from fhirlint's, and the validator's are the ones that have
+// to be sent. It never had a -watch-interval — not in the picocli options, and
+// not in the Params.java they replaced, which already knew exactly -watch-mode,
 // -watch-scan-delay and -watch-settle-time. picocli rejects an unknown option
 // outright, so getting this wrong does not degrade watch mode, it ends the run
 // before the first file is read.
-func watchArgs(mode string, intervalMS int) []string {
-	args := []string{"-watch-mode", mode}
-	if intervalMS > 0 {
-		args = append(args, "-watch-scan-delay", strconv.Itoa(intervalMS))
+func watchArgs(w WatchConfig) []string {
+	args := []string{"-watch-mode", w.Mode}
+	if w.ScanDelayMS > 0 {
+		args = append(args, "-watch-scan-delay", strconv.Itoa(w.ScanDelayMS))
+	}
+	if w.SettleTimeMS > 0 {
+		args = append(args, "-watch-settle-time", strconv.Itoa(w.SettleTimeMS))
 	}
 	return args
 }
 
 // RunWatch starts the JAR in watch mode and blocks until the process is killed (Ctrl-C).
-// mode must be "single" or "all". intervalMS sets the polling interval in milliseconds (0 = JAR default).
 // The JAR prints results directly to stdout/stderr — no structured output is captured.
-func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) error {
+func RunWatch(inputPaths []string, opts Options, w WatchConfig) error {
 	if err := validateExtraArgs(opts.ExtraArgs); err != nil {
 		return err
 	}
@@ -535,7 +563,7 @@ func RunWatch(inputPaths []string, opts Options, mode string, intervalMS int) er
 	}
 
 	warnInsecureTerminologyServer(os.Stderr, opts)
-	args := append(buildArgs(jarPath, inputPaths, "", opts), watchArgs(mode, intervalMS)...)
+	args := append(buildArgs(jarPath, inputPaths, "", opts), watchArgs(w)...)
 
 	cmd := exec.Command("java", args...) //nolint:gosec // intentional: runs java with user-controlled paths
 	cmd.Stdout = os.Stdout

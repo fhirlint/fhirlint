@@ -88,6 +88,7 @@ var (
 	flagMaxWarnings              int
 	flagWatch                    string
 	flagWatchInterval            int
+	flagWatchSettleTime          int
 	flagSuppress                 []string
 	flagShowSuppressed           bool
 	flagExtractEach              string
@@ -205,7 +206,9 @@ func init() {
 		"Watch for file changes and re-validate: single (changed files only) or all (all files on any change)")
 	validateCmd.Flags().Lookup("watch").NoOptDefVal = "single"
 	validateCmd.Flags().IntVar(&flagWatchInterval, "watch-interval", 0,
-		"Polling interval for --watch in milliseconds (default: 1000)")
+		"How often --watch looks for changes, in milliseconds (default: 1000)")
+	validateCmd.Flags().IntVar(&flagWatchSettleTime, "watch-settle-time", 0,
+		"How long --watch waits after a change before re-validating, in milliseconds (default: 100)")
 	validateCmd.Flags().StringArrayVar(&flagSuppress, "suppress", nil,
 		"Silence a known issue: type:value (repeatable). Types: messageId, constraint, expression")
 	validateCmd.Flags().BoolVar(&flagShowSuppressed, "show-suppressed", false,
@@ -319,6 +322,7 @@ func init() {
 	_ = viper.BindPFlag("po", validateCmd.Flags().Lookup("po"))
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
 	_ = viper.BindPFlag("watch-interval", validateCmd.Flags().Lookup("watch-interval"))
+	_ = viper.BindPFlag("watch-settle-time", validateCmd.Flags().Lookup("watch-settle-time"))
 	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
 	_ = viper.BindPFlag("url-timeout", validateCmd.Flags().Lookup("url-timeout"))
 
@@ -415,6 +419,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("watch-interval") && viper.IsSet("watch-interval") {
 		flagWatchInterval = viper.GetInt("watch-interval")
+	}
+	if !cmd.Flags().Changed("watch-settle-time") && viper.IsSet("watch-settle-time") {
+		flagWatchSettleTime = viper.GetInt("watch-settle-time")
 	}
 	if !cmd.Flags().Changed("show-suppressed") && viper.IsSet("show-suppressed") {
 		flagShowSuppressed = viper.GetBool("show-suppressed")
@@ -754,7 +761,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			return werr
 		}
 		fmt.Fprintf(os.Stderr, "Watching %d file(s) for changes (mode: %s). Press Ctrl-C to stop.\n", len(paths), flagWatch)
-		return validator.RunWatch(paths, opts, flagWatch, flagWatchInterval)
+		return validator.RunWatch(paths, opts, validator.WatchConfig{
+			Mode:         flagWatch,
+			ScanDelayMS:  flagWatchInterval,
+			SettleTimeMS: flagWatchSettleTime,
+		})
 	}
 
 	var (

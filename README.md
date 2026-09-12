@@ -1622,9 +1622,14 @@ fhirlint validate ./fhir/ --watch
 # Re-validate all files on any change
 fhirlint validate ./fhir/ --watch=all
 
-# Custom polling interval (milliseconds)
+# How often to look for changes (milliseconds, default 1000)
 fhirlint validate ./fhir/ --watch --watch-interval 500
+
+# How long to wait after a change before re-validating (milliseconds, default 100)
+fhirlint validate ./fhir/ --watch --watch-settle-time 750
 ```
+
+The two delays do different jobs. `--watch-interval` is how often fhirlint looks; `--watch-settle-time` is how long it waits once it has seen something. Raise the settle time when a generator writes many files at once — SUSHI rewriting `fsh-generated/`, an IG build emitting hundreds of files — and re-validation would otherwise start against a half-written tree. Raising `--watch-interval` does not help there: it only notices the change later, then still settles for the same 100 ms.
 
 Watch mode streams the validator output directly to the terminal. Press `Ctrl-C` to stop. It is not compatible with `--format json --output` or `--url`.
 
@@ -1946,7 +1951,8 @@ The schema is **generated from the same key definitions `config check` validates
 | `--redact` | `false` | Remove message text and source lines from all reports (see [PHI-safe reports](#phi-safe-reports)) |
 | `--no-color` | `false` | Disable ANSI color output |
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
-| `--watch-interval` | — | Polling interval for `--watch` in milliseconds |
+| `--watch-interval` | — | How often `--watch` looks for changes, in milliseconds (default: 1000) |
+| `--watch-settle-time` | — | How long `--watch` waits after a change before re-validating, in milliseconds (default: 100) |
 | `--jar` | — | Path to a local validator JAR (overrides auto-download; also via `FHIRLINT_JAR`) |
 | `--validator-version` | latest | Pin the auto-downloaded validator to an upstream release, e.g. `6.9.12` (also via `FHIRLINT_VALIDATOR_VERSION`) |
 
@@ -2001,6 +2007,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `no-color` | bool | `--no-color` |
 | `watch` | string | `--watch` |
 | `watch-interval` | int | `--watch-interval` |
+| `watch-settle-time` | int | `--watch-settle-time` |
 
 ---
 
