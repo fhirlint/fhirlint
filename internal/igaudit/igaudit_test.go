@@ -11,9 +11,9 @@ import (
 	"github.com/fhirlint/fhirlint/internal/igaudit"
 )
 
-// registry serves packuments from a name -> JSON body map. Any name not in the
-// map answers 404, which is what packages.fhir.org does for unknown packages.
-func registry(t *testing.T, bodies map[string]string) *igaudit.Client {
+// packumentServer serves packuments from a name -> JSON body map. Any name not
+// in the map answers 404, which is what both registries do for unknown packages.
+func packumentServer(t *testing.T, bodies map[string]string) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimPrefix(r.URL.Path, "/")
@@ -26,7 +26,15 @@ func registry(t *testing.T, bodies map[string]string) *igaudit.Client {
 		_, _ = w.Write([]byte(body))
 	}))
 	t.Cleanup(srv.Close)
-	return &igaudit.Client{BaseURL: srv.URL, HTTP: srv.Client()}
+	return srv
+}
+
+// registry is a client over a single packument server — the case where the
+// primary answers, which is every test that is not about the fallback.
+func registry(t *testing.T, bodies map[string]string) *igaudit.Client {
+	t.Helper()
+	srv := packumentServer(t, bodies)
+	return &igaudit.Client{Registries: []string{srv.URL}, HTTP: srv.Client()}
 }
 
 func packument(latest string, versions ...string) string {
@@ -152,7 +160,7 @@ func TestAuditUnreachableRegistryIsNotAFinding(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
-	c := &igaudit.Client{BaseURL: srv.URL, HTTP: srv.Client()}
+	c := &igaudit.Client{Registries: []string{srv.URL}, HTTP: srv.Client()}
 
 	r := igaudit.Audit(context.Background(), c, []string{"kbv.basis#1.4.0"})
 
@@ -332,5 +340,81 @@ func mustEqualVersions(t *testing.T, name string, got, want []string) {
 	t.Helper()
 	if !slices.Equal(got, want) {
 		t.Errorf("%s: UntaggedNewer = %v, want %v", name, got, want)
+	}
+}
+
+// The validator asks packages2.fhir.org first and packages.fhir.org second, and
+// the two do not carry the same set: HL7 pre-releases reach the primary first
+// (hl7.fhir.r6.core#6.0.0-snapshot1 sat there for a week while the fallback
+// answered 404). An audit that asks only one host disagrees with validate about
+// what exists (#427).
+func TestAuditFallsBackToTheSecondRegistry(t *testing.T) {
+	primary := packumentServer(t, map[string]string{
+		"hl7.fhir.r6.core": packument("6.0.0-snapshot1", "6.0.0-snapshot1"),
+	})
+	secondary := packumentServer(t, map[string]string{
+		"kbv.basis": packument("1.9.0", "1.9.0"),
+	})
+	c := &igaudit.Client{Registries: []string{primary.URL, secondary.URL}, HTTP: primary.Client()}
+
+	r := igaudit.Audit(context.Background(), c, []string{
+		"hl7.fhir.r6.core#6.0.0-snapshot1", // primary only
+		"kbv.basis#1.9.0",                  // secondary only
+		"does.not.exist#1.0.0",             // neither
+	})
+
+	r6 := findPackage(t, r, "hl7.fhir.r6.core#6.0.0-snapshot1")
+	if r6.NotFound || r6.Error != "" || r6.IsProblem() {
+		t.Errorf("primary-only package: %+v", r6)
+	}
+	if r6.Registry != primary.URL {
+		t.Errorf("Registry = %q, want the primary %q", r6.Registry, primary.URL)
+	}
+
+	kbv := findPackage(t, r, "kbv.basis#1.9.0")
+	if kbv.NotFound || kbv.Error != "" || kbv.IsProblem() {
+		t.Errorf("secondary-only package: %+v", kbv)
+	}
+	if kbv.Registry != secondary.URL {
+		t.Errorf("Registry = %q, want the secondary %q", kbv.Registry, secondary.URL)
+	}
+
+	missing := findPackage(t, r, "does.not.exist#1.0.0")
+	if !missing.NotFound || missing.Error != "" {
+		t.Errorf("package on neither registry: %+v, want NotFound", missing)
+	}
+	if missing.Registry != "" {
+		t.Errorf("Registry = %q for a package nobody served", missing.Registry)
+	}
+}
+
+func TestAuditNotFoundNeedsEveryRegistry(t *testing.T) {
+	// The primary is down and the fallback has never heard of the package.
+	// That is not "not found": the host that would know could not be asked.
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer down.Close()
+	secondary := packumentServer(t, map[string]string{})
+	c := &igaudit.Client{Registries: []string{down.URL, secondary.URL}, HTTP: secondary.Client()}
+
+	r := igaudit.Audit(context.Background(), c, []string{"hl7.fhir.r6.core#6.0.0-snapshot1"})
+
+	p := r.Packages[0]
+	if p.NotFound {
+		t.Error("NotFound set although one registry could not be reached")
+	}
+	if p.Error == "" {
+		t.Error("want the primary's failure recorded in Error")
+	}
+	if r.Problems() != 0 || r.Errors() != 1 {
+		t.Errorf("Problems() = %d, Errors() = %d; want 0 and 1", r.Problems(), r.Errors())
+	}
+}
+
+func TestNewClientAsksTheValidatorsRegistriesInOrder(t *testing.T) {
+	c := igaudit.NewClient()
+	if len(c.Registries) != 2 || c.Registries[0] != "https://packages2.fhir.org/packages" || c.Registries[1] != "https://packages.fhir.org" {
+		t.Errorf("Registries = %v, want packages2 first and packages.fhir.org second, like the JAR", c.Registries)
 	}
 }

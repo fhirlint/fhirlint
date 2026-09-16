@@ -20,14 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fhirlint/fhirlint/internal/iglock"
-
 	"github.com/fhirlint/fhirlint/internal/fhirpkg"
+	"github.com/fhirlint/fhirlint/internal/iglock"
+	"github.com/fhirlint/fhirlint/internal/registry"
 )
-
-// DefaultRegistry is the canonical FHIR package registry. It is the same host
-// iglock records in each lock entry's URL.
-const DefaultRegistry = "https://packages.fhir.org"
 
 // defaultTimeout bounds a single packument request. The registry is a plain
 // static-metadata host, so a slow response is a sign of trouble rather than of
@@ -39,17 +35,20 @@ const defaultTimeout = 5 * time.Second
 // registry rather than about throughput.
 const maxConcurrent = 4
 
-// Client fetches packuments from a FHIR package registry.
+// Client fetches packuments from the FHIR package registries.
 type Client struct {
-	BaseURL string
-	HTTP    *http.Client
+	// Registries are asked in order, and a package is only not found when every
+	// one of them says so. The default is the validator's own order — see
+	// package registry for why there are two and why the order matters.
+	Registries []string
+	HTTP       *http.Client
 }
 
-// NewClient returns a Client pointed at the default registry.
+// NewClient returns a Client pointed at the registries the validator uses.
 func NewClient() *Client {
 	return &Client{
-		BaseURL: DefaultRegistry,
-		HTTP:    &http.Client{Timeout: defaultTimeout},
+		Registries: registry.Default(),
+		HTTP:       &http.Client{Timeout: defaultTimeout},
 	}
 }
 
@@ -90,9 +89,16 @@ type PackageReport struct {
 	Deprecated      bool   `json:"deprecated,omitempty"`
 	DeprecationNote string `json:"deprecationNote,omitempty"`
 
-	// NotFound means the registry has no such package. That is a stronger
+	// Registry is the registry that answered for this package, as a base URL.
+	// The two default registries serve the same metadata for everything they
+	// both carry, so this is recorded for the day they do not, and for a
+	// package only one of them has.
+	Registry string `json:"registry,omitempty"`
+
+	// NotFound means no registry has such a package. That is a stronger
 	// signal than being outdated: a pin that cannot be resolved will not
-	// survive a cold cache.
+	// survive a cold cache. It takes a 404 from every registry — a registry
+	// that could not be reached is reported through Error instead.
 	NotFound bool `json:"notFound,omitempty"`
 
 	// VersionMissing means the package exists but the registry does not serve
@@ -177,15 +183,16 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 
 	p := PackageReport{ID: id, Name: name, Version: version}
 
-	pkg, err := c.fetch(ctx, name)
+	pkg, from, err := c.fetch(ctx, name)
 	switch {
-	case errors.Is(err, errNotFound):
+	case errors.Is(err, registry.ErrNotFound):
 		p.NotFound = true
 		return p
 	case err != nil:
 		p.Error = err.Error()
 		return p
 	}
+	p.Registry = from
 
 	// A packument with no versions map at all is a registry quirk rather than
 	// evidence about the pin, so only a populated list can contradict it.
@@ -219,10 +226,6 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 	}
 	return p
 }
-
-// errNotFound distinguishes "the registry does not know this package" from
-// "the registry could not be reached", which are different findings.
-var errNotFound = errors.New("package not found in registry")
 
 // packument is the npm-style metadata document the FHIR registry serves for a
 // package. Only the fields fhirlint needs are modelled.
@@ -301,40 +304,28 @@ func deprecationNote(raw json.RawMessage) (string, bool) {
 	return note, true
 }
 
-func (c *Client) fetch(ctx context.Context, name string) (packument, error) {
+// fetch returns the packument for name and the registry it came from. The
+// error is registry.ErrNotFound only when every registry answered 404.
+func (c *Client) fetch(ctx context.Context, name string) (packument, string, error) {
 	var pkg packument
-
-	// Package names are dotted identifiers, but they arrive from a file on disk
-	// and are pasted straight into a URL path, so escape rather than trust.
-	endpoint := strings.TrimSuffix(c.BaseURL, "/") + "/" + url.PathEscape(name)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return pkg, err
-	}
-	req.Header.Set("Accept", "application/json")
 
 	client := c.HTTP
 	if client == nil {
 		client = &http.Client{Timeout: defaultTimeout}
 	}
 
-	resp, err := client.Do(req)
+	// Package names are dotted identifiers, but they arrive from a file on disk
+	// and are pasted straight into a URL path, so escape rather than trust.
+	resp, from, err := registry.Get(ctx, client, c.Registries, url.PathEscape(name), "application/json")
 	if err != nil {
-		return pkg, err
+		return pkg, "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return pkg, errNotFound
-	}
-	if resp.StatusCode != http.StatusOK {
-		return pkg, fmt.Errorf("HTTP %d", resp.StatusCode)
-	}
 	if err := json.NewDecoder(resp.Body).Decode(&pkg); err != nil {
-		return pkg, fmt.Errorf("parsing packument: %w", err)
+		return pkg, "", fmt.Errorf("parsing packument from %s: %w", registry.Host(from), err)
 	}
-	return pkg, nil
+	return pkg, from, nil
 }
 
 // CompareVersions orders two package versions, returning -1, 0 or 1 along with

@@ -90,7 +90,7 @@ func TestPrintIGTerminal_Classification(t *testing.T) {
 	for _, want := range []string{
 		"1.4.0 → 1.6.0 available",
 		"deprecated upstream: use new.pkg",
-		"not found in the registry",
+		"not found on any registry (packages2.fhir.org, packages.fhir.org)",
 		"registry latest is 2025-Q1",
 		"ahead of registry latest",
 		"could not check: connection refused",

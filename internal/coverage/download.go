@@ -17,10 +17,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-)
 
-// DefaultRegistry is the canonical FHIR package registry.
-const DefaultRegistry = "https://packages.fhir.org"
+	"github.com/fhirlint/fhirlint/internal/registry"
+)
 
 // Limits on what a package tarball may expand to. A FHIR package is a few
 // hundred files of JSON; these are far above anything legitimate and exist so
@@ -33,18 +32,22 @@ const (
 
 const downloadTimeout = 5 * time.Minute
 
-// Downloader fetches IG packages from a FHIR package registry into the local
-// package cache.
+// Downloader fetches IG packages from the FHIR package registries into the
+// local package cache.
 type Downloader struct {
-	Registry string
-	HTTP     *http.Client
+	// Registries are asked in order, for the packument and for the archive
+	// alike; the default is the validator's own order. A package the validator
+	// would load from the primary must not be undownloadable here because only
+	// the fallback was asked (#427).
+	Registries []string
+	HTTP       *http.Client
 }
 
-// NewDownloader returns a Downloader pointed at the default registry.
+// NewDownloader returns a Downloader pointed at the registries the validator uses.
 func NewDownloader() *Downloader {
 	return &Downloader{
-		Registry: DefaultRegistry,
-		HTTP:     &http.Client{Timeout: downloadTimeout},
+		Registries: registry.Default(),
+		HTTP:       &http.Client{Timeout: downloadTimeout},
 	}
 }
 
@@ -96,22 +99,11 @@ func (d *Downloader) Fetch(ctx context.Context, cacheRoot, name, version string)
 // registry itself, since the digest and the archive come from the same source —
 // stating that plainly is more useful than implying a guarantee it cannot give.
 func (d *Downloader) publishedSHA(ctx context.Context, name, version string) (string, error) {
-	endpoint := strings.TrimSuffix(d.registry(), "/") + "/" + url.PathEscape(name)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	resp, _, err := registry.Get(ctx, d.client(), d.registries(), url.PathEscape(name), "application/json")
 	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := d.client().Do(req)
-	if err != nil {
-		return "", err
+		return "", fmt.Errorf("fetching package metadata: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d fetching package metadata", resp.StatusCode)
-	}
 
 	var doc struct {
 		Versions map[string]struct {
@@ -131,26 +123,16 @@ func (d *Downloader) publishedSHA(ctx context.Context, name, version string) (st
 }
 
 func (d *Downloader) download(ctx context.Context, name, version string) ([]byte, error) {
-	endpoint := strings.TrimSuffix(d.registry(), "/") + "/" +
-		url.PathEscape(name) + "/" + url.PathEscape(version)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
+	resp, _, err := registry.Get(ctx, d.client(), d.registries(),
+		url.PathEscape(name)+"/"+url.PathEscape(version), "")
+	if errors.Is(err, registry.ErrNotFound) {
+		return nil, fmt.Errorf("IG package %s#%s does not exist on any registry (%s) — check the name and version",
+			name, version, registry.Hosts(d.registries()))
 	}
-
-	resp, err := d.client().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("downloading %s#%s: %w", name, version, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("IG package %s#%s does not exist in the registry — check the name and version", name, version)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("downloading %s#%s: HTTP %d", name, version, resp.StatusCode)
-	}
 
 	// Bounded so a hostile or broken response cannot be read without limit. The
 	// extra byte distinguishes "exactly at the limit" from "over it".
@@ -164,11 +146,11 @@ func (d *Downloader) download(ctx context.Context, name, version string) ([]byte
 	return body, nil
 }
 
-func (d *Downloader) registry() string {
-	if d.Registry == "" {
-		return DefaultRegistry
+func (d *Downloader) registries() []string {
+	if len(d.Registries) == 0 {
+		return registry.Default()
 	}
-	return d.Registry
+	return d.Registries
 }
 
 func (d *Downloader) client() *http.Client {

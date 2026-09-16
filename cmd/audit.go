@@ -10,6 +10,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/igaudit"
 	"github.com/fhirlint/fhirlint/internal/iglock"
+	"github.com/fhirlint/fhirlint/internal/registry"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -294,7 +295,8 @@ func printIGTerminal(r igaudit.Report, src igSource, igErr error) int {
 		case p.Error != "":
 			fmt.Fprintf(os.Stderr, "  ! %-*s  %s — could not check: %s\n", width, p.Name, p.Version, p.Error)
 		case p.NotFound:
-			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — not found in the registry\n", width, p.Name, p.Version)
+			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — not found on any registry (%s)\n", width, p.Name, p.Version,
+				registry.Hosts(nil))
 		case p.VersionMissing:
 			fmt.Fprintf(os.Stderr, "  ✗ %-*s  %s — the package exists, but the registry has no such version\n",
 				width, p.Name, p.Version)
