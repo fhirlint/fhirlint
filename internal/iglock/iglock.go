@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/fhirpkg"
+	"github.com/fhirlint/fhirlint/internal/registry"
 )
 
 const LockFileName = "fhirlint.lock"
@@ -71,9 +72,15 @@ func ParseIGID(ig string) (name, version string) {
 	return n, v
 }
 
-// PackageURL returns the canonical packages.fhir.org URL for the given package.
+// PackageURL returns the packages.fhir.org URL for the given package.
+//
+// Deliberately the secondary registry, and deliberately not the host that
+// happened to serve the package: the lock entry's URL is documentation for a
+// person reading the file, and packages.fhir.org is the stable, browsable
+// form of it. What fhirlint actually asks, and in which order, is package
+// registry's business.
 func PackageURL(name, version string) string {
-	return "https://packages.fhir.org/" + name + "/" + version
+	return registry.Secondary + "/" + name + "/" + version
 }
 
 // PackageManifestPath returns the path to package.json for a cached package.

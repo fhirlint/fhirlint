@@ -686,7 +686,7 @@ ISiKPatient  (Patient)
 61 resource(s) scanned, 52 not attributed to any profile
 ```
 
-Profiles come from IG packages in the local FHIR package cache (`~/.fhir/packages`). A package that is not cached yet is downloaded from the FHIR package registry and verified against the checksum the registry publishes for it. `--offline` forbids that and fails instead, for hermetic builds:
+Profiles come from IG packages in the local FHIR package cache (`~/.fhir/packages`). A package that is not cached yet is downloaded from the FHIR package registries — `packages2.fhir.org` first, `packages.fhir.org` as fallback, the validator's own order — and verified against the checksum the registry publishes for it. `--offline` forbids that and fails instead, for hermetic builds:
 
 ```bash
 fhirlint coverage ./examples/ --ig kbv.basis#1.9.0 --offline
@@ -2204,7 +2204,7 @@ Security advisories (hapifhir/org.hl7.fhir.core)
 
 IG packages (fhirlint.lock)
   ✓ de.gematik.isik-basismodul  4.0.3 — current
-  ✗ hl7.fhir.de.core            1.0.0 — not found in the registry
+  ✗ hl7.fhir.de.core            1.0.0 — not found on any registry (packages2.fhir.org, packages.fhir.org)
   ✓ hl7.fhir.r4.core            4.0.1 — current
   ✗ kbv.basis                   1.4.0 → 1.9.0 available
   (2 of 4 package(s) need attention)
@@ -2212,7 +2212,7 @@ IG packages (fhirlint.lock)
 
 The JAR half checks the installed version against the latest release and against the published [security advisories](https://github.com/hapifhir/org.hl7.fhir.core/security/advisories) for `org.hl7.fhir.core`.
 
-The IG half asks the FHIR package registry about each of your packages, taking them from the first source it finds:
+The IG half asks the FHIR package registries about each of your packages — `packages2.fhir.org` first and `packages.fhir.org` second, the same two hosts in the same order the validator itself uses, so that a package `validate` can load is never reported as missing here. "Not found" means both said so; a registry that could not be reached is reported as an error, not as a finding. The packages are taken from the first source it finds:
 
 1. **[`fhirlint.lock`](#ig-lock-file)**, when there is one. Preferred, because it pins exactly what a run resolved to — including the transitive packages your config never names.
 2. **the `ig:` list in your config**, otherwise. Most projects have no lock file, and auditing what they did declare beats skipping the half of the audit they ran the command for.
@@ -2232,14 +2232,14 @@ Entries that name no registry version — a bare package name, a local directory
 
 The audit is scoped to your project, not to the machine. It never audits the whole [package cache](#the-fhir-package-cache), which accumulates across every project that machine has ever validated.
 
-In `--format json`, `igSource` names the file the packages came from and `igUnpinned` lists the entries that could not be checked. `lockFile` keeps naming the lock file only, so consumers reading that field are unaffected. Each package entry carries `untaggedNewer`, the same list as the note described below.
+In `--format json`, `igSource` names the file the packages came from and `igUnpinned` lists the entries that could not be checked. `lockFile` keeps naming the lock file only, so consumers reading that field are unaffected. Each package entry carries `untaggedNewer`, the same list as the note described below, and `registry`, the base URL of the host that answered for it.
 
 A package is reported as:
 
 | | meaning |
 |---|---|
 | `→ X available` | a newer version exists upstream |
-| `not found in the registry` | the pin no longer resolves and will fail on a cold cache |
+| `not found on any registry` | neither packages2.fhir.org nor packages.fhir.org has the package — the pin will fail on a cold cache |
 | `deprecated upstream` | the publisher marked this version deprecated |
 | `registry latest is X (versions not comparable)` | the versions differ but could not be ordered |
 | `ahead of registry latest` | you pinned a version newer than the registry's `latest`, e.g. a pre-release |

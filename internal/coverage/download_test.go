@@ -88,7 +88,7 @@ func registryServer(t *testing.T, name, version string, archive []byte, shasum s
 		}
 	}))
 	t.Cleanup(srv.Close)
-	return &coverage.Downloader{Registry: srv.URL, HTTP: srv.Client()}
+	return &coverage.Downloader{Registries: []string{srv.URL}, HTTP: srv.Client()}
 }
 
 const sdBody = `{"resourceType":"StructureDefinition","url":"https://example.org/p","type":"Patient","derivation":"constraint"}`
@@ -215,10 +215,44 @@ func TestFetchReportsMissingPackage(t *testing.T) {
 	if err == nil {
 		t.Fatal("want an error for a package the registry does not have")
 	}
-	if !strings.Contains(err.Error(), "does not exist in the registry") {
+	if !strings.Contains(err.Error(), "does not exist on any registry") {
 		t.Errorf("error should say the package is unknown, got: %v", err)
 	}
 	assertCacheEmpty(t, cache)
+}
+
+// The validator loads from packages2.fhir.org first and packages.fhir.org
+// second. A package only the primary carries — HL7 pre-releases arrive there
+// first — must download here too, and one only the fallback carries must not
+// be lost because the primary answered 404 (#427).
+func TestFetchFallsBackAcrossRegistries(t *testing.T) {
+	archive := makeTarGz(t, []tarEntry{
+		{name: "package/package.json", body: `{"name":"demo.pkg","version":"1.0.0"}`},
+		{name: "package/StructureDefinition-p.json", body: sdBody},
+	})
+	only := registryServer(t, "demo.pkg", "1.0.0", archive, sha1hex(archive))
+	empty := registryServer(t, "other.pkg", "1.0.0", nil, "")
+
+	for name, order := range map[string][]string{
+		"primary has it":  {only.Registries[0], empty.Registries[0]},
+		"fallback has it": {empty.Registries[0], only.Registries[0]},
+	} {
+		t.Run(name, func(t *testing.T) {
+			d := &coverage.Downloader{Registries: order, HTTP: only.HTTP}
+			cache := t.TempDir()
+
+			warnings, err := d.Fetch(context.Background(), cache, "demo.pkg", "1.0.0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(warnings) != 0 {
+				t.Errorf("the checksum came from the registry that had the package; unexpected warnings: %v", warnings)
+			}
+			if _, err := os.Stat(filepath.Join(cache, "demo.pkg#1.0.0", "package", "StructureDefinition-p.json")); err != nil {
+				t.Errorf("package not installed: %v", err)
+			}
+		})
+	}
 }
 
 func TestFetchRejectsNonArchive(t *testing.T) {

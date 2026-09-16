@@ -83,13 +83,15 @@ func TestFHIRVersionsResolve(t *testing.T) {
 
 // TestR6NotYetAvailable is a tripwire, not a check of our own code.
 //
-// R6 is deliberately absent from the table: as of 2026-08-21 there is no
-// hl7.fhir.r6.core package on the registry and tx.fhir.org serves no /r6
-// endpoint, so both fields a row needs would have to be guessed — which the
-// table's own comment forbids. The JAR meanwhile maps any R6 version to
-// 6.0.0-ballot3 while the spec build is at ballot4.
+// R6 is deliberately absent from the table: both fields a row needs would have
+// to be guessed, which the table's own comment forbids. The two halves of the
+// evidence move independently. The package half moved on 2026-09-10, when
+// hl7.fhir.r6.core#6.0.0-snapshot1 appeared on packages2.fhir.org — the
+// validator's primary registry, which the audit client asks first since #427;
+// packages.fhir.org still answered 404 a week later. The tx half has not:
+// tx.fhir.org serves no /r6 endpoint.
 //
-// This fails when that stops being true, which is the moment to add the row.
+// This fails when both halves are true, which is the moment to add the row.
 // Delete this test with the row (#306).
 func TestR6NotYetAvailable(t *testing.T) {
 	for _, v := range validator.FHIRVersions {
@@ -115,5 +117,6 @@ func TestR6NotYetAvailable(t *testing.T) {
 			"Add the row to validator.FHIRVersions, regenerate the schema, update the README table, and delete this test (#306).",
 			r6CorePackage, r6TxPath)
 	}
-	t.Logf("R6 prerequisites: core package present=%v, %s endpoint present=%v", pkgExists, r6TxPath, txExists)
+	t.Logf("R6 prerequisites: core package present=%v (registry latest %q, from %s), %s endpoint present=%v",
+		pkgExists, report.Packages[0].Latest, report.Packages[0].Registry, r6TxPath, txExists)
 }
