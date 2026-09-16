@@ -10,7 +10,7 @@ import (
 
 func TestBuildJUnitReport_ValidNoIssues(t *testing.T) {
 	r := makeResult(true)
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	if report.Tests != 1 {
 		t.Errorf("expected tests=1, got %d", report.Tests)
@@ -25,7 +25,7 @@ func TestBuildJUnitReport_ValidNoIssues(t *testing.T) {
 
 func TestBuildJUnitReport_SingleError(t *testing.T) {
 	r := makeResult(false, issue("error", "bad value", "Patient.gender"))
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	if report.Failures != 1 {
 		t.Errorf("expected failures=1, got %d", report.Failures)
@@ -44,7 +44,7 @@ func TestBuildJUnitReport_SingleError(t *testing.T) {
 
 func TestBuildJUnitReport_BodyIncludesLocation(t *testing.T) {
 	r := makeResult(false, issue("error", "bad value", "Patient.gender"))
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	body := report.Suites[0].TestCases[0].Failures[0].Body
 	if !strings.Contains(body, "Patient.gender") {
@@ -58,7 +58,7 @@ func TestBuildJUnitReport_SeverityFilter(t *testing.T) {
 		issue("warning", "warn", ""),
 		issue("information", "info", ""),
 	)
-	report := buildJUnitReport([]*validator.Result{r}, "warning")
+	report := buildJUnitReport([]*validator.Result{r}, "warning", RunInfo{})
 
 	if report.Failures != 2 {
 		t.Errorf("expected 2 failures (error+warning), got %d", report.Failures)
@@ -68,7 +68,7 @@ func TestBuildJUnitReport_SeverityFilter(t *testing.T) {
 func TestBuildJUnitReport_MultipleFiles(t *testing.T) {
 	r1 := makeResult(false, issue("error", "e1", ""))
 	r2 := makeResult(true)
-	report := buildJUnitReport([]*validator.Result{r1, r2}, "information")
+	report := buildJUnitReport([]*validator.Result{r1, r2}, "information", RunInfo{})
 
 	if report.Tests != 2 {
 		t.Errorf("expected tests=2, got %d", report.Tests)
@@ -83,7 +83,7 @@ func TestBuildJUnitReport_MultipleFiles(t *testing.T) {
 
 func TestBuildJUnitReport_TestCaseLabel(t *testing.T) {
 	r := &validator.Result{Filename: "test.json", Label: "patient-001.json", Valid: true}
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	name := report.Suites[0].TestCases[0].Name
 	if name != "patient-001.json" {
@@ -93,7 +93,7 @@ func TestBuildJUnitReport_TestCaseLabel(t *testing.T) {
 
 func TestJUnit_OutputIsValidXML(t *testing.T) {
 	r := makeResult(false, issue("error", "bad value", "Patient.gender"))
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	out, err := xml.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -107,7 +107,7 @@ func TestJUnit_OutputIsValidXML(t *testing.T) {
 
 func TestJUnit_XMLHeader(t *testing.T) {
 	r := makeResult(true)
-	report := buildJUnitReport([]*validator.Result{r}, "information")
+	report := buildJUnitReport([]*validator.Result{r}, "information", RunInfo{})
 
 	out, err := xml.MarshalIndent(report, "", "  ")
 	if err != nil {

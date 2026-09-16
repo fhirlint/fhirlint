@@ -46,6 +46,15 @@ type Result struct {
 	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
 	Cached     bool    `json:"cached,omitempty"`     // true when result came from the result cache
 
+	// ValidatorBuild is the validator's own description of itself, taken from
+	// the validator-version extension it adds to each OperationOutcome from
+	// 6.10.5 on — version, Git SHA and build date in one line. Per run in
+	// truth, per result in shape, because the JAR states it on every outcome;
+	// reporters lift it into the report's provenance once. Not serialised: the
+	// JSON report says it in one place rather than once per file, and the
+	// result cache keys on the JAR version already.
+	ValidatorBuild string `json:"-"`
+
 	// SourcePath is the file the validator actually read, which is what the
 	// line/col in Issue.Location refer to. It is usually the same as Filename,
 	// but differs when the input was preprocessed (--extract, --ignore,
@@ -427,6 +436,24 @@ func checkOptionsSupported(opts Options, jarVersion string) error {
 		}
 	}
 	return nil
+}
+
+// RunValidatorVersion reports the version of the JAR a run with opts executes,
+// for a report to say what produced it: the manifest of --jar / FHIRLINT_JAR
+// when one is set, otherwise the pin or whatever is cached. Empty when it
+// cannot be told, never a placeholder — a report should omit the field rather
+// than assert "unknown".
+func RunValidatorVersion(opts Options) string {
+	v := ""
+	if opts.JARPath != "" {
+		v = jarVersion(opts.JARPath)
+	} else {
+		v = EffectiveValidatorVersion(opts.ValidatorVersion)
+	}
+	if v == "unknown" {
+		return ""
+	}
+	return v
 }
 
 // jarVersion reports the version of the JAR this run actually executes.
@@ -911,9 +938,21 @@ func formatDuration(d time.Duration) string {
 	return s
 }
 
+// extValidatorVersion is the extension the validator adds to each
+// OperationOutcome from 6.10.5 on (hapifhir/org.hl7.fhir.core#2459), carrying
+// the same version/build line it logs at start-up.
+const extValidatorVersion = "http://hl7.org/fhir/tools/StructureDefinition/validator-version"
+
 func toResult(oo operationOutcome, filename string) *Result {
 	valid := true
 	issues := make([]Issue, 0, len(oo.Issue))
+
+	build := ""
+	for _, ext := range oo.Extension {
+		if ext.URL == extValidatorVersion {
+			build = ext.ValueString
+		}
+	}
 
 	for _, i := range oo.Issue {
 		if i.Severity == "error" || i.Severity == "fatal" {
@@ -949,9 +988,10 @@ func toResult(oo operationOutcome, filename string) *Result {
 	}
 
 	return &Result{
-		Filename:   filename,
-		SourcePath: filename,
-		Valid:      valid,
-		Issues:     issues,
+		Filename:       filename,
+		SourcePath:     filename,
+		Valid:          valid,
+		Issues:         issues,
+		ValidatorBuild: build,
 	}
 }

@@ -17,10 +17,24 @@ type junitTestSuites struct {
 }
 
 type junitTestSuite struct {
-	Name      string          `xml:"name,attr"`
-	Tests     int             `xml:"tests,attr"`
-	Failures  int             `xml:"failures,attr"`
-	TestCases []junitTestCase `xml:"testcase"`
+	Name     string `xml:"name,attr"`
+	Tests    int    `xml:"tests,attr"`
+	Failures int    `xml:"failures,attr"`
+	// Properties is where JUnit XML puts what the run knew that no test case
+	// is about. It hangs off testsuite, not testsuites: that is where the
+	// common schema (Ant, Jenkins, GitLab) allows it, and a properties element
+	// one level up is dropped or rejected by strict readers.
+	Properties *junitProperties `xml:"properties,omitempty"`
+	TestCases  []junitTestCase  `xml:"testcase"`
+}
+
+type junitProperties struct {
+	Property []junitProperty `xml:"property"`
+}
+
+type junitProperty struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
 }
 
 type junitTestCase struct {
@@ -35,8 +49,8 @@ type junitFailure struct {
 	Body    string `xml:",chardata"`
 }
 
-func JUnit(results []*validator.Result, minSeverity, dest string) error {
-	suites := buildJUnitReport(results, minSeverity)
+func JUnit(results []*validator.Result, minSeverity string, info RunInfo, dest string) error {
+	suites := buildJUnitReport(results, minSeverity, info)
 	out, err := xml.MarshalIndent(suites, "", "  ")
 	if err != nil {
 		return err
@@ -49,7 +63,8 @@ func JUnit(results []*validator.Result, minSeverity, dest string) error {
 	return os.WriteFile(dest, data, 0600)
 }
 
-func buildJUnitReport(results []*validator.Result, minSeverity string) junitTestSuites {
+func buildJUnitReport(results []*validator.Result, minSeverity string, info RunInfo) junitTestSuites {
+	info = info.WithResults(results)
 	cases := make([]junitTestCase, 0, len(results))
 	totalFailures := 0
 
@@ -79,10 +94,30 @@ func buildJUnitReport(results []*validator.Result, minSeverity string) junitTest
 		Tests:    len(results),
 		Failures: totalFailures,
 		Suites: []junitTestSuite{{
-			Name:      "FHIR Validation",
-			Tests:     len(results),
-			Failures:  totalFailures,
-			TestCases: cases,
+			Name:       "FHIR Validation",
+			Tests:      len(results),
+			Failures:   totalFailures,
+			Properties: junitPropertiesFor(info),
+			TestCases:  cases,
 		}},
 	}
+}
+
+// junitPropertiesFor renders the run's provenance as properties, in the
+// dotted style JUnit consumers expect, omitting what the run could not tell.
+func junitPropertiesFor(info RunInfo) *junitProperties {
+	var props []junitProperty
+	add := func(name, value string) {
+		if value != "" {
+			props = append(props, junitProperty{Name: name, Value: value})
+		}
+	}
+	add("fhirlint.version", info.Fhirlint)
+	add("validator.version", info.Validator)
+	add("validator.build", info.ValidatorBuild)
+	add("fhir.version", info.FHIRVersion)
+	if len(props) == 0 {
+		return nil
+	}
+	return &junitProperties{Property: props}
 }

@@ -547,6 +547,20 @@ fhirlint validate ./fhir/ --group
 fhirlint validate patient.json --no-color
 ```
 
+### What produced the report
+
+A report is read long after the run, and the validator changes what it finds from release to release, so every archived format says what produced it — once, not per file:
+
+| format | where |
+|---|---|
+| `json` | a top-level `meta` object: `{"fhirlint": "1.13.0", "validator": "6.10.4", "fhirVersion": "4.0.1"}` |
+| `sarif` | `tool.driver` stays fhirlint; the validator is a `tool.extensions[]` entry named `HL7 FHIR Validator` with its version |
+| `junit` | `<properties>` on the `<testsuite>`: `fhirlint.version`, `validator.version`, `fhir.version` |
+| `html` | the meta line under the heading |
+| `markdown` | a footnote |
+
+`validator` is the JAR fhirlint executed — the manifest of `--jar`/`FHIRLINT_JAR` when set, otherwise the pin or the cached JAR. Validators from 6.10.5 on also state what they are on every OperationOutcome, as the `validator-version` extension, with Git SHA and build date; when present that line is carried too (`meta.validatorBuild`, the SARIF extension's `build` property, `validator.build` in JUnit) and preferred where there is room for only one. A field that cannot be told is omitted, never filled with `unknown`.
+
 ### Grouping repeated findings
 
 Validating a directory prints every finding of every file, so one `dom-6` across 500 resources is 500 blocks of output. `--group` collapses identical findings into one block each:
@@ -1137,6 +1151,8 @@ Issues are matched by file, message ID, and location (line/column shifts are ign
 Exit codes make it CI-ready: `0` no new issues, `1` new issues found (breaks the build), `2` fhirlint itself failed (e.g. malformed input).
 
 `--format json` emits the structured diff; `--format sarif` emits **only the new issues**, so uploading it to GitHub Code Scanning annotates a pull request with just its regressions, free of pre-existing noise.
+
+When the two reports name different validators, the diff says so before anything else — `note: the reports were produced by different validators — baseline 6.10.3, current 6.10.4` — because a changed validator explains more diffs than changed resources do. The JSON diff carries both sides' `meta` as `baseline` and `current`. Reports written before fhirlint recorded this compare silently, as before.
 
 ---
 

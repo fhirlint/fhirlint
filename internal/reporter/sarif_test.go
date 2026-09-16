@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuildSARIFReport_EmptyResults(t *testing.T) {
-	report := buildSARIFReport(nil, "information", "1.0.0")
+	report := buildSARIFReport(nil, "information", RunInfo{Fhirlint: "1.0.0"})
 	if report.Version != sarifVersion {
 		t.Errorf("expected version=%q, got %q", sarifVersion, report.Version)
 	}
@@ -22,7 +22,7 @@ func TestBuildSARIFReport_EmptyResults(t *testing.T) {
 }
 
 func TestBuildSARIFReport_ToolVersion(t *testing.T) {
-	report := buildSARIFReport(nil, "information", "2.3.4")
+	report := buildSARIFReport(nil, "information", RunInfo{Fhirlint: "2.3.4"})
 	driver := report.Runs[0].Tool.Driver
 	if driver.Version != "2.3.4" {
 		t.Errorf("expected driver version=2.3.4, got %q", driver.Version)
@@ -38,7 +38,7 @@ func TestBuildSARIFReport_LevelMapping(t *testing.T) {
 		issue("warning", "warn msg", "Patient"),
 		issue("information", "info msg", ""),
 	)
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	levels := make(map[string]int)
 	for _, res := range report.Runs[0].Results {
@@ -61,7 +61,7 @@ func TestBuildSARIFReport_SeverityFilter(t *testing.T) {
 		issue("warning", "w", ""),
 		issue("information", "i", ""),
 	)
-	report := buildSARIFReport([]*validator.Result{r}, "warning", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "warning", RunInfo{Fhirlint: "0.0.1"})
 
 	if len(report.Runs[0].Results) != 2 {
 		t.Errorf("expected 2 results after filter, got %d", len(report.Runs[0].Results))
@@ -71,7 +71,7 @@ func TestBuildSARIFReport_SeverityFilter(t *testing.T) {
 func TestBuildSARIFReport_RuleIDFromMessageID(t *testing.T) {
 	iss := validator.Issue{Severity: "error", Message: "msg", MessageID: "dom-6"}
 	r := &validator.Result{Filename: "f.json", Valid: false, Issues: []validator.Issue{iss}}
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	res := report.Runs[0].Results[0]
 	if res.RuleID != "dom-6" {
@@ -85,7 +85,7 @@ func TestBuildSARIFReport_RuleIDFromMessageID(t *testing.T) {
 
 func TestBuildSARIFReport_FallbackRuleID(t *testing.T) {
 	r := makeResult(false, issue("error", "msg", ""))
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	res := report.Runs[0].Results[0]
 	if res.RuleID != sarifDefaultRule {
@@ -97,7 +97,7 @@ func TestBuildSARIFReport_DeduplicatesRules(t *testing.T) {
 	iss1 := validator.Issue{Severity: "error", Message: "a", MessageID: "dom-6"}
 	iss2 := validator.Issue{Severity: "warning", Message: "b", MessageID: "dom-6"}
 	r := &validator.Result{Filename: "f.json", Valid: false, Issues: []validator.Issue{iss1, iss2}}
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	if len(report.Runs[0].Tool.Driver.Rules) != 1 {
 		t.Errorf("expected 1 unique rule, got %d", len(report.Runs[0].Tool.Driver.Rules))
@@ -111,7 +111,7 @@ func TestBuildSARIFReport_LocationWithLineCol(t *testing.T) {
 		Location: "Patient.gender (line 5, col 12)",
 	}
 	r := &validator.Result{Filename: "patient.json", Valid: false, Issues: []validator.Issue{iss}}
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	res := report.Runs[0].Results[0]
 	if len(res.Locations) == 0 {
@@ -137,7 +137,7 @@ func TestBuildSARIFReport_NoLocationWhenFilenameEmpty(t *testing.T) {
 	r := &validator.Result{Filename: "", Valid: false, Issues: []validator.Issue{
 		{Severity: "error", Message: "bad"},
 	}}
-	report := buildSARIFReport([]*validator.Result{r}, "information", "0.0.1")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "0.0.1"})
 
 	res := report.Runs[0].Results[0]
 	if len(res.Locations) != 0 {
@@ -193,7 +193,7 @@ func TestSarifLevel_Mapping(t *testing.T) {
 
 func TestBuildSARIFReport_ValidJSON(t *testing.T) {
 	r := makeResult(false, issue("error", "bad value", "Patient.gender"))
-	report := buildSARIFReport([]*validator.Result{r}, "information", "1.0.0")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "1.0.0"})
 
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -216,7 +216,7 @@ func TestBuildSARIFReport_OriginalSeverityInProperties(t *testing.T) {
 	downgraded.OriginalSeverity = "error"
 	r := makeResult(true, downgraded, issue("warning", "plain warning", "Patient"))
 
-	report := buildSARIFReport([]*validator.Result{r}, "information", "1.0.0")
+	report := buildSARIFReport([]*validator.Result{r}, "information", RunInfo{Fhirlint: "1.0.0"})
 	results := report.Runs[0].Results
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -235,7 +235,7 @@ func TestBuildSARIFReport_OriginalSeverityInProperties(t *testing.T) {
 func TestSARIF_OriginalSeverityOmittedWhenUnchanged(t *testing.T) {
 	report := buildSARIFReport(
 		[]*validator.Result{makeResult(false, issue("error", "msg", "Patient"))},
-		"information", "1.0.0")
+		"information", RunInfo{Fhirlint: "1.0.0"})
 	data, err := json.Marshal(report)
 	if err != nil {
 		t.Fatal(err)

@@ -9,8 +9,30 @@ import (
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
+// DiffSides is the provenance of the two reports a diff compares. Either side
+// is empty for a report written before reports carried a meta block.
+//
+// It is worth carrying because a changed validator explains more diffs than
+// changed resources do: a report that says "3 new issues" between two runs a
+// release apart is mostly saying the release changed.
+type DiffSides struct {
+	Baseline RunInfo
+	Current  RunInfo
+}
+
+// validatorChanged reports whether the two sides were produced by different
+// validators, as far as either side says.
+func (s DiffSides) validatorChanged() bool {
+	b, c := s.Baseline.validatorLine(), s.Current.validatorLine()
+	return b != "" && c != "" && b != c
+}
+
 // diffJSON is the structured JSON shape emitted by DiffJSON.
 type diffJSON struct {
+	// Baseline and Current say what produced each side; absent when the
+	// report did not say.
+	Baseline  *RunInfo     `json:"baseline,omitempty"`
+	Current   *RunInfo     `json:"current,omitempty"`
 	New       []diff.Issue `json:"new"`
 	Resolved  []diff.Issue `json:"resolved"`
 	Unchanged []diff.Issue `json:"unchanged"`
@@ -25,7 +47,14 @@ type diffSummary struct {
 
 // DiffTerminal renders a human-readable diff. Unchanged issues are summarised
 // unless showUnchanged is set.
-func DiffTerminal(d *diff.Result, showUnchanged bool) {
+func DiffTerminal(d *diff.Result, sides DiffSides, showUnchanged bool) {
+	// Said first, because it reframes everything below it.
+	if sides.validatorChanged() {
+		fmt.Println(warningStyle.Render(fmt.Sprintf("note: the reports were produced by different validators — baseline %s, current %s",
+			sides.Baseline.validatorLine(), sides.Current.validatorLine())))
+		fmt.Println()
+	}
+
 	fmt.Println(errorStyle.Render(fmt.Sprintf("New issues (%d)", len(d.New))))
 	if len(d.New) == 0 {
 		fmt.Println(dimStyle.Render("  (none)"))
@@ -87,8 +116,10 @@ func severityMark(severity string) string {
 }
 
 // DiffJSON writes the diff as structured JSON. When dest is empty it prints to stdout.
-func DiffJSON(d *diff.Result, dest string) error {
+func DiffJSON(d *diff.Result, sides DiffSides, dest string) error {
 	out := diffJSON{
+		Baseline:  metaFor(nil, sides.Baseline),
+		Current:   metaFor(nil, sides.Current),
 		New:       d.New,
 		Resolved:  d.Resolved,
 		Unchanged: d.Unchanged,
@@ -113,7 +144,9 @@ func DiffJSON(d *diff.Result, dest string) error {
 // DiffSARIF writes only the new issues as a SARIF report, so GitHub Code
 // Scanning surfaces just the regressions a change introduced — pre-existing
 // issues are excluded. It reuses the standard SARIF builder.
-func DiffSARIF(d *diff.Result, fhirlintVersion, dest string) error {
+//
+// The provenance is the current side's: those are the findings in the file.
+func DiffSARIF(d *diff.Result, sides DiffSides, dest string) error {
 	byFile := map[string]*validator.Result{}
 	order := []string{}
 	for _, iss := range d.New {
@@ -134,5 +167,5 @@ func DiffSARIF(d *diff.Result, fhirlintVersion, dest string) error {
 	for _, f := range order {
 		results = append(results, byFile[f])
 	}
-	return SARIF(results, "information", fhirlintVersion, dest)
+	return SARIF(results, "information", sides.Current, dest)
 }
