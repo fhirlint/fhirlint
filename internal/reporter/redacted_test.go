@@ -108,19 +108,19 @@ func TestRedactedResultsLeakNothingToStdoutReporters(t *testing.T) {
 func TestRedactedResultsLeakNothingToFileReporters(t *testing.T) {
 	cases := map[string]func(results []*validator.Result, dest string) error{
 		"json": func(rs []*validator.Result, dest string) error {
-			return reporter.JSON(rs, "information", dest)
+			return reporter.JSON(rs, "information", reporter.RunInfo{}, dest)
 		},
 		"html": func(rs []*validator.Result, dest string) error {
-			return reporter.HTML(rs, "information", "4.0.1", dest)
+			return reporter.HTML(rs, "information", reporter.RunInfo{FHIRVersion: "4.0.1"}, dest)
 		},
 		"junit": func(rs []*validator.Result, dest string) error {
-			return reporter.JUnit(rs, "information", dest)
+			return reporter.JUnit(rs, "information", reporter.RunInfo{}, dest)
 		},
 		"sarif": func(rs []*validator.Result, dest string) error {
-			return reporter.SARIF(rs, "information", "1.0.0", dest)
+			return reporter.SARIF(rs, "information", reporter.RunInfo{Fhirlint: "1.0.0"}, dest)
 		},
 		"markdown": func(rs []*validator.Result, dest string) error {
-			return reporter.Markdown(rs, "information", dest)
+			return reporter.Markdown(rs, "information", reporter.RunInfo{}, dest)
 		},
 		"codeclimate": func(rs []*validator.Result, dest string) error {
 			return reporter.CodeClimate(rs, "information", dest)

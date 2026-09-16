@@ -710,3 +710,42 @@ func TestValidateExpansionParameters(t *testing.T) {
 		t.Errorf("directory: got %v, want an error saying it is a directory", err)
 	}
 }
+
+// From 6.10.5 the validator states what it is on every OperationOutcome, as
+// the validator-version extension (hapifhir/org.hl7.fhir.core#2459). A report
+// should carry the JAR's own statement when it makes one (#428).
+func TestParseOutput_ValidatorVersionExtension(t *testing.T) {
+	const build = "FHIR Validation tool Version 6.10.5 (Git# e9cb40e7b4ea). Built 2026-09-10T00:02:31.157+10:00 (6 days old)"
+	oo := `{"resourceType":"OperationOutcome","extension":[{"url":"http://hl7.org/fhir/tools/StructureDefinition/validator-version","valueString":"` + build + `"}],"issue":[]}`
+
+	results, err := parseOutput([]byte(oo), []string{"a.json"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results[0].ValidatorBuild != build {
+		t.Errorf("ValidatorBuild = %q, want the extension's value", results[0].ValidatorBuild)
+	}
+
+	bundle := `{"resourceType":"Bundle","entry":[{"resource":` + oo + `},{"resource":` + oo + `}]}`
+	results, err = parseOutput([]byte(bundle), []string{"a.json", "b.json"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range results {
+		if r.ValidatorBuild != build {
+			t.Errorf("%s: ValidatorBuild = %q, want the extension's value", r.Filename, r.ValidatorBuild)
+		}
+	}
+}
+
+// A JAR that does not state its version — every release before 6.10.5 —
+// leaves the field empty rather than inventing one.
+func TestParseOutput_NoValidatorVersionExtension(t *testing.T) {
+	results, err := parseOutput([]byte(`{"resourceType":"OperationOutcome","issue":[]}`), []string{"a.json"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results[0].ValidatorBuild != "" {
+		t.Errorf("ValidatorBuild = %q, want empty", results[0].ValidatorBuild)
+	}
+}

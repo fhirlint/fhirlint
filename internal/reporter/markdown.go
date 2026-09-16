@@ -10,8 +10,8 @@ import (
 
 // Markdown writes a human-readable validation summary suitable for posting as a
 // GitHub PR comment. When dest is empty the report is printed to stdout.
-func Markdown(results []*validator.Result, minSeverity, dest string) error {
-	report := buildMarkdownReport(results, minSeverity)
+func Markdown(results []*validator.Result, minSeverity string, info RunInfo, dest string) error {
+	report := buildMarkdownReport(results, minSeverity, info)
 	if dest == "" {
 		fmt.Print(report)
 		return nil
@@ -19,7 +19,8 @@ func Markdown(results []*validator.Result, minSeverity, dest string) error {
 	return os.WriteFile(dest, []byte(report), 0600)
 }
 
-func buildMarkdownReport(results []*validator.Result, minSeverity string) string {
+func buildMarkdownReport(results []*validator.Result, minSeverity string, info RunInfo) string {
+	info = info.WithResults(results)
 	var errCount, warnCount, validCount, suppCount int
 	for _, r := range results {
 		if r.Valid {
@@ -86,6 +87,12 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string) string
 			}
 		}
 		b.WriteString("\n</details>\n")
+	}
+
+	// A PR comment outlives the run that made it; say what made it, quietly,
+	// at the end.
+	if line := provenanceLine(info); line != "" {
+		b.WriteString("\n<sub>" + line + "</sub>\n")
 	}
 
 	return b.String()

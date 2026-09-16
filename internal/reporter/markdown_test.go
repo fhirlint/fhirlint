@@ -13,7 +13,7 @@ func TestBuildMarkdownReport_Summary(t *testing.T) {
 		issue("error", "err msg", "Patient.gender"),
 		issue("warning", "warn msg", "Patient"),
 	)
-	out := buildMarkdownReport([]*validator.Result{valid, bad}, "information")
+	out := buildMarkdownReport([]*validator.Result{valid, bad}, "information", RunInfo{})
 
 	for _, want := range []string{
 		"## FHIR Validation Report",
@@ -31,7 +31,7 @@ func TestBuildMarkdownReport_Summary(t *testing.T) {
 func TestBuildMarkdownReport_OmitsValidFiles(t *testing.T) {
 	valid := makeResult(true)
 	valid.Label = "clean.json"
-	out := buildMarkdownReport([]*validator.Result{valid}, "information")
+	out := buildMarkdownReport([]*validator.Result{valid}, "information", RunInfo{})
 
 	if strings.Contains(out, "### ") {
 		t.Errorf("valid file should not get a detail section\n---\n%s", out)
@@ -46,7 +46,7 @@ func TestBuildMarkdownReport_FileHeadingEmoji(t *testing.T) {
 	errFile.Label = "err.json"
 	warnFile := makeResult(false, issue("warning", "meh", "Patient"))
 	warnFile.Label = "warn.json"
-	out := buildMarkdownReport([]*validator.Result{errFile, warnFile}, "information")
+	out := buildMarkdownReport([]*validator.Result{errFile, warnFile}, "information", RunInfo{})
 
 	if !strings.Contains(out, "### ❌ err.json") {
 		t.Errorf("file with an error should use ❌\n---\n%s", out)
@@ -62,7 +62,7 @@ func TestBuildMarkdownReport_SeverityFilter(t *testing.T) {
 		issue("warning", "a warning", "Patient"),
 		issue("information", "an info", ""),
 	)
-	out := buildMarkdownReport([]*validator.Result{r}, "error")
+	out := buildMarkdownReport([]*validator.Result{r}, "error", RunInfo{})
 
 	if !strings.Contains(out, "an error") {
 		t.Error("error issue should be present when --severity error")
@@ -77,7 +77,7 @@ func TestBuildMarkdownReport_SeverityFilter(t *testing.T) {
 
 func TestBuildMarkdownReport_EscapesPipesAndNewlines(t *testing.T) {
 	r := makeResult(false, issue("error", "value a|b\nsecond line", "Patient.code"))
-	out := buildMarkdownReport([]*validator.Result{r}, "information")
+	out := buildMarkdownReport([]*validator.Result{r}, "information", RunInfo{})
 
 	if !strings.Contains(out, `value a\|b second line`) {
 		t.Errorf("pipes should be escaped and newlines flattened\n---\n%s", out)
@@ -89,7 +89,7 @@ func TestBuildMarkdownReport_SuppressedDetails(t *testing.T) {
 	r.Suppressed = []validator.Issue{
 		{Severity: "warning", Message: "suppressed thing", Location: "Patient", SuppressReason: "known false positive"},
 	}
-	out := buildMarkdownReport([]*validator.Result{r}, "information")
+	out := buildMarkdownReport([]*validator.Result{r}, "information", RunInfo{})
 
 	for _, want := range []string{
 		"<summary>Suppressed (1)</summary>",
@@ -105,7 +105,7 @@ func TestBuildMarkdownReport_SuppressedDetails(t *testing.T) {
 
 func TestBuildMarkdownReport_NoSuppressedBlockWhenEmpty(t *testing.T) {
 	r := makeResult(false, issue("error", "boom", "Patient"))
-	out := buildMarkdownReport([]*validator.Result{r}, "information")
+	out := buildMarkdownReport([]*validator.Result{r}, "information", RunInfo{})
 	if strings.Contains(out, "<details>") {
 		t.Errorf("no <details> block expected when nothing is suppressed\n---\n%s", out)
 	}
@@ -114,7 +114,7 @@ func TestBuildMarkdownReport_NoSuppressedBlockWhenEmpty(t *testing.T) {
 func TestBuildMarkdownReport_FatalCountsAsError(t *testing.T) {
 	r := makeResult(false, issue("fatal", "fatal boom", "Patient"))
 	r.Label = "fatal.json"
-	out := buildMarkdownReport([]*validator.Result{r}, "information")
+	out := buildMarkdownReport([]*validator.Result{r}, "information", RunInfo{})
 	if !strings.Contains(out, "| ❌ Errors | 1 |") {
 		t.Errorf("fatal should count as an error\n---\n%s", out)
 	}
@@ -133,7 +133,7 @@ func TestBuildMarkdownReport_NamesTheReportedSeverity(t *testing.T) {
 	}
 	out := buildMarkdownReport([]*validator.Result{
 		{Filename: "b.json", Label: "b.json", Issues: []validator.Issue{downgraded}},
-	}, "information")
+	}, "information", RunInfo{})
 
 	if !strings.Contains(out, "WARNING (reported as ERROR)") {
 		t.Errorf("expected the reported severity alongside the effective one, got:\n%s", out)

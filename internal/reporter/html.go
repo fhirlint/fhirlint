@@ -41,7 +41,7 @@ const htmlTmpl = `<!DOCTYPE html>
 </head>
 <body>
 <h1>fhirlint Validation Report</h1>
-<p class="meta">Generated {{ .Generated }} · FHIR {{ .FHIRVersion }}</p>
+<p class="meta">Generated {{ .Generated }}{{ if .FHIRVersion }} · FHIR {{ .FHIRVersion }}{{ end }}{{ if .Validator }} · validator {{ .Validator }}{{ end }}{{ if .Fhirlint }} · fhirlint {{ .Fhirlint }}{{ end }}</p>
 
 <div class="summary">
   <div class="stat"><div class="stat-value">{{ .Summary.Total }}</div><div class="stat-label">Issues</div></div>
@@ -72,13 +72,16 @@ const htmlTmpl = `<!DOCTYPE html>
 type htmlData struct {
 	Generated   string
 	FHIRVersion string
+	Validator   string
+	Fhirlint    string
 	Files       []*validator.Result
 	Summary     JSONSummary
 	ValidCount  int
 }
 
-func HTML(results []*validator.Result, minSeverity, fhirVersion, dest string) error {
+func HTML(results []*validator.Result, minSeverity string, info RunInfo, dest string) error {
 	report := buildJSONReport(results, minSeverity)
+	info = info.WithResults(results)
 
 	validCount := 0
 	for _, r := range results {
@@ -89,7 +92,9 @@ func HTML(results []*validator.Result, minSeverity, fhirVersion, dest string) er
 
 	data := htmlData{
 		Generated:   time.Now().Format("2006-01-02 15:04:05"),
-		FHIRVersion: fhirVersion,
+		FHIRVersion: info.FHIRVersion,
+		Validator:   info.validatorLine(),
+		Fhirlint:    info.Fhirlint,
 		Files:       report.Files,
 		Summary:     report.Summary,
 		ValidCount:  validCount,

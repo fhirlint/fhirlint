@@ -175,6 +175,13 @@ type Result struct {
 
 	// Issues contains all validation findings at any severity.
 	Issues []Issue
+
+	// ValidatorBuild is the validator's own statement of what produced this
+	// result — version, Git SHA and build date in one line — which validators
+	// from 6.10.5 on attach to every outcome. Empty for older validators. An
+	// embedder writing its own report has the same reason to record it that
+	// fhirlint's reports do.
+	ValidatorBuild string
 }
 
 // Issue represents a single validation finding.
@@ -358,8 +365,9 @@ func toPublicResult(r *validator.Result) *Result {
 		}
 	}
 	return &Result{
-		Label:  r.Label,
-		Valid:  r.Valid,
-		Issues: issues,
+		Label:          r.Label,
+		Valid:          r.Valid,
+		Issues:         issues,
+		ValidatorBuild: r.ValidatorBuild,
 	}
 }

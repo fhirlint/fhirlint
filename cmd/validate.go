@@ -997,6 +997,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		flagShowSource = false
 	}
 
+	// What produced these results, for the formats that outlive the run. The
+	// validator's own build line, when it states one, is picked up from the
+	// results inside each reporter.
+	runInfo := reporter.RunInfo{
+		Fhirlint:    fhirlintVersion(),
+		Validator:   validator.RunValidatorVersion(opts),
+		FHIRVersion: flagFHIRVersion,
+	}
+
 	// Render output(s)
 	for _, format := range flagFormat {
 		switch strings.ToLower(format) {
@@ -1014,27 +1023,27 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			printPackageBaseline(os.Stdout, pkgBaseline, flagPackageBaseline)
 		case "json":
 			outFile := outputFile("json")
-			if err := reporter.JSON(results, flagSeverity, outFile); err != nil {
+			if err := reporter.JSON(results, flagSeverity, runInfo, outFile); err != nil {
 				return fmt.Errorf("json report: %w", err)
 			}
 		case "html":
 			outFile := outputFile("html")
-			if err := reporter.HTML(results, flagSeverity, flagFHIRVersion, outFile); err != nil {
+			if err := reporter.HTML(results, flagSeverity, runInfo, outFile); err != nil {
 				return fmt.Errorf("html report: %w", err)
 			}
 		case "junit":
 			outFile := outputFile("xml")
-			if err := reporter.JUnit(results, flagSeverity, outFile); err != nil {
+			if err := reporter.JUnit(results, flagSeverity, runInfo, outFile); err != nil {
 				return fmt.Errorf("junit report: %w", err)
 			}
 		case "sarif":
 			outFile := outputFile("sarif")
-			if err := reporter.SARIF(results, flagSeverity, fhirlintVersion(), outFile); err != nil {
+			if err := reporter.SARIF(results, flagSeverity, runInfo, outFile); err != nil {
 				return fmt.Errorf("sarif report: %w", err)
 			}
 		case "markdown", "md":
 			outFile := outputFile("md")
-			if err := reporter.Markdown(results, flagSeverity, outFile); err != nil {
+			if err := reporter.Markdown(results, flagSeverity, runInfo, outFile); err != nil {
 				return fmt.Errorf("markdown report: %w", err)
 			}
 		case "github":

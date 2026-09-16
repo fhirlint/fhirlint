@@ -459,3 +459,28 @@ func pointVerificationAt(t *testing.T, base string) {
 	releaseAPIURLFor = func(v string) string { return base + "/api/" + v }
 	t.Cleanup(func() { jarSignatureURLFor, releaseAPIURLFor = sigOrig, apiOrig })
 }
+
+// RunValidatorVersion answers for the JAR a run executes, which with --jar is
+// not the cached one: a report must name the JAR that produced it, not the
+// one that happens to be installed (#428).
+func TestRunValidatorVersion(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(cache.DirEnvVar, dir)
+	custom := writeJARWithManifest(t, t.TempDir(), "6.9.7")
+
+	if got := RunValidatorVersion(Options{JARPath: custom}); got != "6.9.7" {
+		t.Errorf("--jar: got %q, want the manifest's 6.9.7", got)
+	}
+	if got := RunValidatorVersion(Options{ValidatorVersion: "6.10.4"}); got != "6.10.4" {
+		t.Errorf("pinned: got %q, want the pin", got)
+	}
+	// Nothing cached, nothing pinned, no --jar: unknown, said as empty so a
+	// report omits the field rather than printing "unknown".
+	if got := RunValidatorVersion(Options{}); got != "" {
+		t.Errorf("nothing to go on: got %q, want empty", got)
+	}
+	// An unreadable --jar likewise.
+	if got := RunValidatorVersion(Options{JARPath: filepath.Join(dir, "missing.jar")}); got != "" {
+		t.Errorf("unreadable --jar: got %q, want empty", got)
+	}
+}

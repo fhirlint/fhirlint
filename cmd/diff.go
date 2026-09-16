@@ -67,17 +67,18 @@ func runDiff(_ *cobra.Command, args []string) error {
 	}
 
 	d := diff.Compute(baseline.Files, current.Files, flagDiffSeverity)
+	sides := reporter.DiffSides{Baseline: metaOf(baseline), Current: metaOf(current)}
 
 	for _, format := range flagDiffFormat {
 		switch strings.ToLower(format) {
 		case "terminal":
-			reporter.DiffTerminal(d, flagDiffShowUnchanged)
+			reporter.DiffTerminal(d, sides, flagDiffShowUnchanged)
 		case "json":
-			if err := reporter.DiffJSON(d, diffOutputFile("json")); err != nil {
+			if err := reporter.DiffJSON(d, sides, diffOutputFile("json")); err != nil {
 				return &exitErr{code: 2, err: fmt.Errorf("json diff report: %w", err)}
 			}
 		case "sarif":
-			if err := reporter.DiffSARIF(d, fhirlintVersion(), diffOutputFile("sarif")); err != nil {
+			if err := reporter.DiffSARIF(d, sides, diffOutputFile("sarif")); err != nil {
 				return &exitErr{code: 2, err: fmt.Errorf("sarif diff report: %w", err)}
 			}
 		default:
@@ -89,6 +90,15 @@ func runDiff(_ *cobra.Command, args []string) error {
 		return errValidationFailed
 	}
 	return nil
+}
+
+// metaOf is a report's provenance, empty for a report written before reports
+// carried one.
+func metaOf(r *reporter.JSONReport) reporter.RunInfo {
+	if r.Meta == nil {
+		return reporter.RunInfo{}
+	}
+	return *r.Meta
 }
 
 // readReport parses a JSON report written by `fhirlint validate --format json`.

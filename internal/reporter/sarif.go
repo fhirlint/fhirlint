@@ -34,13 +34,18 @@ type sarifRun struct {
 
 type sarifTool struct {
 	Driver sarifDriver `json:"driver"`
+	// Extensions is SARIF's slot for the components a driver runs: fhirlint is
+	// the driver, the HL7 validator is what actually produced the findings, and
+	// a reader comparing two files needs its version as much as ours.
+	Extensions []sarifDriver `json:"extensions,omitempty"`
 }
 
 type sarifDriver struct {
-	Name           string      `json:"name"`
-	Version        string      `json:"version"`
-	InformationURI string      `json:"informationUri"`
-	Rules          []sarifRule `json:"rules,omitempty"`
+	Name           string            `json:"name"`
+	Version        string            `json:"version,omitempty"`
+	InformationURI string            `json:"informationUri"`
+	Rules          []sarifRule       `json:"rules,omitempty"`
+	Properties     map[string]string `json:"properties,omitempty"`
 }
 
 type sarifRule struct {
@@ -92,8 +97,8 @@ type sarifLogicalLocation struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-func SARIF(results []*validator.Result, minSeverity, fhirlintVersion, dest string) error {
-	report := buildSARIFReport(results, minSeverity, fhirlintVersion)
+func SARIF(results []*validator.Result, minSeverity string, info RunInfo, dest string) error {
+	report := buildSARIFReport(results, minSeverity, info)
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return err
@@ -106,7 +111,8 @@ func SARIF(results []*validator.Result, minSeverity, fhirlintVersion, dest strin
 	return os.WriteFile(dest, data, 0600)
 }
 
-func buildSARIFReport(results []*validator.Result, minSeverity, fhirlintVersion string) sarifReport {
+func buildSARIFReport(results []*validator.Result, minSeverity string, info RunInfo) sarifReport {
+	info = info.WithResults(results)
 	sarifResults := make([]sarifResult, 0)
 	rulesSeen := map[string]bool{}
 	var rules []sarifRule
@@ -152,10 +158,11 @@ func buildSARIFReport(results []*validator.Result, minSeverity, fhirlintVersion 
 			Tool: sarifTool{
 				Driver: sarifDriver{
 					Name:           "fhirlint",
-					Version:        fhirlintVersion,
+					Version:        info.Fhirlint,
 					InformationURI: sarifInfoURI,
 					Rules:          rules,
 				},
+				Extensions: validatorExtension(info),
 			},
 			Results: sarifResults,
 		}},
@@ -228,4 +235,30 @@ func sarifLevel(severity string) string {
 	default:
 		return "note"
 	}
+}
+
+// sarifValidatorURI is where the component named in tool.extensions lives.
+const sarifValidatorURI = "https://github.com/hapifhir/org.hl7.fhir.core"
+
+// validatorExtension describes the validator JAR as a SARIF tool component,
+// or nothing when the run could not tell which JAR it executed.
+func validatorExtension(info RunInfo) []sarifDriver {
+	if info.Validator == "" && info.ValidatorBuild == "" {
+		return nil
+	}
+	ext := sarifDriver{
+		Name:           "HL7 FHIR Validator",
+		Version:        info.Validator,
+		InformationURI: sarifValidatorURI,
+	}
+	if info.ValidatorBuild != "" {
+		ext.Properties = map[string]string{"build": info.ValidatorBuild}
+	}
+	if info.FHIRVersion != "" {
+		if ext.Properties == nil {
+			ext.Properties = map[string]string{}
+		}
+		ext.Properties["fhirVersion"] = info.FHIRVersion
+	}
+	return []sarifDriver{ext}
 }
