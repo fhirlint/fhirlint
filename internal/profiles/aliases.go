@@ -16,6 +16,16 @@ import (
 // Versions are pinned to a sensible default (the registry's current release at
 // the time of writing). Aliases are a convenience shortcut — pass the full
 // name#version reference directly to target a different version.
+//
+// The pin follows dist-tags.latest, not the highest number the registry serves:
+// publishing a tarball and blessing it are separate acts, and an alias should
+// follow the blessing (#406, and the uk-core comment below).
+//
+// When dist-tags.latest is itself a pre-release, it is not a version to follow
+// either. A ballot is a draft for comment and an alias is a default, so the pin
+// stays on the last final the tag named, until upstream tags a final again
+// (#435). `fhirlint audit` reports that state rather than calling such a pin
+// outdated (#434).
 var Aliases = map[string][]string{
 	// German profiles
 	"kbv-basis":   {"kbv.basis#1.9.0"},
@@ -38,8 +48,16 @@ var Aliases = map[string][]string{
 	// pulls one version of kerndatensatz.meta — the split documented here
 	// before #398 was a supersession mistaken for a release-train difference.
 	//
-	// Versions are dist-tags.latest, not the highest number published — the
-	// rule the uk-core comment records.
+	// Versions follow dist-tags.latest, with the pre-release clause on Aliases
+	// doing the work here: since September 2026 all twelve modules tag a
+	// 2027.0.0-ballot* version, so every pin below is the last final the tag
+	// named rather than what the registry currently calls latest (#435).
+	//
+	// icu is the module to watch. The registry also serves the finals 2026.0.3
+	// and 2027.0.0, neither tagged, under a 2027.0.0-ballot.3 tag — the two
+	// halves of the rule biting at once. `fhirlint audit` lists them as
+	// untagged-newer. Revisit when the MII tags a 2027 final; the ballot itself
+	// is not the event.
 	"mii": {
 		"de.medizininformatikinitiative.kerndatensatz.base#2026.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3",
