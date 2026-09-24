@@ -2057,6 +2057,15 @@ An alias can stand for more than one package. The MII publishes no umbrella
 package — the Kerndatensatz ships module by module — so `mii` loads all 12
 packages, and the `mii-*` aliases name them individually.
 
+Alias versions follow the registry's `dist-tags.latest` rather than the highest
+number it serves, because publishing a package and blessing it are separate acts.
+When that tag points at a *pre-release*, the pin does not follow it: a ballot is a
+draft for comment, and an alias is a default. As of September 2026 all twelve MII
+modules tag a `2027.0.0-ballot*` version, so every `mii` pin is deliberately the
+last final release rather than what the registry currently calls latest.
+`fhirlint audit` reports this as `registry latest is a pre-release` instead of
+calling the pin outdated — see [auditing the toolchain](#auditing-the-toolchain).
+
 `mii-base` covers what `mii-person`, `mii-fall`, `mii-diagnose` and
 `mii-prozedur` used to. Those four modules stop at `2025.0.1`; their profiles
 moved wholesale into `kerndatensatz.base` for the 2026 train, and the newer
