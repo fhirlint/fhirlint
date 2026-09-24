@@ -93,9 +93,12 @@ func TestAuditClassifiesPackages(t *testing.T) {
 	if p := findPackage(t, r, "ahead.pkg#2.0.0"); !p.Ahead || p.IsProblem() {
 		t.Errorf("ahead.pkg: got ahead=%v problem=%v, want true/false", p.Ahead, p.IsProblem())
 	}
-	// A version that cannot be ordered must never be called "outdated".
-	if p := findPackage(t, r, "odd.pkg#1.0.0"); !p.Differs || p.Outdated {
-		t.Errorf("odd.pkg: got differs=%v outdated=%v, want true/false", p.Differs, p.Outdated)
+	// A version that cannot be ordered must never be called "outdated" — nor
+	// mistaken for a ballot: "2025-Q1" is a calendar scheme, and IsPreRelease is
+	// syntactic enough to say yes to it (#434).
+	if p := findPackage(t, r, "odd.pkg#1.0.0"); !p.Differs || p.Outdated || p.LatestIsPreRelease {
+		t.Errorf("odd.pkg: got differs=%v outdated=%v latestIsPreRelease=%v, want true/false/false",
+			p.Differs, p.Outdated, p.LatestIsPreRelease)
 	}
 	if p := findPackage(t, r, "gone.pkg#1.0.0"); !p.NotFound || p.Error != "" {
 		t.Errorf("gone.pkg: got notFound=%v err=%q, want true/empty", p.NotFound, p.Error)
@@ -334,6 +337,71 @@ func TestAuditUntaggedNewerSkipsIncomparableVersions(t *testing.T) {
 	r := igaudit.Audit(context.Background(), c, []string{"odd.pkg#1.0.0"})
 
 	mustEqualVersions(t, "odd.pkg", findPackage(t, r, "odd.pkg#1.0.0").UntaggedNewer, []string{"1.1.0"})
+}
+
+// dist-tags.latest can be a pre-release. MII moved the tag on all 12
+// Kerndatensatz modules to a 2027 ballot in September 2026, and a final pin
+// underneath it was reported as "outdated → 2027.0.0-ballot available" — advice
+// to move a production pin onto a draft (#434).
+func TestAuditLatestIsPreReleaseIsNotOutdated(t *testing.T) {
+	c := registry(t, map[string]string{
+		"icu.pkg": packument("2027.0.0-ballot.3",
+			"2026.0.2", "2026.0.3", "2027.0.0", "2027.0.0-ballot.3"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"icu.pkg#2026.0.2"})
+	p := findPackage(t, r, "icu.pkg#2026.0.2")
+
+	if !p.LatestIsPreRelease {
+		t.Errorf("icu.pkg: got latestIsPreRelease=false, want true (latest %q)", p.Latest)
+	}
+	if p.Outdated || p.Differs || p.Ahead {
+		t.Errorf("icu.pkg: got outdated=%v differs=%v ahead=%v, want all false — a ballot is not a release to move to",
+			p.Outdated, p.Differs, p.Ahead)
+	}
+	if p.IsProblem() {
+		t.Errorf("icu.pkg: a final pin under a ballot tag must not be a finding: %+v", p)
+	}
+
+	// The latest bound on UntaggedNewer is dropped when latest is a pre-release,
+	// so the finals between the pin and the ballot are listed too. With the bound
+	// in place this reported 2027.0.0 alone and hid 2026.0.3.
+	mustEqualVersions(t, "icu.pkg", p.UntaggedNewer, []string{"2026.0.3", "2027.0.0"})
+}
+
+// Only a *final* pin gets the softer treatment. Someone tracking a ballot round
+// deliberately still wants to hear that the round moved on.
+func TestAuditPreReleasePinUnderNewerPreReleaseIsOutdated(t *testing.T) {
+	c := registry(t, map[string]string{
+		"isik.pkg": packument("6.0.0-rc2", "6.0.0-rc1", "6.0.0-rc2"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"isik.pkg#6.0.0-rc1"})
+	p := findPackage(t, r, "isik.pkg#6.0.0-rc1")
+
+	if p.LatestIsPreRelease {
+		t.Errorf("isik.pkg: got latestIsPreRelease=true, want false — both sides are pre-releases")
+	}
+	if !p.Outdated {
+		t.Errorf("isik.pkg: got outdated=false, want true (pin %q, latest %q)", p.Version, p.Latest)
+	}
+}
+
+// KBV publishes 1.9.0-Expansions and 1.9.0-Resources beside 1.9.0. They are
+// split artifacts, not a ballot round, and they are never the tag — so a KBV
+// pin must land in the plain "current" case, not the pre-release one.
+func TestAuditSplitArtifactsDoNotTriggerThePreReleaseCase(t *testing.T) {
+	c := registry(t, map[string]string{
+		"kbv.pkg": packument("1.9.0", "1.8.0", "1.9.0", "1.9.0-Expansions", "1.9.0-Resources"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"kbv.pkg#1.9.0"})
+	p := findPackage(t, r, "kbv.pkg#1.9.0")
+
+	if p.LatestIsPreRelease || p.IsProblem() {
+		t.Errorf("kbv.pkg: got latestIsPreRelease=%v problem=%v, want false/false", p.LatestIsPreRelease, p.IsProblem())
+	}
+	mustEqualVersions(t, "kbv.pkg", p.UntaggedNewer, nil)
 }
 
 func mustEqualVersions(t *testing.T, name string, got, want []string) {
