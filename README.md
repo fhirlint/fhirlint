@@ -1004,6 +1004,14 @@ fhirlint validate ./fhir/ --check-references --suppress messageId:ref:external
 
 It is opt-in: when you validate a subset of a dataset, references to resources you did not include will (correctly) report as unresolved. XML resources are skipped with a notice.
 
+### Overlap with the validator's own warning
+
+The validator reports one reference problem by itself, with or without this flag: a `urn:uuid:` reference that no entry of the enclosing Bundle carries, as a warning with message ID `Bundle_BUNDLE_Not_Local`. With `--check-references` that is the same finding twice, so fhirlint keeps the `ref:unresolved` error and drops the warning — it says what was searched, and it is an error rather than a warning.
+
+The warning is dropped only for references this check itself flagged. `Bundle_BUNDLE_Not_Local` is about one Bundle, while the check spans the whole validated set, so a `urn:uuid:` that resolves against a different file in the run still produces the validator's warning and no error — "not local to this bundle" is then the only thing anyone is saying, and it stays.
+
+Without `--check-references` nothing changes: the validator's warning is the only reference finding there is.
+
 ---
 
 ## Explaining message IDs

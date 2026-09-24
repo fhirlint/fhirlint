@@ -161,3 +161,54 @@ func TestMultipleReferencesDeterministicOrder(t *testing.T) {
 		t.Errorf("unexpected first location %q", first[0].Location)
 	}
 }
+
+// CheckWithRefs hands back the reference values behind its unresolved findings,
+// so a caller can reconcile them with what the validator said about the same
+// reference. Only unresolved ones: an external reference is a different
+// statement and nothing duplicates it (#436).
+func TestCheckWithRefsCollectsUnresolvedOnly(t *testing.T) {
+	ix := NewIndex()
+	ix.Add([]byte(`{"resourceType":"Patient","id":"p1"}`))
+
+	doc := `{"resourceType":"Encounter","id":"e1",
+	  "subject":{"reference":"Patient/p1"},
+	  "partOf":{"reference":"Encounter/missing"},
+	  "serviceProvider":{"reference":"https://other.example/fhir/Organization/9"}}`
+
+	issues, refs := CheckWithRefs([]byte(doc), ix)
+
+	if len(issues) != 2 {
+		t.Fatalf("got %d issues, want 2 (one unresolved, one external): %+v", len(issues), issues)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got refs %v, want just the unresolved one", refs)
+	}
+	if _, ok := refs["Encounter/missing"]; !ok {
+		t.Errorf("refs = %v, want Encounter/missing", refs)
+	}
+}
+
+// The returned value is the trimmed reference, so it matches the text the
+// validator's message carries rather than the raw JSON string.
+func TestCheckWithRefsTrimsTheReference(t *testing.T) {
+	_, refs := CheckWithRefs([]byte(`{"resourceType":"Observation","id":"o1","subject":{"reference":"  Patient/gone  "}}`), NewIndex())
+
+	if _, ok := refs["Patient/gone"]; !ok {
+		t.Errorf("refs = %v, want the trimmed Patient/gone", refs)
+	}
+}
+
+// Check stays the thin wrapper it was, so existing callers are unaffected.
+func TestCheckMatchesCheckWithRefs(t *testing.T) {
+	doc := []byte(`{"resourceType":"Observation","id":"o1","subject":{"reference":"Patient/gone"}}`)
+
+	plain := Check(doc, NewIndex())
+	withRefs, _ := CheckWithRefs(doc, NewIndex())
+
+	if len(plain) != len(withRefs) || len(plain) != 1 {
+		t.Fatalf("Check = %+v, CheckWithRefs = %+v", plain, withRefs)
+	}
+	if plain[0] != withRefs[0] {
+		t.Errorf("Check and CheckWithRefs disagree:\n%+v\n%+v", plain[0], withRefs[0])
+	}
+}

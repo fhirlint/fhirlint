@@ -87,31 +87,62 @@ func (ix *Index) Add(resourceJSON []byte) {
 // resource. Contained (#id) references are resolved within the resource. The
 // result is sorted by location for deterministic output.
 func Check(resourceJSON []byte, ix *Index) []validator.Issue {
+	issues, _ := CheckWithRefs(resourceJSON, ix)
+	return issues
+}
+
+// CheckWithRefs is Check, and additionally returns the reference values it
+// reported as unresolved.
+//
+// The validator reports some of the same references itself, and a caller that
+// shows both ends up printing one dangling reference twice under two severities
+// (#436). Reconciling the two needs the reference value, which this check
+// already has and which neither message carries as a field — so it is returned
+// rather than parsed back out of message text.
+//
+// Only unresolved references are collected. An external reference is a
+// different statement ("points outside the validated set"), and nothing the
+// validator emits duplicates it.
+func CheckWithRefs(resourceJSON []byte, ix *Index) ([]validator.Issue, map[string]struct{}) {
 	var root map[string]interface{}
 	if err := json.Unmarshal(resourceJSON, &root); err != nil {
-		return nil
+		return nil, nil
 	}
 	rt, _ := root["resourceType"].(string)
 	if rt == "" {
 		rt = "(resource)"
 	}
-	var issues []validator.Issue
-	walk(root, rt, nil, ix, &issues)
+	c := &collector{unresolved: map[string]struct{}{}}
+	walk(root, rt, nil, ix, c)
 
-	sort.SliceStable(issues, func(i, j int) bool {
-		if issues[i].Location != issues[j].Location {
-			return issues[i].Location < issues[j].Location
+	sort.SliceStable(c.issues, func(i, j int) bool {
+		if c.issues[i].Location != c.issues[j].Location {
+			return c.issues[i].Location < c.issues[j].Location
 		}
-		return issues[i].Message < issues[j].Message
+		return c.issues[i].Message < c.issues[j].Message
 	})
-	return issues
+	return c.issues, c.unresolved
+}
+
+// collector gathers what a walk found: the issues to report, and the reference
+// values behind the unresolved ones.
+type collector struct {
+	issues     []validator.Issue
+	unresolved map[string]struct{}
+}
+
+func (c *collector) add(iss validator.Issue, ref string) {
+	c.issues = append(c.issues, iss)
+	if iss.MessageID == MsgUnresolved {
+		c.unresolved[ref] = struct{}{}
+	}
 }
 
 // walk recursively visits node, collecting reference findings. contained is the
 // set of contained resource ids in scope for the enclosing resource; it is
 // recomputed whenever a nested resource (an object with a resourceType) is
 // entered.
-func walk(node interface{}, path string, contained map[string]struct{}, ix *Index, issues *[]validator.Issue) {
+func walk(node interface{}, path string, contained map[string]struct{}, ix *Index, c *collector) {
 	switch n := node.(type) {
 	case map[string]interface{}:
 		if _, ok := n["resourceType"]; ok {
@@ -120,17 +151,17 @@ func walk(node interface{}, path string, contained map[string]struct{}, ix *Inde
 		for k, v := range n {
 			if k == "reference" {
 				if ref, ok := v.(string); ok {
-					if iss, ok := classify(ref, path+".reference", contained, ix); ok {
-						*issues = append(*issues, iss)
+					if iss, normalised, ok := classify(ref, path+".reference", contained, ix); ok {
+						c.add(iss, normalised)
 					}
 					continue
 				}
 			}
-			walk(v, joinPath(path, k), contained, ix, issues)
+			walk(v, joinPath(path, k), contained, ix, c)
 		}
 	case []interface{}:
 		for i, e := range n {
-			walk(e, fmt.Sprintf("%s[%d]", path, i), contained, ix, issues)
+			walk(e, fmt.Sprintf("%s[%d]", path, i), contained, ix, c)
 		}
 	}
 }
@@ -153,59 +184,60 @@ func containedIDs(res map[string]interface{}) map[string]struct{} {
 }
 
 // classify resolves a single literal reference against the index (and the
-// contained scope) and returns an issue when it does not resolve.
-func classify(ref, location string, contained map[string]struct{}, ix *Index) (validator.Issue, bool) {
+// contained scope) and returns an issue when it does not resolve, along with
+// the trimmed reference value the issue is about.
+func classify(ref, location string, contained map[string]struct{}, ix *Index) (validator.Issue, string, bool) {
 	ref = strings.TrimSpace(ref)
 	if ref == "" {
-		return validator.Issue{}, false
+		return validator.Issue{}, "", false
 	}
 
 	// Contained reference: resolves within the enclosing resource.
 	if strings.HasPrefix(ref, "#") {
 		id := ref[1:]
 		if id == "" {
-			return validator.Issue{}, false // "#" refers to the container itself
+			return validator.Issue{}, "", false // "#" refers to the container itself
 		}
 		if _, ok := contained[id]; ok {
-			return validator.Issue{}, false
+			return validator.Issue{}, "", false
 		}
 		return issue(sevUnresolved, MsgUnresolved, location,
-			fmt.Sprintf("contained reference %q has no matching contained resource", ref)), true
+			fmt.Sprintf("contained reference %q has no matching contained resource", ref)), ref, true
 	}
 
 	// urn: reference (urn:uuid / urn:oid) — resolves against a Bundle entry fullUrl.
 	if strings.HasPrefix(ref, "urn:") {
 		if _, ok := ix.fullURLs[ref]; ok {
-			return validator.Issue{}, false
+			return validator.Issue{}, "", false
 		}
 		return issue(sevUnresolved, MsgUnresolved, location,
-			fmt.Sprintf("unresolved reference %q (no matching entry fullUrl in the validated set)", ref)), true
+			fmt.Sprintf("unresolved reference %q (no matching entry fullUrl in the validated set)", ref)), ref, true
 	}
 
 	// Absolute URL reference.
 	if isAbsoluteURL(ref) {
 		if _, ok := ix.fullURLs[ref]; ok {
-			return validator.Issue{}, false
+			return validator.Issue{}, "", false
 		}
 		if tid, ok := trailingTypeID(ref); ok {
 			if _, ok := ix.typeIDs[tid]; ok {
-				return validator.Issue{}, false
+				return validator.Issue{}, "", false
 			}
 		}
 		return issue(sevExternal, MsgExternal, location,
-			fmt.Sprintf("reference %q points outside the validated set (external — not checked)", ref)), true
+			fmt.Sprintf("reference %q points outside the validated set (external — not checked)", ref)), ref, true
 	}
 
 	// Relative literal reference: Type/id (optionally /_history/…).
 	tid, ok := relativeTypeID(ref)
 	if !ok {
-		return validator.Issue{}, false // not a recognisable literal reference (e.g. logical)
+		return validator.Issue{}, "", false // not a recognisable literal reference (e.g. logical)
 	}
 	if _, ok := ix.typeIDs[tid]; ok {
-		return validator.Issue{}, false
+		return validator.Issue{}, "", false
 	}
 	return issue(sevUnresolved, MsgUnresolved, location,
-		fmt.Sprintf("unresolved reference %q (target not found in the validated set)", ref)), true
+		fmt.Sprintf("unresolved reference %q (target not found in the validated set)", ref)), ref, true
 }
 
 func issue(sev, msgID, location, msg string) validator.Issue {
