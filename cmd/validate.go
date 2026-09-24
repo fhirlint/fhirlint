@@ -2960,7 +2960,8 @@ func applyReferenceCheck(results []*validator.Result, indexOnly []string) {
 		docs = append(docs, parsed{res: res, raw: content})
 	}
 	for _, d := range docs {
-		found := refcheck.Check(d.raw, index)
+		found, unresolved := refcheck.CheckWithRefs(d.raw, index)
+		d.res.Issues = dropDuplicateBundleRefWarnings(d.res.Issues, unresolved)
 		if len(found) == 0 {
 			continue
 		}
@@ -2974,6 +2975,61 @@ func applyReferenceCheck(results []*validator.Result, indexOnly []string) {
 	if skippedXML > 0 {
 		fmt.Fprintf(os.Stderr, "warn: reference check skipped %d XML resource(s) — it supports JSON input only\n", skippedXML)
 	}
+}
+
+// bundleNotLocalMessageID is the validator's message for a urn: reference that
+// no entry of the enclosing Bundle carries. It is the one reference message the
+// validator emits by default — its own reference resolution sits behind
+// -check-references, which defaults to off and which fhirlint does not pass.
+const bundleNotLocalMessageID = "Bundle_BUNDLE_Not_Local"
+
+// dropDuplicateBundleRefWarnings removes the validator's Bundle_BUNDLE_Not_Local
+// warning for references that the reference check reports as unresolved in its
+// own right.
+//
+// Both describe the same dangling reference, under two severities and two
+// spellings of the path, and --group cannot fold them together because the
+// messages differ. The reference check's version is the one to keep: it is an
+// error rather than a warning, it says what was searched, and it spans the whole
+// validated set rather than one Bundle (#436).
+//
+// That wider scope is also why this is matched per reference rather than applied
+// to every Bundle_BUNDLE_Not_Local issue. A urn: that the validator cannot find
+// in this Bundle may well resolve against another file in the run; the reference
+// check then reports nothing, and the validator's warning is the only account of
+// that and stays.
+//
+// Runs before suppression and before --redact, so a dropped row is not counted
+// as suppressed and the message text is still intact to match against.
+func dropDuplicateBundleRefWarnings(issues []validator.Issue, unresolved map[string]struct{}) []validator.Issue {
+	if len(issues) == 0 || len(unresolved) == 0 {
+		return issues
+	}
+	out := make([]validator.Issue, 0, len(issues))
+	for _, iss := range issues {
+		if iss.MessageID == bundleNotLocalMessageID && mentionsAnyRef(iss.Message, unresolved) {
+			continue
+		}
+		out = append(out, iss)
+	}
+	return out
+}
+
+// mentionsAnyRef reports whether a validator message names one of the given
+// references.
+//
+// Containment rather than a suffix match, because the reference is the message's
+// {0} parameter and --locale changes everything around it. The message ID has
+// already narrowed this to one message about one reference, so the remaining
+// risk is a reference that is a substring of another unresolved one in the same
+// resource — both are being dropped in that case anyway.
+func mentionsAnyRef(message string, refs map[string]struct{}) bool {
+	for ref := range refs {
+		if ref != "" && strings.Contains(message, ref) {
+			return true
+		}
+	}
+	return false
 }
 
 // buildRuleEngine loads rules from --rules-file (precedence) or the rules:
