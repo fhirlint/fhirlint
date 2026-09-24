@@ -115,6 +115,13 @@ func TestAliasesUpToDate(t *testing.T) {
 		case p.Ahead:
 			t.Logf("alias %s → %s is ahead of the registry's latest (%s), which is normal for a pre-release pin",
 				named(byID, p.ID), p.ID, p.Latest)
+		case p.LatestIsPreRelease:
+			// Logged, never failed, for the same reason as Ahead: the pin is on
+			// a final and upstream is mid-ballot, so there is no release to move
+			// to. Failing here would leave the monitor red for the length of a
+			// ballot round — the whole MII set, as of 2026-09 (#434).
+			t.Logf("alias %s → %s: the registry's latest (%s) is a pre-release, so the pin stays on the last final",
+				named(byID, p.ID), p.ID, p.Latest)
 		}
 
 		// Logged, never failed. Upstream publishing a release without tagging it

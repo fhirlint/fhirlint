@@ -310,6 +310,9 @@ func printIGTerminal(r igaudit.Report, src igSource, igErr error) int {
 				width, p.Name, p.Version, p.Latest)
 		case p.Ahead:
 			fmt.Printf("  ✓ %-*s  %s — ahead of registry latest (%s)\n", width, p.Name, p.Version, p.Latest)
+		case p.LatestIsPreRelease:
+			fmt.Printf("  ✓ %-*s  %s — current release; registry latest is a pre-release (%s)\n",
+				width, p.Name, p.Version, p.Latest)
 		default:
 			fmt.Printf("  ✓ %-*s  %s — current\n", width, p.Name, p.Version)
 		}

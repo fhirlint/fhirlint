@@ -75,14 +75,16 @@ func TestPrintIGTerminal_Classification(t *testing.T) {
 		{ID: "gone.pkg#1.0.0", Name: "gone.pkg", Version: "1.0.0", NotFound: true},
 		{ID: "odd.pkg#1.0.0", Name: "odd.pkg", Version: "1.0.0", Latest: "2025-Q1", Differs: true},
 		{ID: "new.pkg#2.0.0", Name: "new.pkg", Version: "2.0.0", Latest: "1.0.0", Ahead: true},
+		{ID: "mii.pkg#2026.0.1", Name: "mii.pkg", Version: "2026.0.1", Latest: "2027.0.0-ballot",
+			LatestIsPreRelease: true},
 		{ID: "err.pkg#1.0.0", Name: "err.pkg", Version: "1.0.0", Error: "connection refused"},
 	}}
 
 	var got int
 	out := captureOutErr(t, func() { got = printIGTerminal(report, igSource{Label: "fhirlint.lock"}, nil) })
 
-	// Outdated, deprecated, not-found and differs count. Ahead and a check that
-	// could not run do not.
+	// Outdated, deprecated, not-found and differs count. Ahead, a pre-release
+	// tag over a final pin, and a check that could not run do not.
 	if want := 4; got != want {
 		t.Errorf("problem count = %d, want %d", got, want)
 	}
@@ -93,8 +95,9 @@ func TestPrintIGTerminal_Classification(t *testing.T) {
 		"not found on any registry (packages2.fhir.org, packages.fhir.org)",
 		"registry latest is 2025-Q1",
 		"ahead of registry latest",
+		"2026.0.1 — current release; registry latest is a pre-release (2027.0.0-ballot)",
 		"could not check: connection refused",
-		"(4 of 7 package(s) need attention)",
+		"(4 of 8 package(s) need attention)",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in output:\n%s", want, out)

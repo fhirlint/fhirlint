@@ -76,6 +76,15 @@ type PackageReport struct {
 	// happens with pre-release pins. Not a problem, but worth showing.
 	Ahead bool `json:"ahead,omitempty"`
 
+	// LatestIsPreRelease means dist-tags.latest names a pre-release — a ballot,
+	// a release candidate — while the pin is a final. Upstream has not blessed a
+	// newer release, so the pin is not outdated: there is nothing to move to.
+	//
+	// Kept distinct from Ahead, which is the mirror image (a pre-release pin
+	// against a final tag). Both say "the pin is not the tag, and that is fine",
+	// but for opposite reasons, and a reader needs to know which.
+	LatestIsPreRelease bool `json:"latestIsPreRelease,omitempty"`
+
 	// UntaggedNewer lists final versions the registry serves that outrank both
 	// the pin and dist-tags.latest — published without being blessed.
 	//
@@ -211,13 +220,26 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 	if p.Latest == "" {
 		return p
 	}
-	p.UntaggedNewer = pkg.untaggedNewer(version, p.Latest)
+	// A pre-release tag over a final pin is not a version to move to: upstream is
+	// mid-ballot and has blessed nothing newer, so this is reported rather than
+	// counted as a finding.
+	//
+	// Guarded by the comparison rather than checked on its own, because
+	// IsPreRelease is deliberately syntactic: "2025-Q1" is a whole calendar
+	// versioning scheme, not a pre-release, and it must keep reaching Differs.
+	cmp, ordered := CompareVersions(version, p.Latest)
+	p.LatestIsPreRelease = ordered && cmp < 0 &&
+		fhirpkg.IsPreRelease(p.Latest) && !fhirpkg.IsPreRelease(version)
+
+	p.UntaggedNewer = pkg.untaggedNewer(version, p.Latest, p.LatestIsPreRelease)
 	if p.Latest == version {
 		return p
 	}
 
-	switch cmp, ok := CompareVersions(version, p.Latest); {
-	case !ok:
+	switch {
+	case p.LatestIsPreRelease:
+		// Already classified above, and deliberately none of the three below.
+	case !ordered:
 		p.Differs = true
 	case cmp < 0:
 		p.Outdated = true
@@ -247,16 +269,30 @@ type packument struct {
 // no existing field describes: released, downloadable, and not what upstream
 // says is current.
 //
+// The latest bound is dropped when the caller established that latest is a
+// pre-release over a final pin. The bound is there to avoid restating what
+// Outdated already says, and in that case there is no Outdated finding to
+// restate — LatestIsPreRelease is reported instead. Keeping it would hide every
+// final between the pin and the ballot, which is the interesting part: MII's
+// icu module serves 2026.0.3 and 2027.0.0 under a 2027.0.0-ballot.3 tag, and
+// only the second outranks it (#434).
+//
 // Pre-releases are excluded, and so is anything CompareVersions cannot order —
 // consistent with Differs, which reports rather than guesses.
-func (p packument) untaggedNewer(version, latest string) []string {
+func (p packument) untaggedNewer(version, latest string, latestIsPreRelease bool) []string {
+	ceiling := latest
+	if latestIsPreRelease {
+		ceiling = ""
+	}
 	var newer []string
 	for v := range p.Versions {
 		if fhirpkg.IsPreRelease(v) {
 			continue
 		}
-		if cmp, ok := fhirpkg.CompareVersions(v, latest); !ok || cmp <= 0 {
-			continue
+		if ceiling != "" {
+			if cmp, ok := fhirpkg.CompareVersions(v, ceiling); !ok || cmp <= 0 {
+				continue
+			}
 		}
 		if cmp, ok := fhirpkg.CompareVersions(v, version); !ok || cmp <= 0 {
 			continue
