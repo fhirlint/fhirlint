@@ -1,0 +1,69 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "warning",
+      "code": "processing",
+      "details": {
+        "text": "Profile reference 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Patient' has not been checked because it could not be found, and fetching it resulted in the error The URL 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Patient' is not known to the FHIR validator, and has not been provided as part of the setup / parameters"
+      },
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR"
+        }
+      ],
+      "expression": [
+        "Patient.meta.profile[0]"
+      ]
+    },
+    {
+      "severity": "warning",
+      "code": "processing",
+      "details": {
+        "text": "Profile reference 'https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/Patient' has not been checked because it could not be found, and fetching it resulted in the error org.hl7.fhir.r4.utils.client.EFhirClientException: Error from https://www.medizininformatik-initiative.de/fhir/core/modul-person: Unparseable HTML Source (Unable to read attribute '-1' value on <input> at line 420 column 372)"
+      },
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR"
+        }
+      ],
+      "expression": [
+        "Patient.meta.profile[0]"
+      ]
+    },
+    {
+      "severity": "warning",
+      "code": "processing",
+      "details": {
+        "text": "Profile reference 'https://gematik.de/fhir/isik/StructureDefinition/ISiKPatient' has not been checked because it could not be found, and fetching it resulted in the error org.hl7.fhir.r4.utils.client.EFhirClientException: Error from https://gematik.de/fhir/isik: Unparseable HTML Source (Unable to read attribute '-1' value on <input> at line 446 column 282)"
+      },
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR"
+        }
+      ],
+      "expression": [
+        "Patient.meta.profile[0]"
+      ]
+    },
+    {
+      "severity": "warning",
+      "code": "processing",
+      "details": {
+        "text": "Profile reference 'http://fhir.de/StructureDefinition/patient-de-basis' has not been checked because it could not be found, and fetching it resulted in the error org.hl7.fhir.r4.utils.client.EFhirClientException: Error from https://fhir.de: Canonical - SIMPLIFIER.NET window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-75770883-1', { 'anonymize_ip': true }); !function(T,l,y){var S=T.location,k=\"script\",D=\"instrumentationKey\",C=\"ingestionendpoint\",I=\"disableExceptionTracking\",E=\"ai.device.\",b=\"toLowerCase\",w=\"crossOrigin\",N=\"POST\",e=\"appInsightsSDK\",t=y.name||\"appInsights\";(y.name||T[e])&&(T[e]=t);var n=T[t]||function(d){var g=!1,f=!1,m={initialize:!0,queue:[],sv:\"5\",version:2,config:d};function v(e,t){var n={},a=\"Browser\";return n[E+\"id\"]=a[b](),n[E+\"type\"]=a,n[\"ai.operation.name\"]=S&&S.pathname||\"_unknown_\",n[\"ai.internal.sdkVersion\"]=\"javascript:snippet_\"+(m.sv||m.version),{time:function(){var e=new Date;function t(e){var t=\"\"+e;return 1===t.length&&(t=\"0\"+t),t}return e.getUTCFullYear()+\"-\"+t(1+e.getUTCMonth())+\"-\"+t(e.getUTCDate())+\"T\"+t(e.getUTCHours())+\":\"+t(e.getUTCMinutes())+\":\"+t(e.getUTCSeconds())+\".\"+((e.getUTCMilliseconds()/1e3).toFixed(3)+\"\").slice(2,5)+\"Z\"}(),iKey:e,name:\"Microsoft.ApplicationInsights.\"+e.replace(/-/g,\"\")+\".\"+t,sampleRate:100,tags:n,data:{baseData:{ver:2}}}}var h=d.url||y.src;if(h){function a(e){var t,n,a,i,r,o,s,c,u,p,l;g=!0,m.queue=[],f||(f=!0,t=h,s=function(){var e={},t=d.connectionString;if(t)for(var n=t.split(\";\"),a=0;a<n.length;a++){var i=n[a].split(\"=\");2===i.length&&(e[i[0][b]()]=i[1])}if(!e[C]){var r=e.endpointsuffix,o=r?e.location:null;e[C]=\"https://\"+(o?o+\".\":\"\")+\"dc.\"+(r||\"services.visualstudio.com\")}return e}(),c=s[D]||d[D]||\"\",u=s[C],p=u?u+\"/v2/track\":d.endpointUrl,(l=[]).push((n=\"SDK LOAD Failure: Failed to load Application Insights SDK script (See stack for details)\",a=t,i=p,(o=(r=v(c,\"Exception\")).data).baseType=\"ExceptionData\",o.baseData.exceptions=[{typeName:\"SDKLoadFailed\",message:n.replace(/\\./g,\"-\"),hasFullStack:!1,stack:n+\"\\nSnippet failed to load [\"+a+\"] -- Telemetry is disabled\\nHelp Link: https://go.microsoft.com/fwlink/?linkid=2128109\\nHost: \"+(S&&S.pathname||\"_unknown_\")+\"\\nEndpoint: \"+i,parsedStack:[]}],r)),l.push(function(e,t,n,a){var i=v(c,\"Message\"),r=i.data;r.baseType=\"MessageData\";var o=r.baseData;return o.message='AI (Internal): 99 message:\"'+(\"SDK LOAD Failure: Failed to load Application Insights SDK script (See stack for details) (\"+n+\")\").replace(/\\\"/g,\"\")+'\"',o.properties={endpoint:a},i}(0,0,t,p)),function(e,t){if(JSON){var n=T.fetch;if(n&&!y.useXhr)n(t,{method:N,body:JSON.stringify(e),mode:\"cors\"});else if(XMLHttpRequest){var a=new XMLHttpRequest;a.open(N,t),a.setRequestHeader(\"Content-type\",\"application/json\"),a.send(JSON.stringify(e))}}}(l,p))}function i(e,t){f||setTimeout(function(){!t&&m.core||a()},500)}var e=function(){var n=l.createElement(k);n.src=h;var e=y[w];return!e&&\"\"!==e||\"undefined\"==n[w]||(n[w]=e),n.onload=i,n.onerror=a,n.onreadystatechange=function(e,t){\"loaded\"!==n.readyState&&\"complete\"!==n.readyState||i(0,t)},n}();y.ld<0?l.getElementsByTagName(\"head\")[0].appendChild(e):setTimeout(function(){l.getElementsByTagName(k)[0].parentNode.appendChild(e)},y.ld||0)}try{m.cookie=l.cookie}catch(p){}function t(e){for(;e.length;)!function(t){m[t]=function(){var e=arguments;g||m.queue.push(function(){m[t].apply(m,e)})}}(e.pop())}var n=\"track\",r=\"TrackPage\",o=\"TrackEvent\";t([n+\"Event\",n+\"PageView\",n+\"Exception\",n+\"Trace\",n+\"DependencyData\",n+\"Metric\",n+\"PageViewPerformance\",\"start\"+r,\"stop\"+r,\"start\"+o,\"stop\"+o,\"addTelemetryInitializer\",\"setAuthenticatedUserContext\",\"clearAuthenticatedUserContext\",\"flush\"]),m.SeverityLevel={Verbose:0,Information:1,Warning:2,Error:3,Critical:4};var s=(d.extensionConfig||{}).ApplicationInsightsAnalytics||{};if(!0!==d[I]&&!0!==s[I]){var c=\"onerror\";t([\"_\"+c]);var u=T[c];T[c]=function(e,t,n,a,i){var r=u&&u(e,t,n,a,i);return!0!==r&&m[\"_\"+c]({message:e,url:t,lineNumber:n,columnNumber:a,error:i}),r},d.autoExceptionInstrumented=!0}return m}(y.cfg);function a(){y.onInit&&y.onInit(n)}(T[t]=n).queue&&0===n.queue.length?(n.queue.push(a),n.trackPageView({})):a()}(window,document,{ src: \"https://js.monitor.azure.com/scripts/b/ai.2.min.js\", // The SDK URL Source crossOrigin: \"anonymous\", cfg: { // Application Insights Configuration instrumentationKey: '3897b433-fe6f-4616-82a8-64b8a0263450' }}); About About Simplifier About Firely Learn more Contact Information Documentation Terms Privacy Vulnerability disclosure policy Features Pricing Status Follow us Github Twitter Youtube Links FHIR DevDays FHIR specification R5 FHIR specification R4B FHIR specification R4 FHIR specification STU3 FHIR specification DSTU 2 FHIR Server SIMPLIFIER.NET version 2026.5.2.0 Copyright © 2015-2026 Firely HL7® and FHIR® are the registered trademarks of Health Level Seven International Simplifier logo Confirmation Are you sure? Yes Cancel Simplifier.net SNIPPETS FEEDBACK LOG IN SIGN UP Phone Tell us your suggestions or report a problem This field is required Resolve Canonical Use this page to find the documentation for a resource given its canonical. Scope: Scope de.basisprofil.r4 1.6.0 Select a scope Any DSTU2 STU3 R4 R4B R5 You can select a scope by choosing a package or a project. hl7.fhir.r2.core DSTU2 1.0.2 hl7.fhir.r3.core STU3 3.0.2 hl7.fhir.r4.core R4 4.0.1 hl7.fhir.r4b.core R4B 4.3.0 hl7.fhir.r5.core R5 5.0.0 Select a scope to search in. If unsure you can leave it empty. Canonical: Type a canonical URL to search for. It can find partial matches. What is Canonical Resolving? Conformance resources in FHIR have a canonical URL as their unique identifier. The Simplifier resolve URL builder makes it easy to have these URLs also resolve in a regular browser. All this requires is that on your domain, you run a little script that forwards the requested URL to https://simplifier.net/resolve with the appropriate canonical URL and scope (a package or project to find this resource in) as parameters. See the full documentation here. window.addEventListener('DOMContentLoaded', (event) => { $('#3c27367e2988443da6de0101075d4ed2').on('hidden.bs.collapse', function () { $('#icon_3c27367e2988443da6de0101075d4ed2').removeClass('glyphicon-triangle-top'); $('#icon_3c27367e2988443da6de0101075d4ed2').addClass('glyphicon-triangle-bottom'); $('#href_3c27367e2988443da6de0101075d4ed2').prop('title', 'Click here to expand the panel'); }); $('#3c27367e2988443da6de0101075d4ed2').on('shown.bs.collapse', function () { $('#icon_3c27367e2988443da6de0101075d4ed2').removeClass('glyphicon-triangle-bottom'); $('#icon_3c27367e2988443da6de0101075d4ed2').addClass('glyphicon-triangle-top'); $('#href_3c27367e2988443da6de0101075d4ed2').prop('title', 'Click here to collapse the panel'); }); }); We were unable to route you to the exact resource. Below are the best matches: Basisprofil-DE-R4 http://fhir.de/ claimed base url basisprofil.de@0.2.40 http://fhir.de/StructureDefinition/patient-de-basis unclaimed canonical BasisprofilDE http://fhir.de/StructureDefinition/patient-de-basis claimed canonical"
+      },
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR"
+        }
+      ],
+      "expression": [
+        "Patient.meta.profile[0]"
+      ]
+    }
+  ]
+}

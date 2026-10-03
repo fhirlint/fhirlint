@@ -158,6 +158,29 @@ var rules = map[string]Rule{
 			"than believing a green run. fhirlint counts these separately in the\n" +
 			"summary for that reason.",
 	},
+	"validation_val_profile_unknown_error": {
+		ID:        "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR",
+		Title:     "A profile named in meta.profile could not be found, so it was not checked",
+		DefinedIn: "HL7 Validator (profile resolution)",
+		Description: "The resource claims a profile the validator has not loaded. It then\n" +
+			"tries to fetch the canonical URL from the web, which rarely\n" +
+			"succeeds, and reports the fetch error. The instance is still checked\n" +
+			"against the base resource, but none of the profile's rules ran, so\n" +
+			"a run with only this warning is not evidence of conformance.\n\n" +
+			"For http://fhir.de/ canonicals the fetch lands on Simplifier's resolve\n" +
+			"page. fhirlint shortens the quoted page to\n" +
+			"\"(response from fhir.de omitted, N characters)\".",
+		HowToFix: "Load the package that defines the profile with --ig. The canonical's\n" +
+			"host usually names it:\n\n" +
+			"  http://fhir.de/...                         --ig de.basisprofil.r4\n" +
+			"  https://fhir.kbv.de/...                    --ig kbv.basis (or the KBV module)\n" +
+			"  https://gematik.de/fhir/isik/...           --ig de.gematik.isik\n" +
+			"  https://www.medizininformatik-initiative.de/...\n" +
+			"                                             --ig de.medizininformatikinitiative.kerndatensatz.<module>\n\n" +
+			"`fhirlint profiles` lists the built-in aliases with pinned versions.\n" +
+			"For a profile of your own, point --ig at the folder that holds its\n" +
+			"StructureDefinition.",
+	},
 	"valueset_inc_too_many_codes": {
 		ID:        "VALUESET_INC_TOO_MANY_CODES",
 		Title:     "Too many codes in a ValueSet include to check them all",

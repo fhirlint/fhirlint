@@ -981,7 +981,7 @@ func toResult(oo operationOutcome, filename string) *Result {
 
 		issues = append(issues, Issue{
 			Severity:  i.Severity,
-			Message:   i.Details.Text,
+			Message:   trimFetchErrorBody(i.Details.Text),
 			Location:  loc,
 			MessageID: messageID,
 		})
