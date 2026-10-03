@@ -601,6 +601,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		defer igCleanup()
 		flagIG = append(flagIG, igDir)
 	}
+	warnSkippedIGFiles(os.Stderr, flagIG)
 
 	// Resolve profile aliases. An alias may stand for several packages, so the
 	// resolved list can be longer than what the user typed.
