@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -36,8 +37,8 @@ func PackageDir(paths []string, fhirVersion string) (dir string, cleanup func(),
 		return "", nil, fmt.Errorf("writing package.json: %w", err)
 	}
 
-	for _, src := range paths {
-		dst := filepath.Join(tmpDir, filepath.Base(src))
+	for i, src := range paths {
+		dst := filepath.Join(tmpDir, tempName(src, i))
 		if err := copyFile(src, dst); err != nil {
 			cleanup()
 			return "", nil, fmt.Errorf("copying %s: %w", src, err)
@@ -45,6 +46,84 @@ func PackageDir(paths []string, fhirVersion string) (dir string, cleanup func(),
 	}
 
 	return tmpDir, cleanup, nil
+}
+
+// tempName is the name src gets inside the temp IG. The validator loads the
+// directory as a plain folder and skips any file whose name ends in
+// template.json or template.xml (see SkippedByValidator), and two sources with
+// the same base name from different directories would overwrite each other.
+// Inserting the position before the extension avoids both while keeping the
+// original name readable in the validator's log.
+func tempName(src string, i int) string {
+	base := filepath.Base(src)
+	ext := filepath.Ext(base)
+	return fmt.Sprintf("%s.%d%s", strings.TrimSuffix(base, ext), i, ext)
+}
+
+// SkippedByValidator returns the files among local -ig entries that the
+// validator JAR drops without an error a user would see.
+//
+// When it loads an IG from a folder or a single file (not a package), its
+// IgLoader.loadResourceByVersion rejects every name ending in template.json or
+// template.xml with "Unsupported format", and loadFileWithErrorChecking only
+// logs that. A profile in such a file is never loaded, so instances claiming it
+// pass (#444, hapifhir/org.hl7.fhir.core#2682).
+//
+// The checks follow IgLoader.loadIgSource: package ids, URLs and entries that do
+// not exist are not local folders; a folder holding package.tgz, igpack.zip or
+// validator.pack is read as that archive; otherwise only the folder's top level
+// is scanned, because fhirlint never passes -recurse, and dot files are ignored.
+func SkippedByValidator(igs []string) []string {
+	var skipped []string
+	for _, ig := range igs {
+		info, err := os.Stat(ig)
+		if err != nil {
+			continue
+		}
+		if !info.IsDir() {
+			if rejectedName(filepath.Base(ig)) {
+				skipped = append(skipped, ig)
+			}
+			continue
+		}
+		if holdsArchive(ig) {
+			continue
+		}
+		entries, err := os.ReadDir(ig)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+				continue
+			}
+			if rejectedName(e.Name()) {
+				skipped = append(skipped, filepath.Join(ig, e.Name()))
+			}
+		}
+	}
+	return skipped
+}
+
+// rejectedName reports whether the validator rejects a file of this name. It
+// renames a scanned file's extension to the detected format's ("json"/"xml")
+// before the check, so the extension's case does not matter but the stem's
+// does: report-template.JSON is rejected, ReportTemplate.json is not.
+func rejectedName(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext != ".json" && ext != ".xml" {
+		return false
+	}
+	return strings.HasSuffix(strings.TrimSuffix(name, filepath.Ext(name)), "template")
+}
+
+func holdsArchive(dir string) bool {
+	for _, name := range []string{"package.tgz", "igpack.zip", "validator.pack"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // corePackageName returns the hl7.fhir.rX.core package name for the given FHIR

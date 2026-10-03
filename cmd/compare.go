@@ -109,6 +109,7 @@ func runCompare(_ *cobra.Command, _ []string) error {
 	}
 
 	igs := append([]string{leftIG, rightIG}, flagCompareIG...)
+	warnSkippedIGFiles(os.Stderr, igs)
 
 	destDir, cleanup, err := compareDestDir()
 	if err != nil {

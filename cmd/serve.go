@@ -122,6 +122,8 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
 	}
 
+	warnSkippedIGFiles(os.Stderr, flagServeIG)
+
 	cfg := validator.ServerConfig{
 		Port:                flagServePort,
 		FHIRVersion:         flagServeFHIRVersion,
