@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -55,7 +56,8 @@ type Result struct {
 
 	// ValidatorBuild is the validator's own description of itself, taken from
 	// the validator-version extension it adds to each OperationOutcome from
-	// 6.10.5 on — version, Git SHA and build date in one line. Per run in
+	// 7.0.0 on — version, Git SHA and build date in one line, without the
+	// JAR's age (see stableBuildLine). Per run in
 	// truth, per result in shape, because the JAR states it on every outcome;
 	// reporters lift it into the report's provenance once. Not serialised: the
 	// JSON report says it in one place rather than once per file, and the
@@ -965,9 +967,25 @@ func formatDuration(d time.Duration) string {
 }
 
 // extValidatorVersion is the extension the validator adds to each
-// OperationOutcome from 6.10.5 on (hapifhir/org.hl7.fhir.core#2459), carrying
-// the same version/build line it logs at start-up.
+// OperationOutcome from 7.0.0 on (hapifhir/org.hl7.fhir.core#2459), carrying
+// the same version/build line it logs at start-up. There was no 6.10.5: the
+// release that shipped it was the 7.0.0 major.
 const extValidatorVersion = "http://hl7.org/fhir/tools/StructureDefinition/validator-version"
+
+// buildAge is the trailing "(19 hours old)" of the validator's build line:
+// VersionUtil.getDurationSinceBuild, which formats days, hours, mins or ms
+// (Utilities.describeDuration) and gives "??" when the build time does not
+// parse. Negative under clock skew, so the sign is allowed.
+var buildAge = regexp.MustCompile(`\s*\((?:-?\d+ (?:days|hours|mins|ms) old|\?\?)\)\s*$`)
+
+// stableBuildLine drops the JAR's age from its build line. The age is the time
+// between the build and this run, so it made two runs with the same JAR and the
+// same input write different reports — breaking committed and golden reports,
+// report diffs, and every SARIF upload (#452). Version, Git SHA and build
+// timestamp stay: those identify the JAR.
+func stableBuildLine(s string) string {
+	return buildAge.ReplaceAllString(strings.TrimSpace(s), "")
+}
 
 func toResult(oo operationOutcome, filename string) *Result {
 	return toResultWith(oo, filename, nil)
@@ -980,7 +998,7 @@ func toResultWith(oo operationOutcome, filename string, c *messageCatalog) *Resu
 	build := ""
 	for _, ext := range oo.Extension {
 		if ext.URL == extValidatorVersion {
-			build = ext.ValueString
+			build = stableBuildLine(ext.ValueString)
 		}
 	}
 

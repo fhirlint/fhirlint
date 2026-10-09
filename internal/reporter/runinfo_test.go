@@ -14,7 +14,8 @@ import (
 
 // Every format that outlives the run says what produced it, once (#428).
 
-const build = "FHIR Validation tool Version 6.10.5 (Git# e9cb40e7b4ea). Built 2026-09-10T00:02:31.157+10:00 (6 days old)"
+// What the validator states, after fhirlint drops the JAR's age (#452).
+const build = "FHIR Validation tool Version 7.0.1 (Git# d8783284409e). Built 2026-10-08T03:33:12.303Z"
 
 var info = RunInfo{Fhirlint: "1.13.0", Validator: "6.10.4", FHIRVersion: "4.0.1"}
 
@@ -198,5 +199,35 @@ func TestDiffJSON_CarriesBothSides(t *testing.T) {
 	}
 	if got.Baseline == nil || got.Current == nil || got.Baseline.Validator != "6.10.4" || got.Current.Validator != "6.10.5" {
 		t.Errorf("sides = %+v / %+v", got.Baseline, got.Current)
+	}
+}
+
+// The result cache stores results as JSON, and the build line is not part of
+// it (json:"-"). So a fully cached run states no build line and falls back to
+// the version, and a mixed run takes it from its first uncached result —
+// either way the report says nothing that is not true of this run (#452).
+func TestRunInfo_CachedResultsCarryNoBuildLine(t *testing.T) {
+	fresh := makeResult(true)
+	fresh.ValidatorBuild = build
+
+	data, err := json.Marshal(fresh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cached validator.Result
+	if err := json.Unmarshal(data, &cached); err != nil {
+		t.Fatal(err)
+	}
+	if cached.ValidatorBuild != "" {
+		t.Fatalf("the build line survived a cache round trip: %q", cached.ValidatorBuild)
+	}
+
+	allCached := info.WithResults([]*validator.Result{&cached, &cached})
+	if allCached.ValidatorBuild != "" || allCached.validatorLine() != info.Validator {
+		t.Errorf("fully cached run: build %q, line %q; want none and the version", allCached.ValidatorBuild, allCached.validatorLine())
+	}
+	mixed := info.WithResults([]*validator.Result{&cached, fresh})
+	if mixed.ValidatorBuild != build {
+		t.Errorf("mixed run: build %q, want the uncached result's", mixed.ValidatorBuild)
 	}
 }

@@ -711,19 +711,21 @@ func TestValidateExpansionParameters(t *testing.T) {
 	}
 }
 
-// From 6.10.5 the validator states what it is on every OperationOutcome, as
+// From 7.0.0 the validator states what it is on every OperationOutcome, as
 // the validator-version extension (hapifhir/org.hl7.fhir.core#2459). A report
-// should carry the JAR's own statement when it makes one (#428).
+// should carry the JAR's own statement when it makes one (#428), without the
+// JAR's age, which changes from run to run (#452).
 func TestParseOutput_ValidatorVersionExtension(t *testing.T) {
-	const build = "FHIR Validation tool Version 6.10.5 (Git# e9cb40e7b4ea). Built 2026-09-10T00:02:31.157+10:00 (6 days old)"
-	oo := `{"resourceType":"OperationOutcome","extension":[{"url":"http://hl7.org/fhir/tools/StructureDefinition/validator-version","valueString":"` + build + `"}],"issue":[]}`
+	const stated = "FHIR Validation tool Version 7.0.1 (Git# d8783284409e). Built 2026-10-08T03:33:12.303Z (19 hours old)"
+	const build = "FHIR Validation tool Version 7.0.1 (Git# d8783284409e). Built 2026-10-08T03:33:12.303Z"
+	oo := `{"resourceType":"OperationOutcome","extension":[{"url":"http://hl7.org/fhir/tools/StructureDefinition/validator-version","valueString":"` + stated + `"}],"issue":[]}`
 
 	results, err := parseOutput([]byte(oo), []string{"a.json"}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if results[0].ValidatorBuild != build {
-		t.Errorf("ValidatorBuild = %q, want the extension's value", results[0].ValidatorBuild)
+		t.Errorf("ValidatorBuild = %q, want the extension's value without the age", results[0].ValidatorBuild)
 	}
 
 	bundle := `{"resourceType":"Bundle","entry":[{"resource":` + oo + `},{"resource":` + oo + `}]}`
@@ -733,12 +735,12 @@ func TestParseOutput_ValidatorVersionExtension(t *testing.T) {
 	}
 	for _, r := range results {
 		if r.ValidatorBuild != build {
-			t.Errorf("%s: ValidatorBuild = %q, want the extension's value", r.Filename, r.ValidatorBuild)
+			t.Errorf("%s: ValidatorBuild = %q, want the extension's value without the age", r.Filename, r.ValidatorBuild)
 		}
 	}
 }
 
-// A JAR that does not state its version — every release before 6.10.5 —
+// A JAR that does not state its version — every release before 7.0.0 —
 // leaves the field empty rather than inventing one.
 func TestParseOutput_NoValidatorVersionExtension(t *testing.T) {
 	results, err := parseOutput([]byte(`{"resourceType":"OperationOutcome","issue":[]}`), []string{"a.json"}, "")
@@ -747,5 +749,29 @@ func TestParseOutput_NoValidatorVersionExtension(t *testing.T) {
 	}
 	if results[0].ValidatorBuild != "" {
 		t.Errorf("ValidatorBuild = %q, want empty", results[0].ValidatorBuild)
+	}
+}
+
+// Every age the validator can print, and nothing else, is dropped (#452).
+func TestStableBuildLine(t *testing.T) {
+	const line = "FHIR Validation tool Version 7.0.1 (Git# d8783284409e). Built 2026-10-08T03:33:12.303Z"
+	for _, age := range []string{"(19 hours old)", "(1 days old)", "(6 days old)", "(45 mins old)", "(812 ms old)", "(-3 ms old)", "(??)"} {
+		if got := stableBuildLine(line + " " + age); got != line {
+			t.Errorf("%s: got %q, want %q", age, got, line)
+		}
+	}
+	// Same JAR, different moments: the same line.
+	if stableBuildLine(line+" (19 hours old)") != stableBuildLine(line+" (3 days old)") {
+		t.Error("two runs of one JAR give different build lines")
+	}
+	// Parentheses that are not an age stay, including the Git SHA's.
+	for _, keep := range []string{
+		line,
+		"FHIR Validation tool Version 7.0.1 (Git# d8783284409e)",
+		line + " (snapshot)",
+	} {
+		if got := stableBuildLine(keep); got != keep {
+			t.Errorf("stableBuildLine(%q) = %q, want it unchanged", keep, got)
+		}
 	}
 }
