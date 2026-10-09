@@ -326,6 +326,13 @@ func printIGTerminal(r igaudit.Report, src igSource, igErr error) int {
 			fmt.Printf("    %-*s  also on the registry, not tagged latest: %s\n",
 				width, "", strings.Join(p.UntaggedNewer, ", "))
 		}
+		// Also not a finding: the validator falls back per version and loads
+		// it. Said because "latest" above is the first registry's tag, and a pin
+		// ahead of it reads oddly without knowing where the pin lives (#451).
+		if p.PinRegistry != "" {
+			fmt.Printf("    %-*s  %s is listed only on %s, not on %s (the validator falls back to it)\n",
+				width, "", p.Version, registry.Host(p.PinRegistry), registry.Host(p.Registry))
+		}
 	}
 
 	// An unpinned IG cannot be checked against the registry, and that is worth

@@ -281,3 +281,30 @@ func assertCacheEmpty(t *testing.T, cache string) {
 		}
 	}
 }
+
+// The archive comes from whichever registry has it, so the checksum has to as
+// well. packages2.fhir.org answers for a package without listing all of its
+// versions; reading only its packument called a published checksum
+// unavailable (#451).
+func TestFetchFindsTheChecksumOnALaterRegistry(t *testing.T) {
+	archive := makeTarGz(t, []tarEntry{{name: "package/StructureDefinition-p.json", body: sdBody}})
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/demo.pkg" {
+			// Knows the package, not this version, and serves no archive for it.
+			_, _ = w.Write([]byte(`{"versions":{"0.9.0":{"dist":{"shasum":"00"}}}}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(primary.Close)
+	secondary := registryServer(t, "demo.pkg", "1.0.0", archive, sha1hex(archive))
+	d := &coverage.Downloader{Registries: []string{primary.URL, secondary.Registries[0]}, HTTP: primary.Client()}
+
+	warnings, err := d.Fetch(context.Background(), t.TempDir(), "demo.pkg", "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("the secondary publishes the checksum, want no warning, got %v", warnings)
+	}
+}

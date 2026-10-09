@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -98,11 +99,15 @@ type PackageReport struct {
 	Deprecated      bool   `json:"deprecated,omitempty"`
 	DeprecationNote string `json:"deprecationNote,omitempty"`
 
-	// Registry is the registry that answered for this package, as a base URL.
-	// The two default registries serve the same metadata for everything they
-	// both carry, so this is recorded for the day they do not, and for a
-	// package only one of them has.
+	// Registry is the first registry that answered for this package, as a base
+	// URL, and the one whose dist-tags Latest is. The versions are the union of
+	// every registry that answered (#451).
 	Registry string `json:"registry,omitempty"`
+	// PinRegistry is set when the pinned version is not listed by Registry but
+	// by a later one — the validator still loads it, through its fallback, and
+	// this says where from. packages2.fhir.org lacked the newest
+	// kerndatensatz.pros releases that packages.fhir.org serves (#451).
+	PinRegistry string `json:"pinRegistry,omitempty"`
 
 	// NotFound means no registry has such a package. That is a stronger
 	// signal than being outdated: a pin that cannot be resolved will not
@@ -210,6 +215,9 @@ func checkOne(ctx context.Context, c *Client, id string) PackageReport {
 			p.VersionMissing = true
 		}
 	}
+	if hosts := pkg.servedBy[version]; len(hosts) > 0 && !slices.Contains(hosts, from) {
+		p.PinRegistry = hosts[0]
+	}
 
 	if note, ok := pkg.deprecation(version); ok {
 		p.Deprecated = true
@@ -255,9 +263,15 @@ type packument struct {
 	DistTags struct {
 		Latest string `json:"latest"`
 	} `json:"dist-tags"`
-	Versions map[string]struct {
-		Deprecated json.RawMessage `json:"deprecated"`
-	} `json:"versions"`
+	Versions map[string]packumentVersion `json:"versions"`
+
+	// servedBy lists, per version, the registries whose packument lists it.
+	// Filled by fetch when it merges the registries' answers.
+	servedBy map[string][]string
+}
+
+type packumentVersion struct {
+	Deprecated json.RawMessage `json:"deprecated"`
 }
 
 // untaggedNewer returns the final versions this packument serves that outrank
@@ -340,8 +354,17 @@ func deprecationNote(raw json.RawMessage) (string, bool) {
 	return note, true
 }
 
-// fetch returns the packument for name and the registry it came from. The
-// error is registry.ErrNotFound only when every registry answered 404.
+// fetch returns the packument for name, merged across every registry that
+// has it, and the registry whose dist-tags it carries. The error is
+// registry.ErrNotFound only when every registry answered 404.
+//
+// Versions are the union: the validator falls back from one registry to the
+// next per version, so a version any of them serves is one it can load, and
+// packages2.fhir.org — asked first — is not a superset of packages.fhir.org
+// (#451). dist-tags come from the first registry that answered, in the
+// validator's order: the tags genuinely differ between the two hosts (as of
+// 2026-10 packages2 tags the MII 2027 ballots latest, packages.fhir.org the
+// finals), and the primary's are the ones the validator would see first.
 func (c *Client) fetch(ctx context.Context, name string) (packument, string, error) {
 	var pkg packument
 
@@ -352,16 +375,31 @@ func (c *Client) fetch(ctx context.Context, name string) (packument, string, err
 
 	// Package names are dotted identifiers, but they arrive from a file on disk
 	// and are pasted straight into a URL path, so escape rather than trust.
-	resp, from, err := registry.Get(ctx, client, c.Registries, url.PathEscape(name), "application/json")
+	answers, err := registry.GetAll(ctx, client, c.Registries, url.PathEscape(name), "application/json")
 	if err != nil {
 		return pkg, "", err
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	if err := json.NewDecoder(resp.Body).Decode(&pkg); err != nil {
-		return pkg, "", fmt.Errorf("parsing packument from %s: %w", registry.Host(from), err)
+	for i, a := range answers {
+		var one packument
+		if err := json.Unmarshal(a.Body, &one); err != nil {
+			return pkg, "", fmt.Errorf("parsing packument from %s: %w", registry.Host(a.Registry), err)
+		}
+		if i == 0 {
+			pkg.DistTags = one.DistTags
+		}
+		for v, meta := range one.Versions {
+			if pkg.Versions == nil {
+				pkg.Versions = map[string]packumentVersion{}
+				pkg.servedBy = map[string][]string{}
+			}
+			if _, seen := pkg.Versions[v]; !seen {
+				pkg.Versions[v] = meta
+			}
+			pkg.servedBy[v] = append(pkg.servedBy[v], a.Registry)
+		}
 	}
-	return pkg, from, nil
+	return pkg, answers[0].Registry, nil
 }
 
 // CompareVersions orders two package versions, returning -1, 0 or 1 along with

@@ -99,27 +99,30 @@ func (d *Downloader) Fetch(ctx context.Context, cacheRoot, name, version string)
 // registry itself, since the digest and the archive come from the same source —
 // stating that plainly is more useful than implying a guarantee it cannot give.
 func (d *Downloader) publishedSHA(ctx context.Context, name, version string) (string, error) {
-	resp, _, err := registry.Get(ctx, d.client(), d.registries(), url.PathEscape(name), "application/json")
+	// Every registry, not the first that answers: packages2.fhir.org answers
+	// for a package without listing all of its versions, and download takes the
+	// archive from whichever registry has it (#451).
+	answers, err := registry.GetAll(ctx, d.client(), d.registries(), url.PathEscape(name), "application/json")
 	if err != nil {
 		return "", fmt.Errorf("fetching package metadata: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	var doc struct {
-		Versions map[string]struct {
-			Dist struct {
-				Shasum string `json:"shasum"`
-			} `json:"dist"`
-		} `json:"versions"`
+	for _, a := range answers {
+		var doc struct {
+			Versions map[string]struct {
+				Dist struct {
+					Shasum string `json:"shasum"`
+				} `json:"dist"`
+			} `json:"versions"`
+		}
+		if err := json.Unmarshal(a.Body, &doc); err != nil {
+			return "", fmt.Errorf("parsing package metadata from %s: %w", registry.Host(a.Registry), err)
+		}
+		if v, ok := doc.Versions[version]; ok && v.Dist.Shasum != "" {
+			return strings.ToLower(v.Dist.Shasum), nil
+		}
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
-		return "", fmt.Errorf("parsing package metadata: %w", err)
-	}
-	v, ok := doc.Versions[version]
-	if !ok || v.Dist.Shasum == "" {
-		return "", errors.New("no checksum published for this version")
-	}
-	return strings.ToLower(v.Dist.Shasum), nil
+	return "", errors.New("no checksum published for this version")
 }
 
 func (d *Downloader) download(ctx context.Context, name, version string) ([]byte, error) {

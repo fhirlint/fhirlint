@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -86,6 +87,65 @@ func Get(ctx context.Context, client *http.Client, registries []string, path, ac
 		return nil, "", failure
 	}
 	return nil, "", ErrNotFound
+}
+
+// maxMetadataBytes bounds a packument read by GetAll. The largest packuments on
+// the registry (hl7.fhir.r4.core and friends) are well under a megabyte.
+const maxMetadataBytes = 16 << 20
+
+// Answer is one registry's 200 response to GetAll, read into memory.
+type Answer struct {
+	Registry string
+	Body     []byte
+}
+
+// GetAll requests path from every registry and returns each 200 answer, in
+// registry order.
+//
+// Get is right for a download: the validator takes the first host that has the
+// file, and so does fhirlint. It is wrong for metadata. packages2.fhir.org
+// answers for a package as soon as it carries it at all, but it is not a
+// superset of packages.fhir.org — on 2026-10-08 it lacked the five newest
+// finals of kerndatensatz.pros and fhir.r4.ukcore.stu2#2.1.0 — and stopping at
+// its 200 reported versions the validator loads without trouble as missing
+// (#451).
+//
+// The error follows Get: ErrNotFound only when every registry answered 404, and
+// a remembered failure when none answered at all. A registry that fails while
+// another answers is left out of the result, not turned into an error: the
+// answers are still right about what they contain, only possibly incomplete.
+func GetAll(ctx context.Context, client *http.Client, registries []string, path, accept string) ([]Answer, error) {
+	if len(registries) == 0 {
+		registries = Default()
+	}
+	var (
+		answers []Answer
+		failure error
+	)
+	for _, base := range registries {
+		resp, _, err := Get(ctx, client, []string{base}, path, accept)
+		if errors.Is(err, ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			failure = err
+			continue
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxMetadataBytes))
+		_ = resp.Body.Close()
+		if err != nil {
+			failure = fmt.Errorf("%s: %w", Host(base), err)
+			continue
+		}
+		answers = append(answers, Answer{Registry: base, Body: body})
+	}
+	if len(answers) > 0 {
+		return answers, nil
+	}
+	if failure != nil {
+		return nil, failure
+	}
+	return nil, ErrNotFound
 }
 
 // Host renders a registry URL the way a person names it — "packages2.fhir.org"
