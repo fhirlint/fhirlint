@@ -32,7 +32,7 @@ jobs:
       # Pinned, not @latest: a security job that can change under us overnight
       # is the wrong shape, which is what #414 ran into when x/vuln v1.8.0
       # raised its own go directive past the module's. go.mod now asks for
-      # 1.26.8, so v1.8.0 builds. Raise this pin together with go.mod.
+      # 1.26.9, so v1.8.0 builds. Raise this pin together with go.mod.
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.8.0

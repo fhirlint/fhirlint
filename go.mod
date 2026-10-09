@@ -1,6 +1,6 @@
 module github.com/fhirlint/fhirlint
 
-go 1.26.8
+go 1.26.9
 
 require (
 	github.com/ProtonMail/go-crypto v1.5.2
