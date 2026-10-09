@@ -33,7 +33,7 @@ type KeyOpts struct {
 	// ValidatorVersion is the *effective* JAR version, not the
 	// --validator-version flag. An empty flag means "whatever is installed",
 	// and `fhirlint update` changes that underneath an unchanged command line.
-	// Use validator.EffectiveValidatorVersion to resolve it.
+	// --jar replaces both. Use validator.RunValidatorVersion to resolve it.
 	ValidatorVersion string
 
 	// Options is the run's full option set. Fields that cannot change the

@@ -167,7 +167,7 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	if err := store.WriteManifest(txreplay.Manifest{
 		Upstream:            upstream,
 		FHIRVersion:         flagTxWarmFHIRVersion,
-		ValidatorVersion:    validator.EffectiveValidatorVersion(viper.GetString("validator-version")),
+		ValidatorVersion:    validator.RunValidatorVersion(opts),
 		ExpansionParameters: expansionFingerprint,
 		Recorded:            time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {

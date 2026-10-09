@@ -484,3 +484,32 @@ func TestRunValidatorVersion(t *testing.T) {
 		t.Errorf("unreadable --jar: got %q, want empty", got)
 	}
 }
+
+// With a validator in the cache, --jar must still win: asking the cache with
+// --jar set wrote the cached version into the lock and the tx manifest, and
+// put it into the result cache key (#450).
+func TestVersionFor_JARBeatsCacheAndPin(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(cache.DirEnvVar, dir)
+	if err := saveValidatorVersion("6.10.3"); err != nil {
+		t.Fatal(err)
+	}
+	custom := writeJARWithManifest(t, t.TempDir(), "7.0.1")
+
+	cases := []struct {
+		name, jar, pin, want string
+	}{
+		{"--jar beats the cache", custom, "", "7.0.1"},
+		{"--jar beats a pin", custom, "6.10.4", "7.0.1"},
+		{"pin beats the cache", "", "6.10.4", "6.10.4"},
+		{"cache when nothing else is given", "", "", "6.10.3"},
+		{"unreadable --jar is unknown, not the cache's answer", filepath.Join(dir, "missing.jar"), "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := VersionFor(tc.jar, tc.pin); got != tc.want {
+				t.Errorf("VersionFor(%q, %q) = %q, want %q", tc.jar, tc.pin, got, tc.want)
+			}
+		})
+	}
+}

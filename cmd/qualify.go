@@ -116,7 +116,7 @@ func runQualify(_ *cobra.Command, _ []string) error {
 
 	report := &qualify.Report{
 		ToolVersion: fhirlintVersion(),
-		JARVersion:  validator.ValidatorVersion(),
+		JARVersion:  validator.VersionFor(jarPath, ""),
 		JARSHA256:   jarSHA256(jarPath),
 		FHIRVersion: flagQualifyFHIRVersion,
 		Terminology: terminologyLabel(flagQualifyTxServer),

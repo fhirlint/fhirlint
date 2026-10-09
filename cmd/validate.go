@@ -683,7 +683,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		opts.TxCache = "n/a"
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
 		manifest := store.ReadManifest()
-		warnValidatorVersionDrift(os.Stderr, manifest, validator.EffectiveValidatorVersion(viper.GetString("validator-version")))
+		warnValidatorVersionDrift(os.Stderr, manifest, validator.VersionFor(viper.GetString("jar"), viper.GetString("validator-version")))
 		if err := warnExpansionParametersDrift(os.Stderr, manifest, flagExpansionParameters); err != nil {
 			return err
 		}
@@ -1073,11 +1073,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Handle fhirlint.lock: verify existing lock, or write/update when --lock is set.
 	allIGs := collectAllIGs(opts.IGs, overrides)
+	running := validator.RunValidatorVersion(opts)
 	if flagLock {
-		if lerr := runLockWrite(allIGs); lerr != nil {
+		if lerr := runLockWrite(allIGs, running); lerr != nil {
 			return lerr
 		}
-	} else if lerr := runLockVerify(allIGs); lerr != nil {
+	} else if lerr := runLockVerify(allIGs, running); lerr != nil {
 		return lerr
 	}
 
@@ -1161,7 +1162,7 @@ func collectAllIGs(base []string, overrides []configOverride) []string {
 
 // runLockWrite writes or updates fhirlint.lock with current IG hashes and the
 // validator version in use.
-func runLockWrite(igs []string) error {
+func runLockWrite(igs []string, running string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
@@ -1176,7 +1177,6 @@ func runLockWrite(igs []string) error {
 	// Record the validator too, so the lock covers every input that can change
 	// the result. This is also why an unchanged package set no longer short-
 	// circuits: the validator may still need recording.
-	running := validator.ValidatorVersion()
 	validatorChanged := running != "" && lf.Validator != running
 	if validatorChanged {
 		lf.Validator = running
@@ -1194,7 +1194,7 @@ func runLockWrite(igs []string) error {
 
 // runLockVerify verifies IGs and the validator version against fhirlint.lock
 // when the file exists.
-func runLockVerify(igs []string) error {
+func runLockVerify(igs []string, running string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
@@ -1202,7 +1202,7 @@ func runLockVerify(igs []string) error {
 	if lf == nil {
 		return nil
 	}
-	if err := iglock.VerifyValidator(lf, validator.ValidatorVersion(), os.Stderr); err != nil {
+	if err := iglock.VerifyValidator(lf, running, os.Stderr); err != nil {
 		return err
 	}
 	return iglock.Verify(lf, igs, os.Stderr)
@@ -1738,6 +1738,20 @@ func warnValidatorVersionDrift(w io.Writer, m *txreplay.Manifest, current string
 		m.ValidatorVersion, current)
 }
 
+// cacheKeyValidator is the validator identity in the result cache key. It is
+// the version that will run, and for a --jar whose manifest names no version,
+// the path: two unidentifiable JARs must not share entries, and a needless
+// miss is the cheaper mistake.
+func cacheKeyValidator(opts validator.Options) string {
+	if v := validator.RunValidatorVersion(opts); v != "" {
+		return v
+	}
+	if opts.JARPath != "" {
+		return "jar:" + opts.JARPath
+	}
+	return ""
+}
+
 // warnBaselineIDDrift explains findings that missed the baseline only because
 // the validator no longer states the message id they were recorded under.
 // Validator 7.0.x drops or changes the id on many terminology issues (#449,
@@ -2119,8 +2133,9 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		FhirlintVersion: fhirlintVersion(),
 		// The version that will actually run, not the flag: an unset
 		// --validator-version means "whatever is installed", which `fhirlint
-		// update` changes without the command line changing (#417).
-		ValidatorVersion:    validator.EffectiveValidatorVersion(opts.ValidatorVersion),
+		// update` changes without the command line changing (#417), and --jar
+		// replaces both (#450).
+		ValidatorVersion:    cacheKeyValidator(opts),
 		Options:             opts,
 		ExpansionParameters: expansionFingerprint,
 		FHIRSettings:        settingsFingerprint,
