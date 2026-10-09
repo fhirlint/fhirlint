@@ -147,3 +147,66 @@ func TestHosts(t *testing.T) {
 		t.Errorf("Host = %q", got)
 	}
 }
+
+func getAll(t *testing.T, registries []string) ([]registry.Answer, error) {
+	t.Helper()
+	return registry.GetAll(context.Background(), http.DefaultClient, registries, "some.pkg", "application/json")
+}
+
+// Metadata needs every registry, not the first that answers: packages2 is not
+// a superset of packages.fhir.org (#451).
+func TestGetAll_AsksEveryRegistryInOrder(t *testing.T) {
+	a := server(t, http.StatusOK, "from a")
+	b := server(t, http.StatusOK, "from b")
+
+	answers, err := getAll(t, []string{a.URL, b.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(answers) != 2 || string(answers[0].Body) != "from a" || string(answers[1].Body) != "from b" ||
+		answers[0].Registry != a.URL || answers[1].Registry != b.URL {
+		t.Errorf("want both answers in registry order, got %+v", answers)
+	}
+}
+
+func TestGetAll_SkipsA404(t *testing.T) {
+	missing := server(t, http.StatusNotFound, "")
+	b := server(t, http.StatusOK, "from b")
+
+	answers, err := getAll(t, []string{missing.URL, b.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(answers) != 1 || answers[0].Registry != b.URL {
+		t.Errorf("want only b's answer, got %+v", answers)
+	}
+}
+
+// A registry that fails next to one that answers leaves the answer standing:
+// it is right about what it contains, only possibly incomplete.
+func TestGetAll_AFailureNextToAnAnswerIsNotAnError(t *testing.T) {
+	down := server(t, http.StatusInternalServerError, "")
+	b := server(t, http.StatusOK, "from b")
+
+	answers, err := getAll(t, []string{down.URL, b.URL})
+	if err != nil {
+		t.Fatalf("want b's answer and no error, got %v", err)
+	}
+	if len(answers) != 1 || answers[0].Registry != b.URL {
+		t.Errorf("want only b's answer, got %+v", answers)
+	}
+}
+
+func TestGetAll_NotFoundOnlyWhenEveryRegistrySays404(t *testing.T) {
+	a := server(t, http.StatusNotFound, "")
+	b := server(t, http.StatusNotFound, "")
+	if _, err := getAll(t, []string{a.URL, b.URL}); !errors.Is(err, registry.ErrNotFound) {
+		t.Errorf("every registry said 404: got %v, want ErrNotFound", err)
+	}
+
+	down := server(t, http.StatusInternalServerError, "")
+	_, err := getAll(t, []string{a.URL, down.URL})
+	if err == nil || errors.Is(err, registry.ErrNotFound) {
+		t.Errorf("a 404 next to a failure: got %v, want the failure", err)
+	}
+}

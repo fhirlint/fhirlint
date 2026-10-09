@@ -486,3 +486,51 @@ func TestNewClientAsksTheValidatorsRegistriesInOrder(t *testing.T) {
 		t.Errorf("Registries = %v, want packages2 first and packages.fhir.org second, like the JAR", c.Registries)
 	}
 }
+
+// packages2.fhir.org answers for kerndatensatz.pros but lists versions only up
+// to 2026.3.0, while packages.fhir.org serves up to 2026.7.0 — and the
+// validator loads 2026.7.0 through its fallback. Stopping at the first answer
+// called 2026.3.0 current and 2026.7.0 missing (#451).
+func TestAuditMergesVersionsAcrossRegistries(t *testing.T) {
+	const name = "de.medizininformatikinitiative.kerndatensatz.pros"
+	primary := packumentServer(t, map[string]string{
+		name: packument("2026.3.0", "2026.0.1", "2026.2.0", "2026.3.0"),
+	})
+	secondary := packumentServer(t, map[string]string{
+		name: packument("2026.7.0", "2026.0.1", "2026.2.0", "2026.3.0", "2026.4.1", "2026.7.0"),
+	})
+	c := &igaudit.Client{Registries: []string{primary.URL, secondary.URL}, HTTP: primary.Client()}
+
+	r := igaudit.Audit(context.Background(), c, []string{name + "#2026.3.0", name + "#2026.7.0"})
+
+	newest := findPackage(t, r, name+"#2026.7.0")
+	if newest.VersionMissing || newest.IsProblem() {
+		t.Errorf("a version only the secondary lists is not missing: %+v", newest)
+	}
+	if newest.PinRegistry != secondary.URL {
+		t.Errorf("PinRegistry = %q, want the secondary %q", newest.PinRegistry, secondary.URL)
+	}
+
+	old := findPackage(t, r, name+"#2026.3.0")
+	if old.PinRegistry != "" {
+		t.Errorf("a version the tag's registry lists needs no PinRegistry, got %q", old.PinRegistry)
+	}
+	// The tag is the primary's: that is the one the validator sees first.
+	if old.Latest != "2026.3.0" || old.Registry != primary.URL {
+		t.Errorf("Latest = %q from %q, want the primary's 2026.3.0", old.Latest, old.Registry)
+	}
+	// What the primary does not list still shows up, as untagged-newer.
+	mustEqualVersions(t, "UntaggedNewer", old.UntaggedNewer, []string{"2026.4.1", "2026.7.0"})
+}
+
+// A version listed by neither registry is still missing.
+func TestAuditMergedVersionMissing(t *testing.T) {
+	primary := packumentServer(t, map[string]string{"pkg": packument("1.0.0", "1.0.0")})
+	secondary := packumentServer(t, map[string]string{"pkg": packument("1.1.0", "1.0.0", "1.1.0")})
+	c := &igaudit.Client{Registries: []string{primary.URL, secondary.URL}, HTTP: primary.Client()}
+
+	p := findPackage(t, igaudit.Audit(context.Background(), c, []string{"pkg#2.0.0"}), "pkg#2.0.0")
+	if !p.VersionMissing {
+		t.Errorf("want VersionMissing for a version no registry lists, got %+v", p)
+	}
+}
