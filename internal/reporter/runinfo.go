@@ -20,7 +20,7 @@ type RunInfo struct {
 	// the cache, the pin or the JAR manifest.
 	Validator string `json:"validator,omitempty"`
 	// ValidatorBuild is the JAR's own statement of what it is — version, Git
-	// SHA and build date — which only validators from 6.10.5 on make. When
+	// SHA and build date — which only validators from 7.0.0 on make. When
 	// present it is the better answer, because it is the JAR's, not ours.
 	ValidatorBuild string `json:"validatorBuild,omitempty"`
 	// FHIRVersion is the FHIR release the run validated against.
