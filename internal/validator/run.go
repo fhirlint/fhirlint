@@ -446,16 +446,28 @@ func checkOptionsSupported(opts Options, jarVersion string) error {
 }
 
 // RunValidatorVersion reports the version of the JAR a run with opts executes,
-// for a report to say what produced it: the manifest of --jar / FHIRLINT_JAR
-// when one is set, otherwise the pin or whatever is cached. Empty when it
-// cannot be told, never a placeholder — a report should omit the field rather
-// than assert "unknown".
+// for a report to say what produced it. See VersionFor.
 func RunValidatorVersion(opts Options) string {
+	return VersionFor(opts.JARPath, opts.ValidatorVersion)
+}
+
+// VersionFor reports the version of the validator a command will execute: the
+// manifest of jarPath (--jar / FHIRLINT_JAR) when one is set, otherwise the
+// pin, otherwise whatever is cached. Empty when it cannot be told, never a
+// placeholder — a caller should omit or skip rather than record "unknown".
+//
+// Everything that records or compares the validator version goes through
+// this: the report, the lock file, a tx recording's manifest, the replay drift
+// check, qualify and the result cache key. ValidatorVersion alone answers a
+// different question — what is in the cache — and asking it with --jar set
+// wrote the cached version into the lock and served a cached result from
+// another validator (#450).
+func VersionFor(jarPath, pinned string) string {
 	v := ""
-	if opts.JARPath != "" {
-		v = jarVersion(opts.JARPath)
+	if jarPath != "" {
+		v = jarVersion(jarPath)
 	} else {
-		v = EffectiveValidatorVersion(opts.ValidatorVersion)
+		v = EffectiveValidatorVersion(pinned)
 	}
 	if v == "unknown" {
 		return ""
