@@ -199,6 +199,12 @@ type Issue struct {
 	// MessageID is the HL7 message identifier for the finding (e.g. "dom-6").
 	MessageID string
 
+	// MessageIDInferred reports that the validator did not state MessageID and
+	// fhirlint recovered it by matching Message against the validator's own
+	// message templates. Validator 7.0.x leaves the id off many terminology
+	// issues.
+	MessageIDInferred bool
+
 	// Redacted reports that Options.Redact removed this finding's message text.
 	// Carried through so a stripped finding can never be mistaken for one the
 	// validator described that tersely.
@@ -357,11 +363,12 @@ func toPublicResult(r *validator.Result) *Result {
 	issues := make([]Issue, len(r.Issues))
 	for i, iss := range r.Issues {
 		issues[i] = Issue{
-			Severity:  iss.Severity,
-			Message:   iss.Message,
-			Location:  iss.Location,
-			MessageID: iss.MessageID,
-			Redacted:  iss.Redacted,
+			Severity:          iss.Severity,
+			Message:           iss.Message,
+			Location:          iss.Location,
+			MessageID:         iss.MessageID,
+			MessageIDInferred: iss.MessageIDInferred,
+			Redacted:          iss.Redacted,
 		}
 	}
 	return &Result{

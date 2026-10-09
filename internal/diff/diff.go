@@ -18,6 +18,10 @@ type Issue struct {
 	MessageID string `json:"messageId"`
 	Location  string `json:"location"`
 	Message   string `json:"message"`
+
+	// MessageIDInferred carries validator.Issue.MessageIDInferred: fhirlint
+	// recovered the id from the message text (#449).
+	MessageIDInferred bool `json:"messageIdInferred,omitempty"`
 }
 
 // Result holds the outcome of comparing a baseline run against a current run.
@@ -54,6 +58,7 @@ func Compute(baseline, current []*validator.Result, minSeverity string) *Result 
 			res.Resolved = append(res.Resolved, base[len(cur):]...)
 		}
 	}
+	pairInferredIDs(res)
 
 	sortIssues(res.New)
 	sortIssues(res.Resolved)
@@ -74,15 +79,52 @@ func groupByKey(results []*validator.Result, minSeverity string) map[string][]Is
 			}
 			key := file + "\x00" + iss.MessageID + "\x00" + normalizeLocation(iss.Location)
 			out[key] = append(out[key], Issue{
-				File:      file,
-				Severity:  iss.Severity,
-				MessageID: iss.MessageID,
-				Location:  iss.Location,
-				Message:   iss.Message,
+				File:              file,
+				Severity:          iss.Severity,
+				MessageID:         iss.MessageID,
+				Location:          iss.Location,
+				Message:           iss.Message,
+				MessageIDInferred: iss.MessageIDInferred,
 			})
 		}
 	}
 	return out
+}
+
+// pairInferredIDs moves a new and a resolved issue to unchanged when they are
+// the same finding with and without an inferred message id: one side's id was
+// recovered from the text (#449), the other side has none, and file and
+// location agree. That is a report from before the inference compared with one
+// from after it, or a JAR whose message bundle could not be read; either way
+// the validator said the same thing, at the same severity, at the same place.
+func pairInferredIDs(res *Result) {
+	if len(res.New) == 0 || len(res.Resolved) == 0 {
+		return
+	}
+	matches := func(a, b Issue) bool {
+		return a.File == b.File && a.Severity == b.Severity &&
+			normalizeLocation(a.Location) == normalizeLocation(b.Location) &&
+			((a.MessageIDInferred && b.MessageID == "") || (b.MessageIDInferred && a.MessageID == ""))
+	}
+	var stillNew []Issue
+	for _, n := range res.New {
+		paired := false
+		for j, r := range res.Resolved {
+			if matches(n, r) {
+				res.Resolved = append(res.Resolved[:j], res.Resolved[j+1:]...)
+				res.Unchanged = append(res.Unchanged, n)
+				paired = true
+				break
+			}
+		}
+		if !paired {
+			stillNew = append(stillNew, n)
+		}
+	}
+	if stillNew == nil {
+		stillNew = []Issue{}
+	}
+	res.New = stillNew
 }
 
 // normalizeLocation strips the " (line X, col Y)" suffix so the key stays stable

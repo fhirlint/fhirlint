@@ -192,6 +192,7 @@ func RunMultipleViaServer(serverURL string, paths []string, opts Options) ([]*Re
 		timeout = 5 * time.Minute
 	}
 	client := &http.Client{Timeout: timeout}
+	catalog := messageCatalogFor(opts.JARPath)
 
 	results := make([]*Result, 0, len(paths))
 	for _, p := range paths {
@@ -199,7 +200,7 @@ func RunMultipleViaServer(serverURL string, paths []string, opts Options) ([]*Re
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %w", p, err)
 		}
-		res, err := validateBytesViaServer(client, serverURL, content, p, opts.Profiles)
+		res, err := validateBytesViaServer(client, serverURL, content, p, opts.Profiles, catalog)
 		if err != nil {
 			return nil, err
 		}
@@ -217,12 +218,12 @@ func ValidateBytesViaServer(serverURL string, content []byte, label string, opts
 	if timeout <= 0 {
 		timeout = 5 * time.Minute
 	}
-	return validateBytesViaServer(&http.Client{Timeout: timeout}, serverURL, content, label, opts.Profiles)
+	return validateBytesViaServer(&http.Client{Timeout: timeout}, serverURL, content, label, opts.Profiles, messageCatalogFor(opts.JARPath))
 }
 
 // validateBytesViaServer posts one resource to the server's /validateResource
 // endpoint and parses the returned OperationOutcome into a Result.
-func validateBytesViaServer(client *http.Client, serverURL string, resource []byte, label string, profiles []string) (*Result, error) {
+func validateBytesViaServer(client *http.Client, serverURL string, resource []byte, label string, profiles []string, catalog *messageCatalog) (*Result, error) {
 	u, err := url.Parse(strings.TrimRight(serverURL, "/") + "/validateResource")
 	if err != nil {
 		return nil, fmt.Errorf("invalid server URL %q: %w", serverURL, err)
@@ -261,7 +262,7 @@ func validateBytesViaServer(client *http.Client, serverURL string, resource []by
 		return nil, fmt.Errorf("validator server returned HTTP %d for %s: %s", resp.StatusCode, label, strings.TrimSpace(string(body)))
 	}
 
-	parsed, err := parseOutput(body, []string{label}, "")
+	parsed, err := parseOutputWith(body, []string{label}, "", catalog)
 	if err != nil {
 		return nil, err
 	}

@@ -55,7 +55,7 @@ func TestValidateBytesViaServer(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	res, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`{"resourceType":"Patient"}`), "patient.json", []string{"http://example.org/Foo"})
+	res, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`{"resourceType":"Patient"}`), "patient.json", []string{"http://example.org/Foo"}, nil)
 	if err != nil {
 		t.Fatalf("validateBytesViaServer: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestValidateBytesViaServerXMLContentType(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`  <Patient/>`), "p.xml", nil); err != nil {
+	if _, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`  <Patient/>`), "p.xml", nil, nil); err != nil {
 		t.Fatalf("validateBytesViaServer: %v", err)
 	}
 	if gotContentType != "application/fhir+xml" {
@@ -101,7 +101,7 @@ func TestValidateBytesViaServerHTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`{}`), "x.json", nil); err == nil {
+	if _, err := validateBytesViaServer(srv.Client(), srv.URL, []byte(`{}`), "x.json", nil, nil); err == nil {
 		t.Fatal("expected error on HTTP 500")
 	}
 }

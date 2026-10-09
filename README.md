@@ -1116,6 +1116,8 @@ Issues recorded in the baseline are suppressed on subsequent runs. New issues th
 
 Commit `fhirlint-baseline.json` to version control so the suppressed issues are visible and reviewable by the team.
 
+Baselines match findings by message ID. Validator 7.0.x drops the ID from many terminology issues. fhirlint recovers it from the message text (marked `"messageIdInferred": true`) and warns when a finding misses the baseline only because its ID changed. See [Message IDs and validator 7.0](docs/baseline.md#message-ids-and-validator-70).
+
 You can also set the baseline file in `fhirlint.yml`:
 
 ```yaml
