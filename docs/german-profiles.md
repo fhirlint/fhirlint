@@ -28,7 +28,7 @@ fhirlint profiles
 |-------|-----------|--------|
 | `kbv-basis` | `kbv.basis#1.9.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
 | `kbv-patient` | `kbv.basis#1.9.0` | KBV Patient profile specifically |
-| `mii` | all 12 packages below | MII core dataset, complete |
+| `mii` | all 16 packages below | MII core dataset, complete |
 | `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` | Patient, Encounter, Condition, Procedure, Vitalstatus — replaces person/fall/diagnose/prozedur |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` | Medication, MedicationStatement, … |
@@ -41,6 +41,10 @@ fhirlint profiles
 | `mii-studie` | `de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2` | Clinical study metadata |
 | `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` | Microbiology |
 | `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` | Imaging |
+| `mii-dokument` | `de.medizininformatikinitiative.kerndatensatz.dokument#2026.0.1` | Clinical documents (DocumentReference) |
+| `mii-mtb` | `de.medizininformatikinitiative.kerndatensatz.mtb#2026.0.1` | Molecular tumour board: findings, recommendations, therapy plans |
+| `mii-pros` | `de.medizininformatikinitiative.kerndatensatz.pros#2026.7.0` | Patient-reported outcomes: questionnaires (PHQ, GAD-7, …) and scores |
+| `mii-seltene` | `de.medizininformatikinitiative.kerndatensatz.seltene#2026.0.1` | Rare diseases: diagnoses, family history, care plans |
 | `diga` | `kbv.mio.diga#1.1.0` | KBV MIO DiGA Toolkit profiles |
 | `isik` | `de.gematik.isik#6.0.0` | gematik ISiK, one package: 178 profiles across 39 resource types |
 
