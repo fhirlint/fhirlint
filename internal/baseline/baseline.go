@@ -127,36 +127,74 @@ func Write(path string, bf *BaselineFile) error {
 // Returns the total number of stale occurrences (baseline entries that were not
 // matched by any active issue — these are issues that have already been fixed).
 func Apply(results []*validator.Result, bf *BaselineFile) int {
+	stale, _ := ApplyReport(results, bf)
+	return stale
+}
+
+// ApplyReport is Apply, and also counts the active issues that probably only
+// missed the baseline because their message id changed: an issue without a
+// validator-stated id, at a file and location where a baseline entry went
+// unmatched. Validator 7.0.x drops or changes ids on terminology issues
+// (#449), and without this the result is a silent "new finding" plus a stale
+// entry that look unrelated.
+func ApplyReport(results []*validator.Result, bf *BaselineFile) (stale, drifted int) {
 	remaining := make(map[string]int, len(bf.Entries))
 	for _, e := range bf.Entries {
 		k := entryKey(e.File, e.MessageID, e.Location)
 		remaining[k] += e.Count
 	}
 
+	var unmatched []unmatchedIssue
 	for _, r := range results {
 		f := relPath(r.Filename)
 		var active []validator.Issue
 		for _, issue := range r.Issues {
 			loc := normalizeLocation(issue.Location)
 			k := entryKey(f, issue.MessageID, loc)
+			// An id fhirlint inferred (#449) was empty when the baseline was
+			// written by an older fhirlint, so the empty-id entry is the same
+			// finding.
+			if remaining[k] == 0 && issue.MessageIDInferred {
+				k = entryKey(f, "", loc)
+			}
 			if remaining[k] > 0 {
 				remaining[k]--
 				issue.SuppressReason = "baseline"
 				r.Suppressed = append(r.Suppressed, issue)
 			} else {
 				active = append(active, issue)
+				if issue.MessageID == "" || issue.MessageIDInferred {
+					unmatched = append(unmatched, unmatchedIssue{f, loc})
+				}
 			}
 		}
 		r.Issues = active
 		r.Valid = issuesValid(r.Issues)
 	}
 
-	stale := 0
+	byPlace := make(map[string][]string, len(remaining))
+	for _, e := range bf.Entries {
+		k := entryKey(e.File, e.MessageID, e.Location)
+		p := entryKey(e.File, "", e.Location)
+		byPlace[p] = append(byPlace[p], k)
+	}
+	for _, u := range unmatched {
+		for _, k := range byPlace[entryKey(u.file, "", u.location)] {
+			if remaining[k] > 0 {
+				remaining[k]--
+				drifted++
+				break
+			}
+		}
+	}
+
 	for _, v := range remaining {
 		stale += v
 	}
-	return stale
+	return stale + drifted, drifted
 }
+
+type unmatchedIssue struct{ file, location string }
 
 func issuesValid(issues []validator.Issue) bool {
 	for _, iss := range issues {

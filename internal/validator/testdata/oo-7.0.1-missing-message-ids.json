@@ -1,0 +1,479 @@
+{
+  "resourceType": "OperationOutcome",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/tools/StructureDefinition/validator-version",
+      "valueString": "FHIR Validation tool Version 7.0.1 (Git# d8783284409e). Built 2026-10-08T03:33:12.303Z (20 hours old)"
+    },
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-file",
+      "valueString": "Medication-149e683b-729a-41e2-a3ce-b21f4a2b55e2.json"
+    }
+  ],
+  "issue": [
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 29
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 24
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "InstanceValidator"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "Terminology_TX_ValueSet_NotFound"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "code-invalid",
+      "details": {
+        "text": "ValueSet 'https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE' not found"
+      },
+      "expression": [
+        "Medication.extension[1].value.ofType(code)"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system http://fhir.de/CodeSystem/ifa/pzn|0.2 was not found"
+      },
+      "expression": [
+        "Medication.code"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://fhir.de/CodeSystem/ifa/pzn' version '0.2' could not be found, so the code cannot be validated. Valid versions: []"
+      },
+      "expression": [
+        "Medication.code.coding[0].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system http://snomed.info/sct|http://snomed.info/sct/11000274103/version/20260515 was not found"
+      },
+      "expression": [
+        "Medication.code"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://snomed.info/sct' version 'http://snomed.info/sct/11000274103/version/20260515' could not be found, so the code cannot be validated. Valid versions: [http://snomed.info/sct/11000274103/version/20251115, http://snomed.info/sct/11000274103/version/20260515, http://snomed.info/sct/11000274103/version/20260815]"
+      },
+      "expression": [
+        "Medication.code.coding[1].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system http://fhir.de/CodeSystem/bfarm/atc|2026 was not found"
+      },
+      "expression": [
+        "Medication.code"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 32
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://fhir.de/CodeSystem/bfarm/atc' version '2026' could not be found, so the code cannot be validated. Valid versions: [2026]"
+      },
+      "expression": [
+        "Medication.code.coding[2].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM|1.15 was not found"
+      },
+      "expression": [
+        "Medication.form"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM' version '1.15' could not be found, so the code cannot be validated. Valid versions: []"
+      },
+      "expression": [
+        "Medication.form.coding[0].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system http://snomed.info/sct|http://snomed.info/sct/11000274103/version/20260515 was not found"
+      },
+      "expression": [
+        "Medication.form"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://snomed.info/sct' version 'http://snomed.info/sct/11000274103/version/20260515' could not be found, so the code cannot be validated. Valid versions: [http://snomed.info/sct/11000274103/version/20251115, http://snomed.info/sct/11000274103/version/20260515, http://snomed.info/sct/11000274103/version/20260815]"
+      },
+      "expression": [
+        "Medication.form.coding[1].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "Unable to check whether the code is in the value set '' because the code system http://standardterms.edqm.eu was not found"
+      },
+      "expression": [
+        "Medication.form"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 55
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 4
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://standardterms.edqm.eu' version 'null' could not be found, so the code cannot be validated. Valid versions: [5 February 2025]"
+      },
+      "expression": [
+        "Medication.form.coding[2].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 92
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 8
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "TerminologyEngine"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "UNKNOWN_CODESYSTEM"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "http://hl7.org/fhir/StructureDefinition/Medication|4.0.1"
+        }
+      ],
+      "severity": "warning",
+      "code": "not-found",
+      "details": {
+        "text": "A definition for CodeSystem 'http://fhir.de/CodeSystem/ask' could not be found, so the code cannot be validated"
+      },
+      "expression": [
+        "Medication.ingredient[0].item.ofType(CodeableConcept).coding[0].system"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 57
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 8
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "InstanceValidator"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "Terminology_TX_ValueSet_NotFound"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Medication|1.9.0"
+        }
+      ],
+      "severity": "warning",
+      "code": "code-invalid",
+      "details": {
+        "text": "ValueSet 'https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM' not found"
+      },
+      "expression": [
+        "Medication.form.coding[0]"
+      ]
+    },
+    {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line",
+          "valueInteger": 57
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col",
+          "valueInteger": 8
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-source",
+          "valueString": "InstanceValidator"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+          "valueCode": "UNKNOWN_CODESYSTEM"
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-context",
+          "valueString": "https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Medication|1.9.0"
+        }
+      ],
+      "severity": "information",
+      "code": "unknown",
+      "details": {
+        "text": "A definition for CodeSystem 'https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM' could not be found, so the code cannot be validated"
+      },
+      "expression": [
+        "Medication.form.coding[0].system"
+      ]
+    }
+  ]
+}

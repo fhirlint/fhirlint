@@ -236,3 +236,78 @@ func TestApply_EmptyBaseline(t *testing.T) {
 		t.Errorf("no issues should be suppressed with empty baseline")
 	}
 }
+
+// A baseline written before #449 holds the empty id the validator gave; the
+// same finding now carries an id fhirlint inferred. It is still the same
+// finding.
+func TestApply_InferredIDMatchesEmptyIDEntry(t *testing.T) {
+	bf := &baseline.BaselineFile{Entries: []baseline.Entry{
+		{File: "m.json", MessageID: "", Location: "Medication.code", Count: 1},
+	}}
+	inferred := issue("warning", "UNKNOWN_CODESYSTEM_VERSION", "Medication.code (line 3, col 4)")
+	inferred.MessageIDInferred = true
+	results := []*validator.Result{makeResult("m.json", inferred)}
+
+	stale, drifted := baseline.ApplyReport(results, bf)
+	if len(results[0].Issues) != 0 || len(results[0].Suppressed) != 1 {
+		t.Errorf("inferred issue not matched: active %v, suppressed %v", results[0].Issues, results[0].Suppressed)
+	}
+	if stale != 0 || drifted != 0 {
+		t.Errorf("stale=%d drifted=%d, want 0/0", stale, drifted)
+	}
+}
+
+// A stated id never falls back to the empty-id entry: that would let a
+// baseline entry absorb a different finding.
+func TestApply_StatedIDDoesNotMatchEmptyIDEntry(t *testing.T) {
+	bf := &baseline.BaselineFile{Entries: []baseline.Entry{
+		{File: "m.json", MessageID: "", Location: "Medication.code", Count: 1},
+	}}
+	results := []*validator.Result{makeResult("m.json", issue("warning", "dom-6", "Medication.code"))}
+
+	baseline.Apply(results, bf)
+	if len(results[0].Issues) != 1 {
+		t.Errorf("stated id matched an empty-id entry: %v", results[0].Suppressed)
+	}
+}
+
+// Validator 7.0.x reports a finding the baseline recorded under
+// UNKNOWN_CODESYSTEM_VERSION_NONE without an id, or under a different one.
+// It misses, and the miss is counted as drift instead of passing silently.
+func TestApplyReport_CountsIDDrift(t *testing.T) {
+	bf := &baseline.BaselineFile{Entries: []baseline.Entry{
+		{File: "m.json", MessageID: "UNKNOWN_CODESYSTEM_VERSION_NONE", Location: "Medication.code.coding[0].system", Count: 1},
+		{File: "m.json", MessageID: "UNKNOWN_CODESYSTEM_VERSION_NONE", Location: "Medication.form.coding[0].system", Count: 1},
+		{File: "m.json", MessageID: "dom-6", Location: "Medication", Count: 1},
+	}}
+	inferred := issue("warning", "UNKNOWN_CODESYSTEM_VERSION", "Medication.form.coding[0].system")
+	inferred.MessageIDInferred = true
+	results := []*validator.Result{makeResult("m.json",
+		issue("warning", "", "Medication.code.coding[0].system"), // id dropped
+		inferred, // id changed, recovered from the new text
+		issue("warning", "", "Medication.code.coding[1].system"), // new finding, no entry at this place
+		issue("warning", "dom-6", "Medication"),                  // matches
+	)}
+
+	stale, drifted := baseline.ApplyReport(results, bf)
+	if drifted != 2 {
+		t.Errorf("drifted = %d, want 2", drifted)
+	}
+	if stale != 2 {
+		t.Errorf("stale = %d, want 2 (the two entries the drifted findings missed)", stale)
+	}
+	if len(results[0].Issues) != 3 {
+		t.Errorf("drift is reported, not suppressed: active %d, want 3", len(results[0].Issues))
+	}
+}
+
+// A finding with a stated id is not drift, even next to a stale entry.
+func TestApplyReport_StatedIDIsNotDrift(t *testing.T) {
+	bf := &baseline.BaselineFile{Entries: []baseline.Entry{
+		{File: "m.json", MessageID: "dom-6", Location: "Medication", Count: 1},
+	}}
+	results := []*validator.Result{makeResult("m.json", issue("warning", "dom-3", "Medication"))}
+	if _, drifted := baseline.ApplyReport(results, bf); drifted != 0 {
+		t.Errorf("drifted = %d, want 0", drifted)
+	}
+}

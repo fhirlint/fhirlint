@@ -89,3 +89,35 @@ func TestCompute_EmptyInputsNonNilSlices(t *testing.T) {
 		t.Error("slices should be non-nil so JSON marshals to [] not null")
 	}
 }
+
+// A report from before #449 has the empty id the validator gave; a report
+// from after it has the id fhirlint inferred for the same finding.
+func TestCompute_InferredIDPairsWithEmptyID(t *testing.T) {
+	inferred := iss("warning", "UNKNOWN_CODESYSTEM_VERSION", "Medication.code (line 3, col 4)")
+	inferred.MessageIDInferred = true
+	base := []*validator.Result{res("m.json", iss("warning", "", "Medication.code (line 3, col 4)"))}
+	cur := []*validator.Result{res("m.json", inferred)}
+
+	for _, d := range []*Result{Compute(base, cur, "information"), Compute(cur, base, "information")} {
+		if len(d.New) != 0 || len(d.Resolved) != 0 || len(d.Unchanged) != 1 {
+			t.Errorf("want 1 unchanged, got new=%v resolved=%v unchanged=%v", d.New, d.Resolved, d.Unchanged)
+		}
+	}
+}
+
+func TestCompute_InferredIDDoesNotPairAcrossSeverityOrStatedIDs(t *testing.T) {
+	inferred := iss("warning", "UNKNOWN_CODESYSTEM_VERSION", "Medication.code")
+	inferred.MessageIDInferred = true
+
+	cases := map[string]validator.Issue{
+		"different severity": iss("error", "", "Medication.code"),
+		"stated id":          iss("warning", "dom-6", "Medication.code"),
+		"other location":     iss("warning", "", "Medication.form"),
+	}
+	for name, other := range cases {
+		d := Compute([]*validator.Result{res("m.json", other)}, []*validator.Result{res("m.json", inferred)}, "information")
+		if len(d.New) != 1 || len(d.Resolved) != 1 {
+			t.Errorf("%s: want 1 new and 1 resolved, got new=%v resolved=%v", name, d.New, d.Resolved)
+		}
+	}
+}

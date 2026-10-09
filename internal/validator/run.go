@@ -25,6 +25,13 @@ type Issue struct {
 	MessageID      string `json:"messageId"`
 	SuppressReason string `json:"suppressReason,omitempty"` // set when the issue is suppressed
 
+	// MessageIDInferred marks a MessageID that the validator did not state but
+	// fhirlint recovered by matching the text against the JAR's message
+	// templates. 7.0.x leaves the id off many terminology issues
+	// (hapifhir/org.hl7.fhir.core#2708), and baselines and suppressions key on
+	// it (#449).
+	MessageIDInferred bool `json:"messageIdInferred,omitempty"`
+
 	// OriginalSeverity is what the validator reported before a severity-override
 	// re-levelled the issue; empty when nothing changed it. Severity above is
 	// always the effective level, so a report carries both and cannot mislead a
@@ -699,7 +706,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 			inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()))
 	}
 
-	return parseOutput(jsonBytes, inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()))
+	return parseOutputWith(jsonBytes, inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()), messageCatalogFor(jarPath))
 }
 
 // txCapabilityFailure is the sentence the validator emits when it cannot read a
@@ -878,6 +885,13 @@ func oomError(stderr string) error {
 // diagnostics is what the validator said, rendered by jarDiagnostics: both
 // streams, labelled and bounded. It is only ever shown when something failed.
 func parseOutput(data []byte, inputPaths []string, diagnostics string) ([]*Result, error) {
+	return parseOutputWith(data, inputPaths, diagnostics, nil)
+}
+
+// parseOutputWith is parseOutput with the message catalog of the JAR that
+// produced data, used to recover message ids the validator left out (#449).
+// A nil catalog recovers nothing.
+func parseOutputWith(data []byte, inputPaths []string, diagnostics string, c *messageCatalog) ([]*Result, error) {
 	var peek struct {
 		ResourceType string `json:"resourceType"`
 	}
@@ -895,7 +909,7 @@ func parseOutput(data []byte, inputPaths []string, diagnostics string) ([]*Resul
 		if len(inputPaths) > 0 {
 			filename = inputPaths[0]
 		}
-		return []*Result{toResult(oo, filename)}, nil
+		return []*Result{toResultWith(oo, filename, c)}, nil
 
 	case "Bundle":
 		var bundle struct {
@@ -916,7 +930,7 @@ func parseOutput(data []byte, inputPaths []string, diagnostics string) ([]*Resul
 			} else {
 				filename = strings.TrimPrefix(entry.FullURL, "file://")
 			}
-			results[i] = toResult(entry.Resource, filename)
+			results[i] = toResultWith(entry.Resource, filename, c)
 		}
 		return results, nil
 
@@ -944,6 +958,10 @@ func formatDuration(d time.Duration) string {
 const extValidatorVersion = "http://hl7.org/fhir/tools/StructureDefinition/validator-version"
 
 func toResult(oo operationOutcome, filename string) *Result {
+	return toResultWith(oo, filename, nil)
+}
+
+func toResultWith(oo operationOutcome, filename string, c *messageCatalog) *Result {
 	valid := true
 	issues := make([]Issue, 0, len(oo.Issue))
 
@@ -979,11 +997,21 @@ func toResult(oo operationOutcome, filename string) *Result {
 			loc = fmt.Sprintf("%s (line %d, col %d)", location, line, col)
 		}
 
+		// Recover a missing id from the untrimmed text: the template describes
+		// what the validator wrote, not fhirlint's shortened form of it.
+		inferred := false
+		if messageID == "" {
+			if id := c.infer(i.Details.Text); id != "" {
+				messageID, inferred = id, true
+			}
+		}
+
 		issues = append(issues, Issue{
-			Severity:  i.Severity,
-			Message:   trimFetchErrorBody(i.Details.Text),
-			Location:  loc,
-			MessageID: messageID,
+			Severity:          i.Severity,
+			Message:           trimFetchErrorBody(i.Details.Text),
+			Location:          loc,
+			MessageID:         messageID,
+			MessageIDInferred: inferred,
 		})
 	}
 

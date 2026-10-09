@@ -257,3 +257,17 @@ func TestToInternalOpts_CodeSystemSizeLimit(t *testing.T) {
 		t.Errorf("CodeSystemSizeLimit = %v, want a pointer to 5000", got)
 	}
 }
+
+func TestToPublicResult_MessageIDInferred(t *testing.T) {
+	r := &validator.Result{Issues: []validator.Issue{
+		{Severity: "warning", MessageID: "UNKNOWN_CODESYSTEM_VERSION", MessageIDInferred: true},
+		{Severity: "warning", MessageID: "dom-6"},
+	}}
+	pub := toPublicResult(r)
+	if !pub.Issues[0].MessageIDInferred {
+		t.Error("inferred flag lost on the way to the public API")
+	}
+	if pub.Issues[1].MessageIDInferred {
+		t.Error("a stated id must not be marked inferred")
+	}
+}

@@ -8,6 +8,7 @@ Baseline mode allows incremental adoption of fhirlint on codebases that already 
 - [Generating a baseline](#generating-a-baseline)
 - [Running with a baseline](#running-with-a-baseline)
 - [Stale baseline entries](#stale-baseline-entries)
+- [Message IDs and validator 7.0](#message-ids-and-validator-70)
 - [CI workflow](#ci-workflow)
 - [Configuration file](#configuration-file)
 - [Seeing what is suppressed](#seeing-what-is-suppressed)
@@ -69,6 +70,26 @@ fhirlint validate ./fhir/ --generate-baseline fhirlint-baseline.json
 ```
 
 Commit the updated baseline so the team can see what was resolved.
+
+---
+
+## Message IDs and validator 7.0
+
+The baseline matches findings by message ID. Validator 7.0.x leaves the ID off many terminology issues that 6.10.x stated ([hapifhir/org.hl7.fhir.core#2708](https://github.com/hapifhir/org.hl7.fhir.core/issues/2708)). fhirlint recovers the ID by matching the message text against the validator's own message templates, which it reads from the JAR that ran. A recovered ID is marked `"messageIdInferred": true` in the JSON report. When two templates with different IDs fit the text, fhirlint leaves the ID empty rather than guess.
+
+Recovery cannot undo every change. Where 7.0 rewrote a message, the recovered ID is that of the new text. For example, `UNKNOWN_CODESYSTEM_VERSION_NONE` ("…No versions of this code system are known") became `UNKNOWN_CODESYSTEM_VERSION` ("…Valid versions: []"). A baseline recorded under 6.10.x then misses such a finding at the same place where its old entry goes unmatched. fhirlint names this case instead of showing it only as a new finding plus a stale entry:
+
+```
+warn: 2 finding(s) missed the baseline at a location where a baseline entry went unmatched — the validator changed or dropped their message id …
+```
+
+Review the findings and regenerate the baseline, or keep the old IDs by pinning the validator until you are ready to switch:
+
+```bash
+fhirlint validate ./fhir/ --baseline fhirlint-baseline.json --validator-version 6.10.4
+```
+
+A baseline written by an older fhirlint, which stored an empty ID for a finding that now has a recovered one, still matches it.
 
 ---
 

@@ -946,14 +946,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Apply baseline suppression: issues recorded in the baseline are moved to
 	// r.Suppressed and do not contribute to the exit code.
-	var staleBaselineEntries int
+	var staleBaselineEntries, driftedBaselineEntries int
 	if flagBaseline != "" {
 		bf, berr := baseline.Read(flagBaseline)
 		if berr != nil {
 			return fmt.Errorf("reading baseline %s: %w", flagBaseline, berr)
 		}
 		if bf != nil {
-			staleBaselineEntries = baseline.Apply(results, bf)
+			staleBaselineEntries, driftedBaselineEntries = baseline.ApplyReport(results, bf)
 		}
 	}
 
@@ -1083,6 +1083,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	printUpdateNotice()
 
+	warnBaselineIDDrift(os.Stderr, driftedBaselineEntries)
 	if staleBaselineEntries > 0 {
 		fmt.Fprintf(os.Stderr, "warn: %d baseline occurrence(s) no longer found — run --generate-baseline to update\n", staleBaselineEntries)
 	}
@@ -1735,6 +1736,20 @@ func warnValidatorVersionDrift(w io.Writer, m *txreplay.Manifest, current string
 	}
 	_, _ = fmt.Fprintf(w, "warn: recording was made with validator %s, this run uses %s — re-record if requests come up missing\n",
 		m.ValidatorVersion, current)
+}
+
+// warnBaselineIDDrift explains findings that missed the baseline only because
+// the validator no longer states the message id they were recorded under.
+// Validator 7.0.x drops or changes the id on many terminology issues (#449,
+// hapifhir/org.hl7.fhir.core#2708); unexplained, that reads as new findings
+// next to stale entries, which is exactly what a baseline should prevent.
+func warnBaselineIDDrift(w io.Writer, drifted int) {
+	if drifted == 0 {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "warn: %d finding(s) missed the baseline at a location where a baseline entry went unmatched — "+
+		"the validator changed or dropped their message id (validator 7.0.x does this for terminology issues). "+
+		"Review and run --generate-baseline, or pin --validator-version 6.10.4\n", drifted)
 }
 
 // warnExpansionParametersDrift reports a replay whose recording was made with
