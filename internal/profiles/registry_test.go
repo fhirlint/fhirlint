@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/fhirlint/fhirlint/internal/igaudit"
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/registry"
 	"net/http"
 )
 
@@ -112,6 +113,12 @@ func TestAliasesUpToDate(t *testing.T) {
 			// ones it could not order rather than guessing which is newer.
 			t.Errorf("alias %s → %s: registry latest is %s, and the two could not be ordered — check by hand",
 				named(byID, p.ID), p.ID, p.Latest)
+		case p.Ahead && p.PinRegistry != "":
+			// The tag is the first registry's, and that registry does not list
+			// the pin at all — kerndatensatz.pros on packages2.fhir.org (#451,
+			// #453). Not a pre-release; a lagging mirror.
+			t.Logf("alias %s → %s is ahead of %s's latest (%s) because only %s lists it",
+				named(byID, p.ID), p.ID, registry.Host(p.Registry), p.Latest, registry.Host(p.PinRegistry))
 		case p.Ahead:
 			t.Logf("alias %s → %s is ahead of the registry's latest (%s), which is normal for a pre-release pin",
 				named(byID, p.ID), p.ID, p.Latest)

@@ -49,7 +49,7 @@ var Aliases = map[string][]string{
 	// before #398 was a supersession mistaken for a release-train difference.
 	//
 	// Versions follow dist-tags.latest, with the pre-release clause on Aliases
-	// doing the work here: since September 2026 all twelve modules tag a
+	// doing the work here: since September 2026 the twelve modules above tag a
 	// 2027.0.0-ballot* version, so every pin below is the last final the tag
 	// named rather than what the registry currently calls latest (#435).
 	//
@@ -58,6 +58,20 @@ var Aliases = map[string][]string{
 	// halves of the rule biting at once. `fhirlint audit` lists them as
 	// untagged-newer. Revisit when the MII tags a 2027 final; the ballot itself
 	// is not the event.
+	//
+	// dokument, mtb, pros and seltene joined in #453. None of them is in the
+	// registry catalog, which is why TestMIISetCoversTheCatalogedModules never
+	// asked for them; they turned up in the IG set the MII's own validator
+	// image loads (mii-fhir-validator 0.0.1-alpha.8). dokument, mtb and seltene
+	// follow the same pre-release rule as the rest.
+	//
+	// pros is the exception, and the one place where the two registries
+	// disagree about a tag: packages.fhir.org tags 2026.7.0, packages2.fhir.org
+	// tags 2026.3.0 and does not list 2026.4.1 onwards at all. 2026.7.0 is the
+	// MII's own latest, and the validator loads it through its fallback, so the
+	// pin follows it; `fhirlint audit` reports it as ahead of packages2's tag
+	// and names the registry it lives on (#451). pros also releases roughly
+	// monthly, so expect it to fall behind faster than the yearly modules.
 	"mii": {
 		"de.medizininformatikinitiative.kerndatensatz.base#2026.0.1",
 		"de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3",
@@ -71,6 +85,10 @@ var Aliases = map[string][]string{
 		"de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2",
 		"de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2",
 		"de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0",
+		"de.medizininformatikinitiative.kerndatensatz.dokument#2026.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.mtb#2026.0.1",
+		"de.medizininformatikinitiative.kerndatensatz.pros#2026.7.0",
+		"de.medizininformatikinitiative.kerndatensatz.seltene#2026.0.1",
 	},
 	// base carries Patient, Encounter, Condition, Procedure and Vitalstatus —
 	// what mii-person, mii-fall, mii-diagnose and mii-prozedur used to name.
@@ -86,6 +104,10 @@ var Aliases = map[string][]string{
 	"mii-studie":        {"de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2"},
 	"mii-mikrobiologie": {"de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2"},
 	"mii-bildgebung":    {"de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0"},
+	"mii-dokument":      {"de.medizininformatikinitiative.kerndatensatz.dokument#2026.0.1"},
+	"mii-mtb":           {"de.medizininformatikinitiative.kerndatensatz.mtb#2026.0.1"},     // Molekulares Tumorboard
+	"mii-pros":          {"de.medizininformatikinitiative.kerndatensatz.pros#2026.7.0"},    // Patient Reported Outcomes
+	"mii-seltene":       {"de.medizininformatikinitiative.kerndatensatz.seltene#2026.0.1"}, // Seltene Erkrankungen
 
 	// gematik ISiK — the interoperability profiles German hospitals implement.
 	//

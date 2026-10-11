@@ -2047,7 +2047,7 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 |-------|-------------|
 | `kbv-basis` | `kbv.basis#1.9.0` |
 | `kbv-patient` | `kbv.basis#1.9.0` |
-| `mii` | all 12 MII Kerndatensatz packages (see below) |
+| `mii` | all 16 MII Kerndatensatz packages (see below) |
 | `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |
 | `mii-medikation` | `de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1` |
@@ -2060,11 +2060,15 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 | `mii-studie` | `de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2` |
 | `mii-mikrobiologie` | `de.medizininformatikinitiative.kerndatensatz.mikrobiologie#2025.0.2` |
 | `mii-bildgebung` | `de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0` |
+| `mii-dokument` | `de.medizininformatikinitiative.kerndatensatz.dokument#2026.0.1` |
+| `mii-mtb` | `de.medizininformatikinitiative.kerndatensatz.mtb#2026.0.1` |
+| `mii-pros` | `de.medizininformatikinitiative.kerndatensatz.pros#2026.7.0` |
+| `mii-seltene` | `de.medizininformatikinitiative.kerndatensatz.seltene#2026.0.1` |
 | `diga` | `kbv.mio.diga#1.1.0` |
 | `isik` | `de.gematik.isik#6.0.0` (all ISiK modules, one package) |
 
 An alias can stand for more than one package. The MII publishes no umbrella
-package — the Kerndatensatz ships module by module — so `mii` loads all 12
+package — the Kerndatensatz ships module by module — so `mii` loads all 16
 packages, and the `mii-*` aliases name them individually.
 
 Alias versions follow the registry's `dist-tags.latest` rather than the highest
