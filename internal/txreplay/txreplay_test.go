@@ -172,6 +172,32 @@ func TestKeyIgnoresBodyKeyOrderAndQueryOrder(t *testing.T) {
 	}
 }
 
+func TestKeyDistinguishesEncodedSeparatorsInQueryValues(t *testing.T) {
+	// One parameter a = "x&b=y" against two parameters a and b. Joining the
+	// decoded values unescaped gave both "a=x&b=y" and so one key (#468).
+	pairs := [][2]string{
+		{"a=x%26b%3Dy", "a=x&b=y"},
+		{"a=x%3Bb", "a=x;b"},   // the second does not parse and is kept verbatim
+		{"a=%2526", "a=%26"},   // a literal "%26" against an encoded '&'
+		{"a%3Db=c", "a=b%3Dc"}, // '=' in the key against '=' in the value
+	}
+	for _, p := range pairs {
+		if Key("GET", "/ValueSet", p[0], nil) == Key("GET", "/ValueSet", p[1], nil) {
+			t.Errorf("%q and %q are different requests but share a key", p[0], p[1])
+		}
+	}
+}
+
+func TestCanonicalQueryKeepsTheFormOfExistingRecordings(t *testing.T) {
+	// Recordings are committed. A canonical form that changed for an ordinary
+	// validator query would turn every one of them into a replay miss.
+	got := canonicalQuery("url=http://hl7.org/fhir/ValueSet/administrative-gender%7C4.0.1&_format=json")
+	want := "_format=json&url=http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1"
+	if got != want {
+		t.Errorf("canonicalQuery changed for an ordinary query:\n got %q\nwant %q", got, want)
+	}
+}
+
 func TestKeyDistinguishesDifferentCodes(t *testing.T) {
 	a := Key("POST", "/r4/ValueSet/$validate-code", "", []byte(`{"code":"1234-5"}`))
 	b := Key("POST", "/r4/ValueSet/$validate-code", "", []byte(`{"code":"6789-0"}`))

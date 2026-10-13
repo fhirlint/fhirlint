@@ -96,6 +96,13 @@ func Key(method, path, rawQuery string, body []byte) string {
 	return hex.EncodeToString(h.Sum(nil))[:32]
 }
 
+// queryEscaper re-escapes what would make the joined canonical form ambiguous:
+// the separators '&' and '=', the escape character '%' itself, and ';', which
+// url.ParseQuery rejects, so a query containing one is kept verbatim and must
+// not look like a canonicalised one. Only these: escaping ':', '/' or '|' as
+// well would change the key of nearly every recorded request (#468).
+var queryEscaper = strings.NewReplacer("%", "%25", "&", "%26", "=", "%3D", ";", "%3B")
+
 func canonicalQuery(raw string) string {
 	if raw == "" {
 		return ""
@@ -117,9 +124,9 @@ func canonicalQuery(raw string) string {
 			if b.Len() > 0 {
 				b.WriteByte('&')
 			}
-			b.WriteString(k)
+			b.WriteString(queryEscaper.Replace(k))
 			b.WriteByte('=')
-			b.WriteString(v)
+			b.WriteString(queryEscaper.Replace(v))
 		}
 	}
 	return b.String()
