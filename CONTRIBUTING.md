@@ -33,7 +33,13 @@ FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
 # table against packages.fhir.org and tx.fhir.org. Run them when you touch a pin
 # in internal/profiles/aliases.go or a row in internal/validator/fhirversion.go
 go test -tags registry -v ./internal/profiles/ ./internal/validator/
+
+# Fuzz one target, e.g. the LSP framing. The targets are the Fuzz* functions;
+# .github/workflows/fuzz.yml lists them all with their packages
+go test ./internal/lsp -run '^$' -fuzz '^FuzzRead$' -fuzztime 60s -fuzzminimizetime 5s
 ```
+
+The fuzz targets cover the Go code that reads input fhirlint did not write: resources (lint, refcheck, ndjson, stats), validator output and message texts, source snippets, tx recordings and the LSP stream. Their seeds run as normal tests in `go test ./...`. CI fuzzes each target for 45s on every pull request and for 10 minutes every Sunday. When a target crashes, Go writes the input to `testdata/fuzz/<Target>/` in that package; commit it with the fix, and it replays as a regression test from then on.
 
 The integration tests live in `internal/validator/` (the JAR itself) and `cmd/` (the CLI end to end); both are behind the `integration` tag and skipped by default. CI runs the two packages as separate steps, because `go test` runs packages in parallel and on a cold cache both would download the same JAR at once.
 

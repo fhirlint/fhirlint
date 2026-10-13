@@ -46,6 +46,7 @@ testdata/      fixtures for unit tests
 - `go test ./... -tags integration` — integration tests, downloads JAR (~250 MB), requires Java 17+
 - `go test -tags registry ./internal/profiles/ ./internal/validator/` — checks the built-in aliases and the FHIR version table against the package registry and tx.fhir.org; needs network, run it when changing a pin or a version row
 - Skip long-running or subprocess tests with `testing.Short()` guard
+- Fuzz targets (`Fuzz*`) cover Go code that reads input fhirlint did not write; a new parser of such input gets one and a row in `.github/workflows/fuzz.yml`
 
 ### Linting
 

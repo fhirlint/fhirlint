@@ -3,6 +3,7 @@ package lsp
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -462,6 +463,46 @@ func TestReadRejectsMissingContentLength(t *testing.T) {
 	c := newConn(strings.NewReader("X-Other: 1\r\n\r\n{}"), io.Discard)
 	if _, err := c.read(); err == nil {
 		t.Error("a message without Content-Length must be rejected")
+	}
+}
+
+// zeros is an endless reader, so an oversized body can be streamed without
+// holding it in memory.
+type zeros struct{}
+
+func (zeros) Read(p []byte) (int, error) {
+	clear(p)
+	return len(p), nil
+}
+
+func TestReadSkipsOversizedMessageAndStaysFramed(t *testing.T) {
+	next := `{"jsonrpc":"2.0","method":"test/next"}`
+	r := io.MultiReader(
+		strings.NewReader(fmt.Sprintf("Content-Length: %d\r\n\r\n", maxMessageBytes+1)),
+		io.LimitReader(zeros{}, maxMessageBytes+1),
+		strings.NewReader(fmt.Sprintf("Content-Length: %d\r\n\r\n%s", len(next), next)),
+	)
+	c := newConn(r, io.Discard)
+
+	_, err := c.read()
+	var rpcErr *rpcError
+	if !errors.As(err, &rpcErr) {
+		t.Fatalf("an oversized message must be a protocol error the server survives, got %v", err)
+	}
+	m, err := c.read()
+	if err != nil {
+		t.Fatalf("the message after an oversized one must still parse: %v", err)
+	}
+	if m.Method != "test/next" {
+		t.Errorf("stream lost its framing, got %+v", m)
+	}
+}
+
+func TestReadDoesNotAllocateAnAdvertisedHugeBody(t *testing.T) {
+	// Allocating this would kill the process; the body is not even there.
+	c := newConn(strings.NewReader("Content-Length: 4611686018427387904\r\n\r\n{}"), io.Discard)
+	if _, err := c.read(); err == nil {
+		t.Error("a truncated oversized message must be an error")
 	}
 }
 
