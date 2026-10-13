@@ -25,6 +25,12 @@ const (
 	codeInternalError  = -32603
 )
 
+// maxMessageBytes caps the Content-Length the server will buffer. The body is
+// allocated in one piece, so without a cap a single header could ask for more
+// memory than the machine has, and running out of memory cannot be recovered.
+// It matches the 64 MiB the CLI reads from an input file.
+const maxMessageBytes = 64 << 20
+
 // message is a JSON-RPC 2.0 request, notification or response. A notification
 // is a request without an id; a response carries result or error.
 type message struct {
@@ -60,6 +66,15 @@ func (c *conn) read() (*message, error) {
 	length, err := c.readHeader()
 	if err != nil {
 		return nil, err
+	}
+	if length > maxMessageBytes {
+		// Skip the body rather than buffer it, so the stream stays framed and the
+		// next message still parses.
+		if _, err := io.CopyN(io.Discard, c.r, int64(length)); err != nil {
+			return nil, fmt.Errorf("skipping oversized message body: %w", err)
+		}
+		return nil, &rpcError{Code: codeInvalidRequest,
+			Message: fmt.Sprintf("message of %d bytes exceeds the %d byte limit", length, maxMessageBytes)}
 	}
 	body := make([]byte, length)
 	if _, err := io.ReadFull(c.r, body); err != nil {

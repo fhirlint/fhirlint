@@ -1,0 +1,88 @@
+name: Fuzz
+
+# fhirlint runs on resources from pull requests its user did not write. The JAR
+# parses them as FHIR, but Go code reads them too (lint, refcheck, ndjson,
+# stats), as well as what the validator and terminology servers send back
+# (message ids, source snippets), committed tx recordings and the LSP stream.
+# Nothing recovers from a panic, so one crafted file aborts the whole run.
+# Each target runs briefly on every pull request and for longer once a week,
+# with the corpus it has built kept in the Actions cache (#466).
+#
+# A crash fails the job and uploads the reproducer. To replay it locally, copy
+# the uploaded file into the same testdata/fuzz/<Target>/ path in the repo and
+# run `go test` on that package: the file then stays as a regression case.
+#
+# No target touches the JAR, Java or the network.
+
+on:
+  # main only on push, as in test.yml: PRs are covered by pull_request.
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    - cron: "17 5 * * 0" # 05:17 UTC every Sunday
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      # One crashing target should not hide the result of the others.
+      fail-fast: false
+      matrix:
+        include:
+          - { pkg: ./internal/lint, target: FuzzEvaluate }
+          - { pkg: ./internal/refcheck, target: FuzzCheck }
+          - { pkg: ./internal/ndjson, target: FuzzSplit }
+          - { pkg: ./internal/stats, target: FuzzParse }
+          - { pkg: ./internal/validator, target: FuzzMessageCatalog }
+          - { pkg: ./internal/validator, target: FuzzParseOutput }
+          - { pkg: ./internal/reporter, target: FuzzSourceSnippet }
+          - { pkg: ./internal/reporter, target: FuzzTruncateAround }
+          - { pkg: ./internal/txreplay, target: FuzzKey }
+          - { pkg: ./internal/lsp, target: FuzzRead }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module cache integrity
+        run: go mod verify
+
+      # The generated corpus lives under $GOCACHE/fuzz. Every run saves under a
+      # fresh key and restores the newest earlier one, so the corpus keeps
+      # growing across runs instead of starting over.
+      - id: gocache
+        run: echo "dir=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.gocache.outputs.dir }}/fuzz/github.com/fhirlint/fhirlint/**/${{ matrix.target }}
+          key: fuzz-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-${{ matrix.target }}-
+
+      # -fuzzminimizetime: Go spends up to 60s shrinking each new corpus entry
+      # by default and executes nothing meanwhile, so a 45s run would do little
+      # but minimize. 5s still shrinks a crasher to a readable size.
+      - name: Fuzz
+        env:
+          PKG: ${{ matrix.pkg }}
+          TARGET: ${{ matrix.target }}
+          FUZZTIME: ${{ github.event_name == 'schedule' && '10m' || '45s' }}
+        run: go test "$PKG" -run '^$' -fuzz "^${TARGET}\$" -fuzztime "$FUZZTIME" -fuzzminimizetime 5s
+
+      - name: Upload the crashing input
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: "**/testdata/fuzz/${{ matrix.target }}/"
+          if-no-files-found: ignore
