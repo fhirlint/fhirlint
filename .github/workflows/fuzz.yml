@@ -44,6 +44,7 @@ jobs:
           - { pkg: ./internal/reporter, target: FuzzSourceSnippet }
           - { pkg: ./internal/reporter, target: FuzzTruncateAround }
           - { pkg: ./internal/txreplay, target: FuzzKey }
+          - { pkg: ./internal/txreplay, target: FuzzCanonicalQuery }
           - { pkg: ./internal/lsp, target: FuzzRead }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
