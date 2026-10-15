@@ -4,6 +4,8 @@
 
 # fhirlint
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/fhirlint/fhirlint/pkg/fhirlint.svg)](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)
+[![License](https://img.shields.io/github/license/fhirlint/fhirlint)](LICENSE)
 [![Tests](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml)
 [![Lint](https://github.com/fhirlint/fhirlint/actions/workflows/lint.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/lint.yml)
 [![Security](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml)
