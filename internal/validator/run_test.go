@@ -168,6 +168,17 @@ func TestOOMError_DetectsOutOfMemory(t *testing.T) {
 	}
 }
 
+// The java launcher ignores JAVA_OPTS, so a hint naming it sends the user
+// into the same out-of-memory error again (#470).
+func TestOOMHint_NamesAVariableTheLauncherReads(t *testing.T) {
+	if !strings.Contains(oomHint, `JDK_JAVA_OPTIONS="-Xmx2g"`) {
+		t.Errorf("hint does not recommend JDK_JAVA_OPTIONS:\n%s", oomHint)
+	}
+	if strings.Contains(oomHint, " JAVA_OPTS=") {
+		t.Errorf("hint recommends JAVA_OPTS, which the JVM ignores:\n%s", oomHint)
+	}
+}
+
 func TestOOMError_NilOnNormalStderr(t *testing.T) {
 	err := oomError("some other warning from the JVM")
 	if err != nil {
