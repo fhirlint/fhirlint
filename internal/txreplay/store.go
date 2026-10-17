@@ -57,14 +57,24 @@ type Interaction struct {
 // set of questions. The content is fingerprinted rather than the path, because
 // the path says nothing once the recording is committed and checked out
 // somewhere else.
+// Routing says how the requests reached Upstream. Always RoutingSingleServer
+// for now: the recorder is the validator's only -tx, so every request went to
+// Upstream, including those a live validator 7.x sends to another server the
+// tx registry names (#465). Upstream is then not "the server this run used"
+// but the one that answered instead of the routed ones.
 type Manifest struct {
 	Upstream            string `json:"upstream"`
+	Routing             string `json:"routing,omitempty"`
 	FHIRVersion         string `json:"fhirVersion,omitempty"`
 	ValidatorVersion    string `json:"validatorVersion,omitempty"`
 	ExpansionParameters string `json:"expansionParameters,omitempty"`
 	Recorded            string `json:"recorded"`
 	Entries             int    `json:"entries"`
 }
+
+// RoutingSingleServer is Manifest.Routing for a recording in which every
+// terminology request went to Upstream, whatever the tx registry says.
+const RoutingSingleServer = "single-server"
 
 // Fingerprint reduces a file's contents to a short, stable identifier, for
 // recording which expansion parameters a recording was made with.

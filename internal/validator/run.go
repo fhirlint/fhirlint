@@ -850,6 +850,23 @@ func DefaultTerminologyEndpoint(fhirVersion string) string {
 	return DefaultTerminologyServer + "/r4"
 }
 
+// terminologyRoutingSince is the first validator release known to route
+// terminology requests through the tx registry when no -tx is given, sending
+// e.g. the German SNOMED CT edition to tx.fhir.de rather than tx.fhir.org.
+// Measured on 7.0.1 (#465). Whether 6.10.x routes too is open, so it is not
+// claimed for it.
+const terminologyRoutingSince = "7.0.0"
+
+// RoutesTerminology reports whether validator version routes terminology
+// requests to several servers when run without -tx. With an explicit -tx, as
+// in recording and replay, it sends them all there instead, so such runs can
+// differ from live ones. An unknown or unorderable version reports false: it
+// is not evidence either way.
+func RoutesTerminology(version string) bool {
+	cmp, ok := igaudit.CompareVersions(version, terminologyRoutingSince)
+	return ok && cmp >= 0
+}
+
 // txUnreachableError turns an unreachable terminology server into an
 // explanation instead of "the JAR may have crashed". The JAR did not crash: it
 // could not reach the server it needs for code and value-set checks, and the

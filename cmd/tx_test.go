@@ -195,3 +195,33 @@ func TestWarnExpansionParametersDrift(t *testing.T) {
 		t.Error("unreadable file: got nil, want an error")
 	}
 }
+
+// A recording sends every request to one server, which validator 7.x does not
+// do live without --terminology-server (#465). tx warm says so for a JAR that
+// routes, and stays quiet where routing is not established.
+func TestWarnRoutingBypass(t *testing.T) {
+	for _, tc := range []struct {
+		version string
+		warns   bool
+	}{
+		{"7.0.1", true},
+		{"7.1.0", true},
+		{"6.10.3", false},
+		{"", false}, // unknown version: no evidence either way
+	} {
+		var buf bytes.Buffer
+		warnRoutingBypass(&buf, tc.version, "https://tx.fhir.org/r4")
+		out := buf.String()
+		if got := out != ""; got != tc.warns {
+			t.Errorf("version %q: warned = %v, want %v\n%s", tc.version, got, tc.warns, out)
+			continue
+		}
+		if tc.warns {
+			for _, want := range []string{tc.version, "https://tx.fhir.org/r4", "tx.fhir.de", "--terminology-server"} {
+				if !strings.Contains(out, want) {
+					t.Errorf("version %q: warning lacks %q:\n%s", tc.version, want, out)
+				}
+			}
+		}
+	}
+}

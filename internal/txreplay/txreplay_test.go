@@ -248,7 +248,7 @@ func TestManifestRoundTrip(t *testing.T) {
 	if err := store.Put(&Interaction{Method: "GET", Path: "/r4/metadata", Status: 200}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.WriteManifest(Manifest{Upstream: "https://tx.fhir.org", FHIRVersion: "4.0.1", Recorded: "2026-08-03"}); err != nil {
+	if err := store.WriteManifest(Manifest{Upstream: "https://tx.fhir.org", Routing: RoutingSingleServer, FHIRVersion: "4.0.1", Recorded: "2026-08-03"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -260,7 +260,7 @@ func TestManifestRoundTrip(t *testing.T) {
 		t.Errorf("manifest must not be loaded as an interaction, got %d entries", reopened.Len())
 	}
 	m := reopened.ReadManifest()
-	if m == nil || m.Upstream != "https://tx.fhir.org" || m.Entries != 1 {
+	if m == nil || m.Upstream != "https://tx.fhir.org" || m.Routing != RoutingSingleServer || m.Entries != 1 {
 		t.Errorf("manifest round-trip failed: %+v", m)
 	}
 }

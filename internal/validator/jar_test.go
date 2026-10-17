@@ -513,3 +513,19 @@ func TestVersionFor_JARBeatsCacheAndPin(t *testing.T) {
 		})
 	}
 }
+
+func TestRoutesTerminology(t *testing.T) {
+	for version, want := range map[string]bool{
+		"7.0.0":          true,
+		"7.0.1":          true,
+		"8.0.0":          true,
+		"6.10.3":         false, // not established, so not claimed
+		"7.0.0-SNAPSHOT": false, // a pre-release orders below the release
+		"":               false,
+		"unknown":        false,
+	} {
+		if got := RoutesTerminology(version); got != want {
+			t.Errorf("RoutesTerminology(%q) = %v, want %v", version, got, want)
+		}
+	}
+}
