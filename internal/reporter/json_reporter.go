@@ -66,7 +66,9 @@ func buildJSONReport(results []*validator.Result, minSeverity string) JSONReport
 		for _, i := range issues {
 			summary.Total++
 			switch i.Severity {
-			case "error":
+			// fatal counts as an error, as in the SARIF, Markdown and GitHub
+			// reporters; it used to fall through to info.
+			case "error", "fatal":
 				summary.Errors++
 			case "warning":
 				summary.Warnings++

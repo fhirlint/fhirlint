@@ -132,6 +132,17 @@ func TestBuildJSONReport_SummaryCountsAllSeverities(t *testing.T) {
 	}
 }
 
+// A validator crash is reported as fatal (#471); a summary of "errors: 0,
+// info: 1" over it would read as a clean run.
+func TestBuildJSONReport_SummaryCountsFatalAsError(t *testing.T) {
+	r := makeResult(false, issue("fatal", "the validator crashed on this file", ""))
+	report := buildJSONReport([]*validator.Result{r}, "information")
+
+	if report.Summary.Errors != 1 || report.Summary.Info != 0 {
+		t.Errorf("summary = %+v, want the fatal issue counted as an error", report.Summary)
+	}
+}
+
 func TestJSON_OutputIsValidJSON(t *testing.T) {
 	r := makeResult(true, issue("warning", "msg", "loc"))
 	report := buildJSONReport([]*validator.Result{r}, "information")

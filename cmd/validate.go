@@ -2180,7 +2180,9 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		}
 		for j, r := range fresh {
 			i := uncachedIdx[j]
-			if keys[i] != "" {
+			// A crash or a file left unvalidated is not a verdict on the
+			// content; caching it would replay it after the cause is gone.
+			if keys[i] != "" && !r.Incomplete() {
 				if err := resultcache.Put(cacheDir, keys[i], resultcache.Entry{
 					CachedAt:        timeNow(),
 					FhirlintVersion: keyOpts.FhirlintVersion,

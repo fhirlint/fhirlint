@@ -1783,6 +1783,16 @@ JDK_JAVA_OPTIONS="-Xmx2g" fhirlint validate ./fhir/
 
 For CI that validates pull requests from other people, see [Limits for untrusted pull requests](docs/ci.md#limits-for-untrusted-pull-requests).
 
+### When the validator crashes
+
+Some inputs make the validator throw instead of reporting, and when it does it writes no output for any file in the run. fhirlint contains that: it reports the file the validator was on as `fatal` with message id `fhirlint-validator-crash` and the exception's first line, then validates the other files again in a new JVM, so one such file does not hide every other finding.
+
+```
+warn: the validator crashed on in/BodyStructure-0c5948ba-….json; re-running the other 12 file(s) in a new JVM
+```
+
+Each re-run costs a JVM start. After three crashes in one run, or when `--timeout` runs out during a re-run, the files still waiting are reported as `fatal` with `fhirlint-not-validated` rather than counted as valid. Neither kind of result goes into the `--cache`. If fhirlint cannot tell which file the validator was on, for example because it failed while loading packages, the run fails with `validator produced no result` as before.
+
 ### Result caching
 
 `--cache` caches validation results per file content hash. Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.

@@ -1118,6 +1118,46 @@ func TestRunWithCache_UnwritableCacheIsReportedNotSilent(t *testing.T) {
 	}
 }
 
+// A file the validator crashed on gets a fatal finding from fhirlint, not a
+// verdict on its content. Cached, it would replay after the cause is gone, e.g.
+// once the user adds the IG that avoids the crash (#471).
+func TestRunWithCache_DoesNotCacheACrash(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping subprocess test")
+	}
+	dir := t.TempDir()
+	crashing := "#!/bin/sh\nfor a; do case \"$a\" in *crash.json) echo \"  Validate $a\"; echo 'Exception generating snapshot'; exit 1;; esac; done\nexit 1\n"
+	if err := os.WriteFile(filepath.Join(dir, "java"), []byte(crashing), 0o755); err != nil { //nolint:gosec // test helper must be executable
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	jar := filepath.Join(dir, "validator_cli.jar")
+	if err := os.WriteFile(jar, []byte{0x50, 0x4B, 0x03, 0x04}, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "crash.json")
+	if err := os.WriteFile(file, []byte(`{"resourceType":"BodyStructure"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cacheDir := filepath.Join(dir, "cache")
+
+	oldCache, oldDir := flagCache, flagCacheDir
+	flagCache, flagCacheDir = true, cacheDir
+	t.Cleanup(func() { flagCache, flagCacheDir = oldCache, oldDir })
+
+	results, err := runWithCache([]string{file}, validator.Options{FHIRVersion: "4.0.1", JARPath: jar})
+	if err != nil {
+		t.Fatalf("runWithCache: %v", err)
+	}
+	if len(results) != 1 || !results[0].Incomplete() {
+		t.Fatalf("results = %+v, want one crash result", results)
+	}
+	entries, _ := os.ReadDir(cacheDir)
+	if len(entries) != 0 {
+		t.Errorf("cache holds %d entries, want none for a crash", len(entries))
+	}
+}
+
 // A cache miss is the normal case and must stay quiet, or every first run would
 // warn about a cache that is working perfectly well.
 func TestResultCacheMiss_IsNotAnError(t *testing.T) {
