@@ -664,24 +664,133 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 
 	warnInsecureTerminologyServer(os.Stderr, opts)
 
-	// Write JSON output to a temp file to avoid mixing with validator log output.
-	tmpFile, err := os.CreateTemp("", "fhirlint-result-*.json")
-	if err != nil {
-		return nil, fmt.Errorf("creating temp output file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return nil, fmt.Errorf("closing temp output file: %w", err)
-	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	args := buildArgs(jarPath, inputPaths, tmpFile.Name(), opts)
-
+	// One deadline for the whole run, re-runs after a crash included: --timeout
+	// bounds what the user waits, not each JVM.
 	ctx := context.Background()
 	var cancel context.CancelFunc = func() {}
 	if opts.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 	}
 	defer cancel()
+
+	catalog := messageCatalogFor(jarPath)
+
+	// When the validator throws on one file it exits without writing output
+	// for any of them. Rather than lose every file's findings to that one
+	// (#471), report the file it crashed on and run the rest again in a new
+	// JVM — those before it too, which it validated but never wrote out.
+	results := make([]*Result, len(inputPaths))
+	pending := make([]int, len(inputPaths))
+	for i := range pending {
+		pending[i] = i
+	}
+	crashes := 0
+	for len(pending) > 0 {
+		paths := make([]string, len(pending))
+		for j, i := range pending {
+			paths[j] = inputPaths[i]
+		}
+
+		out, err := runJAR(ctx, jarPath, paths, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		if out.timedOut {
+			if crashes == 0 {
+				return nil, fmt.Errorf("validator timed out after %s — use --timeout to increase the limit", formatDuration(opts.Timeout))
+			}
+			markNotValidated(results, inputPaths, pending, fmt.Sprintf(
+				"--timeout (%s) ran out while re-running the files after a validator crash", formatDuration(opts.Timeout)))
+			break
+		}
+
+		if len(out.json) > 0 {
+			rs, err := parseOutputWith(out.json, paths, out.diagnostics(), catalog)
+			if err != nil {
+				return nil, err
+			}
+			if crashes == 0 {
+				return rs, nil
+			}
+			for j, i := range pending {
+				if j < len(rs) {
+					results[i] = rs[j]
+				}
+			}
+			markNotValidated(results, inputPaths, pending, "the validator returned no result for this file")
+			break
+		}
+
+		// The recognisers look at both streams: which one carries a given
+		// message is the JAR's business and has changed between releases.
+		combined := out.stderr + "\n" + out.stdout
+		if err := oomError(combined); err != nil {
+			return nil, err
+		}
+		if err := txUnreachableError(combined, opts); err != nil {
+			return nil, err
+		}
+
+		j, exception, ok := crashedFile(out.stdout, paths)
+		if !ok || !out.failed {
+			// Nothing recognised. Say the validator produced no result — which
+			// is what we know — rather than asserting a crash, and show what
+			// it did say instead of leaving the user with an empty stderr.
+			return nil, fmt.Errorf("validator produced no result\nfiles: %v\n%s", paths, out.diagnostics())
+		}
+
+		crashed := pending[j]
+		results[crashed] = crashResult(inputPaths[crashed], exception)
+		crashes++
+		pending = append(pending[:j:j], pending[j+1:]...)
+
+		if len(pending) > 0 && crashes >= maxValidatorCrashes {
+			markNotValidated(results, inputPaths, pending, fmt.Sprintf(
+				"the validator crashed on %d files in this run, so fhirlint stopped re-running it", crashes))
+			break
+		}
+		if len(pending) > 0 {
+			fmt.Fprint(os.Stderr, crashSummary(inputPaths[crashed], len(pending)))
+		}
+	}
+	return results, nil
+}
+
+// markNotValidated gives every file in pending that has no result yet one
+// saying why it was not validated.
+func markNotValidated(results []*Result, inputPaths []string, pending []int, reason string) {
+	for _, i := range pending {
+		if results[i] == nil {
+			results[i] = notValidatedResult(inputPaths[i], reason)
+		}
+	}
+}
+
+// jarRun is what one validator process left behind.
+type jarRun struct {
+	json           []byte
+	stdout, stderr string
+	failed         bool // non-zero exit
+	timedOut       bool
+}
+
+func (r jarRun) diagnostics() string { return jarDiagnostics(r.stdout, r.stderr) }
+
+// runJAR runs the validator once over paths. Only fhirlint's own failures are
+// errors; what the validator did is in the jarRun.
+func runJAR(ctx context.Context, jarPath string, paths []string, opts Options) (jarRun, error) {
+	// Write JSON output to a temp file to avoid mixing with validator log output.
+	tmpFile, err := os.CreateTemp("", "fhirlint-result-*.json")
+	if err != nil {
+		return jarRun{}, fmt.Errorf("creating temp output file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return jarRun{}, fmt.Errorf("closing temp output file: %w", err)
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	args := buildArgs(jarPath, paths, tmpFile.Name(), opts)
 
 	// Both streams, because the validator uses stdout for everything — its
 	// banner, its progress, and the exception it dies on. Reporting only
@@ -692,35 +801,22 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 	// Non-zero exit is expected when validation finds errors — not a tool failure.
-	_ = cmd.Run()
+	runErr := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return nil, fmt.Errorf("validator timed out after %s — use --timeout to increase the limit", formatDuration(opts.Timeout))
+		return jarRun{timedOut: true}, nil
 	}
 
 	jsonBytes, err := os.ReadFile(tmpFile.Name())
 	if err != nil {
-		return nil, fmt.Errorf("reading validator output: %w", err)
+		return jarRun{}, fmt.Errorf("reading validator output: %w", err)
 	}
-
-	if len(jsonBytes) == 0 {
-		// The recognisers look at both streams: which one carries a given
-		// message is the JAR's business and has changed between releases.
-		combined := stderrBuf.String() + "\n" + stdoutBuf.String()
-		if err := oomError(combined); err != nil {
-			return nil, err
-		}
-		if err := txUnreachableError(combined, opts); err != nil {
-			return nil, err
-		}
-		// Nothing recognised. Say the validator produced no result — which is
-		// what we know — rather than asserting a crash, and show what it did
-		// say instead of leaving the user with an empty stderr.
-		return nil, fmt.Errorf("validator produced no result\nfiles: %v\n%s",
-			inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()))
-	}
-
-	return parseOutputWith(jsonBytes, inputPaths, jarDiagnostics(stdoutBuf.String(), stderrBuf.String()), messageCatalogFor(jarPath))
+	return jarRun{
+		json:   jsonBytes,
+		stdout: stdoutBuf.String(),
+		stderr: stderrBuf.String(),
+		failed: runErr != nil,
+	}, nil
 }
 
 // txCapabilityFailure is the sentence the validator emits when it cannot read a
