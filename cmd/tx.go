@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,7 +44,12 @@ directory, or rebuild it as a CI artifact, and validation becomes reproducible
 and independent of the terminology server's availability.
 
 Record the same inputs, profiles and IGs you validate with — a request that was
-never recorded is an error at replay time, not a silent fallback to the network.`,
+never recorded is an error at replay time, not a silent fallback to the network.
+
+A recording is a single-server run: every request goes to one terminology
+server. Validator 7.x, run live without --terminology-server, sends some
+requests to other servers named by the tx registry (tx.fhir.de for the German
+SNOMED CT edition, for example), so its live findings can differ from a replay.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runTxWarm,
 }
@@ -156,6 +162,9 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		Proxy:            validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 	}
 
+	validatorVersion := validator.RunValidatorVersion(opts)
+	warnRoutingBypass(os.Stderr, validatorVersion, upstream)
+
 	if _, err := validator.RunMultiple(paths, opts); err != nil {
 		return fmt.Errorf("recording run failed: %w", err)
 	}
@@ -166,8 +175,9 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	}
 	if err := store.WriteManifest(txreplay.Manifest{
 		Upstream:            upstream,
+		Routing:             txreplay.RoutingSingleServer,
 		FHIRVersion:         flagTxWarmFHIRVersion,
-		ValidatorVersion:    validator.RunValidatorVersion(opts),
+		ValidatorVersion:    validatorVersion,
 		ExpansionParameters: expansionFingerprint,
 		Recorded:            time.Now().UTC().Format(time.RFC3339),
 	}); err != nil {
@@ -178,6 +188,23 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "Recorded %d terminology interaction(s) (%d new) in %s/\n", store.Len(), added, dir)
 	fmt.Fprintf(os.Stderr, "Replay them with:  fhirlint validate %s --tx-offline\n", arg)
 	return nil
+}
+
+// warnRoutingBypass says, once per recording, that the recording will not
+// match a live run of a validator that routes terminology requests (#465).
+// Without -tx such a validator sends some requests to the server the tx
+// registry names for the code system, tx.fhir.de for the German SNOMED CT
+// edition among them; with the recorder as -tx all of them go to upstream,
+// whose answers can differ. Replay reproduces the recording, not the live run.
+func warnRoutingBypass(w io.Writer, validatorVersion, upstream string) {
+	if !validator.RoutesTerminology(validatorVersion) {
+		return
+	}
+	_, _ = fmt.Fprintf(w, "warn: without --terminology-server, validator %s sends some terminology requests to servers\n"+
+		"  other than %s (e.g. tx.fhir.de for German SNOMED CT). While recording, all of them go to\n"+
+		"  %s, so replaying this recording can report different terminology findings than a\n"+
+		"  live run without --terminology-server.\n",
+		validatorVersion, upstream, upstream)
 }
 
 // txRecordingExcludes keeps a terminology recording out of the input set.

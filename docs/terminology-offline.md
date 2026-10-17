@@ -38,6 +38,20 @@ fhirlint tx warm ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0
 
 Record against a specific server with `--terminology-server`. Without it, fhirlint records from the endpoint the validator would have used itself (`https://tx.fhir.org/r4` for FHIR R4 and R4B, `/r5` for R5).
 
+### Recording bypasses the validator's terminology routing
+
+Run without `-tx`, validator 7.x looks up each code system in the tx registry and sends some requests to the server the registry names for it, not to tx.fhir.org. tx.fhir.de, for example, is authoritative for the German SNOMED CT edition and a candidate for ATC. For recording, fhirlint makes the recorder the validator's `-tx`, and with an explicit `-tx` the validator sends everything there. So the recording holds tx.fhir.org's answers to questions a live run asks tx.fhir.de, and the two can differ.
+
+Measured with validator 7.0.1 on a `Medication` example from `kbv.basis#1.9.0`: live, `Medication.code` and `Medication.form` were checked by tx.fhir.de and produced 12 terminology warnings without message ids. Replayed from a tx.fhir.org recording, the same file produced 6 issues with ids (`UNKNOWN_CODESYSTEM_VERSION` and others).
+
+What this means in practice:
+
+- A replay reproduces the recording, a single-server run. It does not reproduce a live run without `--terminology-server`.
+- Do not mix the two across environments. A team that replays in CI and validates live locally, or the other way round, can get different terminology findings on the same commit.
+- A live run with `--terminology-server <url>` is single-server too, so it matches a recording made from the same `<url>`.
+
+`tx warm` prints a warning when the JAR is 7.0 or newer, and `manifest.json` records `"routing": "single-server"`, so that `upstream` is not read as "the server the live run used". Whether 6.10.x routes as well is not established. Recording with registry routing intact is not supported yet.
+
 The JAR's own terminology cache is **disabled during recording**. Otherwise it would answer some requests from `~/.fhir` without them ever reaching the recorder, and the recording would be complete only on the machine that made it.
 
 ## Replaying
