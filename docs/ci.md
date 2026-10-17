@@ -16,6 +16,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [GitLab CI](#gitlab-ci)
 - [GitLab Code Quality (merge-request widget)](#gitlab-code-quality-merge-request-widget)
 - [Comparing runs in a pull request](#comparing-runs-in-a-pull-request)
+- [Limits for untrusted pull requests](#limits-for-untrusted-pull-requests)
 - [Exit codes](#exit-codes)
 - [Troubleshooting](#troubleshooting)
 
@@ -442,6 +443,34 @@ The `diff` step exits `1` when there are new issues, failing the job. Add `--for
 
 ---
 
+## Limits for untrusted pull requests
+
+A workflow that validates resources from pull requests by other people runs on input nobody has looked at yet. By default fhirlint bounds very little of what the validator may spend on it:
+
+| Limit | Default |
+|-------|---------|
+| `--timeout` (kills the Java process) | `5m` |
+| `--validation-timeout` | off |
+| `--max-messages` | off |
+| Java heap | not set, so the JVM takes ¼ of the runner's RAM |
+
+Set all of them explicitly in such a job:
+
+```yaml
+      - name: Validate FHIR resources
+        env:
+          JDK_JAVA_OPTIONS: "-Xmx3g"
+        run: fhirlint validate ./fhir/ --timeout 10m --validation-timeout 5m --max-messages 2000
+```
+
+- **Heap:** use `JDK_JAVA_OPTIONS`, which the `java` launcher reads. `JAVA_OPTS` has no effect. Leave headroom below the runner's memory for fhirlint itself and the rest of the job; large IGs may need more than `-Xmx3g`.
+- **`--timeout`** is the hard stop and yields no results. Fit it to the job's own timeout.
+- **`--validation-timeout`** and **`--max-messages`** stop the validator early and report what it found so far, so a pathological resource produces partial results instead of a killed run. Reaching either bound fails the run, because files with errors may then be reported as valid; see [Bounding a run](../README.md#bounding-a-run). Keep them below `--timeout`, or `--timeout` fires first and nothing is reported.
+
+The values above are starting points, not recommendations for every repository: a large IG can legitimately need more time and memory than a handful of examples.
+
+---
+
 ## Exit codes
 
 | Exit code | Meaning |
@@ -463,7 +492,10 @@ Cache both `~/.fhirlint` (JAR) and `.fhirlint-tx-cache/` (terminology). Without 
 The runner may not have outbound HTTPS access. Either cache the JAR via `actions/cache`, commit it to the repository, or use `FHIRLINT_JAR` to point to a pre-staged file.
 
 **"java: command not found"**
-fhirlint requires Java 11+. Add `actions/setup-java` (GitHub Actions) or use a JDK base image (GitLab CI).
+fhirlint requires Java 17+. Add `actions/setup-java` (GitHub Actions) or use a JDK base image (GitLab CI).
+
+**"Java ran out of memory while validating"**
+Raise the heap with `JDK_JAVA_OPTIONS="-Xmx2g"` (or more) in the step's `env`. `JAVA_OPTS` is ignored by the `java` launcher. See [Limits for untrusted pull requests](#limits-for-untrusted-pull-requests).
 
 **Different results between local and CI**
 The most common cause is a different JAR version or a cold terminology cache. Pin the JAR version in `fhirlint.yml` and use `--tx-cache` with a persistent cache store.

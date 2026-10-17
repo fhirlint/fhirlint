@@ -886,10 +886,16 @@ func trimJavaFrames(stderr string) string {
 	return strings.Join(out, "\n")
 }
 
+// oomHint is printed when the JVM runs out of memory. It names
+// JDK_JAVA_OPTIONS because the java launcher reads that one (Java 9+) and
+// ignores JAVA_OPTS, which only start scripts such as Tomcat's pass on (#470).
+// JAVA_TOOL_OPTIONS would work too but prints "Picked up …" on every start.
+const oomHint = "Java ran out of memory while validating. Try increasing the heap size:\n" +
+	`  JDK_JAVA_OPTIONS="-Xmx2g" fhirlint validate`
+
 func oomError(stderr string) error {
 	if strings.Contains(stderr, "OutOfMemoryError") {
-		fmt.Fprintln(os.Stderr, "Java ran out of memory while validating. Try increasing the heap size:")
-		fmt.Fprintln(os.Stderr, `  JAVA_OPTS="-Xmx2g" fhirlint validate`)
+		fmt.Fprintln(os.Stderr, oomHint)
 		return errors.New("out of memory")
 	}
 	return nil

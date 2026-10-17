@@ -1775,6 +1775,14 @@ set --fail-on never to accept partial results
 
 Set `--fail-on never` if you genuinely want partial results accepted.
 
+Memory is bounded by the JVM, not by fhirlint. Without a cap the JVM takes a quarter of the machine's RAM. Set the heap through `JDK_JAVA_OPTIONS`, which the `java` launcher has read since Java 9; `JAVA_OPTS` is only a convention of start scripts and has no effect here:
+
+```bash
+JDK_JAVA_OPTIONS="-Xmx2g" fhirlint validate ./fhir/
+```
+
+For CI that validates pull requests from other people, see [Limits for untrusted pull requests](docs/ci.md#limits-for-untrusted-pull-requests).
+
 ### Result caching
 
 `--cache` caches validation results per file content hash. Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.
