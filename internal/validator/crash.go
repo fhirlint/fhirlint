@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -62,7 +63,7 @@ func crashedFile(stdout string, paths []string) (idx int, message string, ok boo
 	}
 
 	for _, l := range lines[last+1:] {
-		l = strings.TrimSpace(l)
+		l = strings.TrimSpace(plainText(l))
 		if l == "" {
 			continue
 		}
@@ -87,6 +88,22 @@ func indexOfPath(logged string, paths []string) int {
 		}
 	}
 	return -1
+}
+
+// plainText drops the control characters stripANSI leaves: a lone ESC, or the
+// ESC and BEL of an OSC sequence (hyperlinks, window titles). The exception
+// line can echo text from the user's files and ends up in the terminal report,
+// so it must not carry anything a terminal would act on. A tab becomes a space.
+func plainText(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r == '\t':
+			return ' '
+		case unicode.IsControl(r):
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func truncateRunes(s string, n int) string {

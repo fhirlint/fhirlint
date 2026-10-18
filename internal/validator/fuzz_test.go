@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 )
 
 // fuzzExcerptCatalog loads the real 7.0.1 templates kept in testdata.
@@ -88,6 +90,87 @@ func FuzzParseOutput(f *testing.F) {
 				if is.MessageIDInferred && strings.TrimSpace(is.MessageID) == "" {
 					t.Errorf("issue marked as inferred without an id: %+v", is)
 				}
+			}
+		}
+	})
+}
+
+// FuzzParseCompareMessages extracts the difference table from fuzzed
+// comparison HTML. The JAR writes it, but it echoes element paths and texts
+// from the profiles being compared, which come from third-party packages.
+// The result is never nil, and every message has the severity the header row
+// is skipped for lacking.
+func FuzzParseCompareMessages(f *testing.F) {
+	f.Add(messagesHTML(`<tr style="background-color: #ffcccc"><td>Error</td><td>StructureDefinition.version</td><td>Values for version differ: &#39;1.0.0&#39; vs &#39;2.0.0&#39;</td></tr>`))
+	f.Add(messagesHTML(`<tr><td><b>Warning</b></td><td>Patient.<i>name</i></td><td>a &lt; b &amp;&amp; c</td></tr>`))
+	f.Add(messagesHTML(""))
+	f.Add(`<h3>Metadata</h3><table class="grid"></table>`)
+	f.Add(`>Messages<<table`)
+	f.Add(`>Messages< no table </table>`)
+
+	f.Fuzz(func(t *testing.T, doc string) {
+		msgs := parseCompareMessages(doc)
+		if msgs == nil {
+			t.Fatal("nil slice: callers range and marshal it, and JSON must say [] not null")
+		}
+		for _, m := range msgs {
+			if m.Severity == "" || m.Severity != strings.ToLower(m.Severity) {
+				t.Errorf("severity %q is empty or not lower-case", m.Severity)
+			}
+		}
+	})
+}
+
+// FuzzParseFHIRPathOutput locates the result block in fuzzed JAR stdout. The
+// block echoes values from the user's resource, so markers can appear inside
+// it and anywhere else.
+func FuzzParseFHIRPathOutput(f *testing.F) {
+	f.Add(sampleFHIRPathOutput("Patient.name.given", "Erika,Maria,Eri"), "Patient.name.given")
+	f.Add(sampleFHIRPathOutput("x", ""), "x")
+	f.Add(sampleFHIRPathOutput("x", "Error evaluating FHIRPath expression.\norg.hl7.fhir.exceptions.PathEngineException: boom"), "x")
+	f.Add(sampleFHIRPathOutput("x", "Error evaluating FHIRPath expression."), "x")
+	f.Add("\x1b[0;39m ...evaluating x\nDone.", "x")
+	f.Add(" ...evaluating x", "x")
+	f.Add("Unable to parse command line arguments: -foo", "")
+
+	f.Fuzz(func(t *testing.T, stdout, expr string) {
+		r, err := parseFHIRPathOutput(stdout, expr, nil)
+		if err != nil {
+			return
+		}
+		if r == nil || r.Items == nil || r.Expression != expr {
+			t.Errorf("result = %+v, want items for %q", r, expr)
+		}
+	})
+}
+
+// FuzzCrashedFile names the file a crashed run was on from fuzzed JAR stdout
+// (#471). The stdout echoes paths and exception texts the user's files can
+// influence. A file it names is one of the inputs, and the message is plain,
+// bounded text, since it goes into every report format.
+func FuzzCrashedFile(f *testing.F) {
+	f.Add(crashLog)
+	f.Add("  Validate /work/in/a-patient.json\n 00:00.294\n  Validate /work/in/b-crash.json\n")
+	f.Add("  Validate /work/in/b-crash.json\n\n\n" + strings.Repeat("ä", 2*maxCrashMessageLen))
+	f.Add("Validate \n")
+	f.Add("  Validate ../in/./a-patient.json\nboom")
+
+	paths := []string{"/work/in/a-patient.json", "/work/in/b-crash.json", "in/rel.json"}
+	f.Fuzz(func(t *testing.T, stdout string) {
+		idx, msg, ok := crashedFile(stdout, paths)
+		if !ok {
+			return
+		}
+		if idx < 0 || idx >= len(paths) {
+			t.Fatalf("index %d is not one of %d inputs", idx, len(paths))
+		}
+		if msg == "" || utf8.RuneCountInString(msg) > maxCrashMessageLen+1 {
+			t.Errorf("message has %d runes, want 1..%d", utf8.RuneCountInString(msg), maxCrashMessageLen+1)
+		}
+		for _, r := range msg {
+			if unicode.IsControl(r) {
+				t.Errorf("message carries control character %U: %q", r, msg)
+				break
 			}
 		}
 	})
