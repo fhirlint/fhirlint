@@ -519,8 +519,10 @@ func TestRoutesTerminology(t *testing.T) {
 		"7.0.0":          true,
 		"7.0.1":          true,
 		"8.0.0":          true,
-		"6.10.3":         false, // not established, so not claimed
-		"7.0.0-SNAPSHOT": false, // a pre-release orders below the release
+		"6.10.3":         true,
+		"6.2.8":          true,
+		"6.2.7":          false,
+		"6.2.8-SNAPSHOT": false, // a pre-release orders below the release
 		"":               false,
 		"unknown":        false,
 	} {

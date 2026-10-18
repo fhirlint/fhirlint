@@ -1567,7 +1567,7 @@ fhirlint tx warm ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0
 fhirlint validate ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0 --tx-offline
 ```
 
-**A recording is a single-server run.** Every request goes to the one server it was recorded from. Validator 7.x, run live without `--terminology-server`, sends some requests elsewhere: the tx registry names other servers for some code systems, such as tx.fhir.de for the German SNOMED CT edition, which covers most KBV, MII and ISiK examples. Their answers can differ from tx.fhir.org's, so a replay reproduces the recording, not that live run. `tx warm` warns when the JAR is 7.x, and the recording's `manifest.json` says `"routing": "single-server"`. Compare replayed runs with replayed runs, and live runs with live runs.
+**A recording is a single-server run.** Every request goes to the one server it was recorded from. The validator, run live without `--terminology-server`, sends some requests elsewhere: the tx registry names other servers for some code systems, such as tx.fhir.de for the German SNOMED CT edition, which covers most KBV, MII and ISiK examples. Their answers can differ from tx.fhir.org's, so a replay reproduces the recording, not that live run. `tx warm` warns about this (the validator has routed since 6.2.8), and the recording's `manifest.json` says `"routing": "single-server"`. Compare replayed runs with replayed runs, and live runs with live runs.
 
 Use `--tx-dir` to put the recording somewhere other than `.fhirlint-tx/`. In CI, either commit the recording or rebuild it as an artifact:
 

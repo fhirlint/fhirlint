@@ -196,7 +196,7 @@ func TestWarnExpansionParametersDrift(t *testing.T) {
 	}
 }
 
-// A recording sends every request to one server, which validator 7.x does not
+// A recording sends every request to one server, which the validator does not
 // do live without --terminology-server (#465). tx warm says so for a JAR that
 // routes, and stays quiet where routing is not established.
 func TestWarnRoutingBypass(t *testing.T) {
@@ -206,8 +206,9 @@ func TestWarnRoutingBypass(t *testing.T) {
 	}{
 		{"7.0.1", true},
 		{"7.1.0", true},
-		{"6.10.3", false},
-		{"", false}, // unknown version: no evidence either way
+		{"6.10.3", true},
+		{"6.2.7", false}, // before the tx registry
+		{"", false},      // unknown version: no evidence either way
 	} {
 		var buf bytes.Buffer
 		warnRoutingBypass(&buf, tc.version, "https://tx.fhir.org/r4")

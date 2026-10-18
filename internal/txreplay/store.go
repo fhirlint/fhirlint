@@ -59,7 +59,7 @@ type Interaction struct {
 // somewhere else.
 // Routing says how the requests reached Upstream. Always RoutingSingleServer
 // for now: the recorder is the validator's only -tx, so every request went to
-// Upstream, including those a live validator 7.x sends to another server the
+// Upstream, including those a live validator sends to another server the
 // tx registry names (#465). Upstream is then not "the server this run used"
 // but the one that answered instead of the routed ones.
 type Manifest struct {
