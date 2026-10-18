@@ -300,3 +300,17 @@ func TestRunMultiple_UnrecognisedFailureStaysAnError(t *testing.T) {
 		t.Errorf("err = %v, want 'validator produced no result'", err)
 	}
 }
+
+// The exception line can echo the user's files and goes into the terminal
+// report. stripANSI only removes colour sequences, so an OSC hyperlink or a
+// lone ESC would otherwise reach the terminal (#480).
+func TestCrashedFile_DropsControlCharacters(t *testing.T) {
+	log := "  Validate /a.json\nbad \x1b]8;;https://evil.example\x07link\x1b]8;;\x07 at\tfoo \x1b\n"
+	_, msg, ok := crashedFile(log, []string{"/a.json"})
+	if !ok {
+		t.Fatal("crash not recognised")
+	}
+	if want := "bad ]8;;https://evil.examplelink]8;; at foo"; msg != want {
+		t.Errorf("message = %q, want %q", msg, want)
+	}
+}

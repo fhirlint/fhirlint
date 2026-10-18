@@ -2,8 +2,10 @@ name: Fuzz
 
 # fhirlint runs on resources from pull requests its user did not write. The JAR
 # parses them as FHIR, but Go code reads them too (lint, refcheck, ndjson,
-# stats), as well as what the validator and terminology servers send back
-# (message ids, source snippets), committed tx recordings and the LSP stream.
+# stats, custom FHIRPath rules, --extract/--ignore on XML, coverage against
+# third-party profiles), as well as what the validator and terminology servers
+# send back (message ids, source snippets, comparison HTML, FHIRPath output,
+# the log around a crash), committed tx recordings and the LSP stream.
 # Nothing recovers from a panic, so one crafted file aborts the whole run.
 # Each target runs briefly on every pull request and for longer once a week,
 # with the corpus it has built kept in the Actions cache (#466).
@@ -46,6 +48,12 @@ jobs:
           - { pkg: ./internal/txreplay, target: FuzzKey }
           - { pkg: ./internal/txreplay, target: FuzzCanonicalQuery }
           - { pkg: ./internal/lsp, target: FuzzRead }
+          - { pkg: ./internal/rules/fhirpath, target: FuzzEval }
+          - { pkg: ./cmd, target: FuzzXMLPreprocess }
+          - { pkg: ./internal/coverage, target: FuzzRun }
+          - { pkg: ./internal/validator, target: FuzzParseCompareMessages }
+          - { pkg: ./internal/validator, target: FuzzParseFHIRPathOutput }
+          - { pkg: ./internal/validator, target: FuzzCrashedFile }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

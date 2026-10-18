@@ -1,0 +1,2 @@
+go test fuzz v1
+string("Validate /work/in/b-crash.json\n\x1b")
