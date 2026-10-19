@@ -47,7 +47,7 @@ Record the same inputs, profiles and IGs you validate with — a request that wa
 never recorded is an error at replay time, not a silent fallback to the network.
 
 A recording is a single-server run: every request goes to one terminology
-server. Validator 7.x, run live without --terminology-server, sends some
+server. The validator, run live without --terminology-server, sends some
 requests to other servers named by the tx registry (tx.fhir.de for the German
 SNOMED CT edition, for example), so its live findings can differ from a replay.`,
 	Args: cobra.MaximumNArgs(1),

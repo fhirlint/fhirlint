@@ -850,12 +850,12 @@ func DefaultTerminologyEndpoint(fhirVersion string) string {
 	return DefaultTerminologyServer + "/r4"
 }
 
-// terminologyRoutingSince is the first validator release known to route
+// terminologyRoutingSince is the first validator release that routes
 // terminology requests through the tx registry when no -tx is given, sending
 // e.g. the German SNOMED CT edition to tx.fhir.de rather than tx.fhir.org.
-// Measured on 7.0.1 (#465). Whether 6.10.x routes too is open, so it is not
-// claimed for it.
-const terminologyRoutingSince = "7.0.0"
+// 6.2.8 is the first tag whose TerminologyClientManager queries tx-reg; routing
+// was observed on 6.10.3 and 7.0.1 (#465).
+const terminologyRoutingSince = "6.2.8"
 
 // RoutesTerminology reports whether validator version routes terminology
 // requests to several servers when run without -tx. With an explicit -tx, as
