@@ -104,7 +104,7 @@ func TestReadProperties(t *testing.T) {
 func TestMessageCatalog_Infer(t *testing.T) {
 	c := excerptCatalog(t)
 	cases := []struct{ text, want string }{
-		// The 7.0.1 forms from hapifhir/org.hl7.fhir.core#2708, which arrive without an id.
+		// The tx.fhir.de forms 7.0.1 passed on without an id (hapifhir/org.hl7.fhir.core#2708).
 		{"A definition for CodeSystem 'http://fhir.de/CodeSystem/bfarm/atc' version '2026' could not be found, so the code cannot be validated. Valid versions: [2026]", "UNKNOWN_CODESYSTEM_VERSION"},
 		{"A definition for CodeSystem 'http://fhir.de/CodeSystem/ifa/pzn' version '0.2' could not be found, so the code cannot be validated. Valid versions: []", "UNKNOWN_CODESYSTEM_VERSION"},
 		{"Unable to check whether the code is in the value set '' because the code system http://fhir.de/CodeSystem/ifa/pzn|0.2 was not found", "UNABLE_TO_CHECK_IF_THE_PROVIDED_CODES_ARE_IN_THE_VALUE_SET_CS"},

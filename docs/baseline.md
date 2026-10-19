@@ -75,9 +75,11 @@ Commit the updated baseline so the team can see what was resolved.
 
 ## Message IDs and validator 7.0
 
-The baseline matches findings by message ID. Validator 7.0.x leaves the ID off many terminology issues that 6.10.x stated ([hapifhir/org.hl7.fhir.core#2708](https://github.com/hapifhir/org.hl7.fhir.core/issues/2708)). fhirlint recovers the ID by matching the message text against the validator's own message templates, which it reads from the JAR that ran. A recovered ID is marked `"messageIdInferred": true` in the JSON report. When two templates with different IDs fit the text, fhirlint leaves the ID empty rather than guess.
+The baseline matches findings by message ID. Under validator 7.0, many terminology issues that 6.10.x reported with an ID arrive without one. The validator does not drop the ID: those issues are the answers of a different terminology server. Without `--terminology-server`, the validator routes code systems through the tx registry ([#465](https://github.com/fhirlint/fhirlint/issues/465)), and 7.0 sends more of them to tx.fhir.de. 6.10.x sent a CodeableConcept with a coding the registry does not know, such as a PZN next to an ATC code, to tx.fhir.org; 7.0 sends it to tx.fhir.de. tx.fhir.de runs Ontoserver, which answered such a CodeableConcept with issues without IDs and with contradictory wording ("Valid versions: [2026]" for version 2026, "not found in the value set ''"). CSIRO fixed this in Ontoserver 6.30.1. As of 2026-10-19, tx.fhir.de still runs 6.24.2, so the issues still appear ([hapifhir/org.hl7.fhir.core#2708](https://github.com/hapifhir/org.hl7.fhir.core/issues/2708) has the analysis).
 
-Recovery cannot undo every change. Where 7.0 rewrote a message, the recovered ID is that of the new text. For example, `UNKNOWN_CODESYSTEM_VERSION_NONE` ("…No versions of this code system are known") became `UNKNOWN_CODESYSTEM_VERSION` ("…Valid versions: []"). A baseline recorded under 6.10.x then misses such a finding at the same place where its old entry goes unmatched. fhirlint names this case instead of showing it only as a new finding plus a stale entry:
+fhirlint recovers the ID by matching the message text against the validator's own message templates, which it reads from the JAR that ran. A recovered ID is marked `"messageIdInferred": true` in the JSON report. When two templates with different IDs fit the text, fhirlint leaves the ID empty rather than guess.
+
+Recovery cannot undo every change. Where the other server words a finding differently, the recovered ID is that of its text. For example, tx.fhir.org reports `UNKNOWN_CODESYSTEM_VERSION_NONE` ("…No versions of this code system are known"), and tx.fhir.de reports `UNKNOWN_CODESYSTEM_VERSION` ("…Valid versions: []"). A baseline recorded under 6.10.x then misses such a finding at the same place where its old entry goes unmatched. fhirlint names this case instead of showing it only as a new finding plus a stale entry:
 
 ```
 warn: 2 finding(s) missed the baseline at a location where a baseline entry went unmatched — the validator changed or dropped their message id …
@@ -88,6 +90,8 @@ Review the findings and regenerate the baseline, or keep the old IDs by pinning 
 ```bash
 fhirlint validate ./fhir/ --baseline fhirlint-baseline.json --validator-version 6.10.4
 ```
+
+Naming a server with `--terminology-server` also keeps them, because the validator then sends every request to that one server. It also changes which server checks the German SNOMED CT edition, so the findings are not those of a routed run either.
 
 A baseline written by an older fhirlint, which stored an empty ID for a finding that now has a recovered one, still matches it.
 

@@ -14,14 +14,17 @@ import (
 	"github.com/fhirlint/fhirlint/internal/cache"
 )
 
-// Validator 7.0.x emits many terminology issues without the
-// operationoutcome-message-id extension (hapifhir/org.hl7.fhir.core#2708),
-// while 6.10.x gave the same findings an id. Baselines and messageId
-// suppressions key on that id, so an unpinned upgrade silently stops matching
-// them (#449).
+// Under validator 7.0.x many terminology issues arrive without the
+// operationoutcome-message-id extension, while 6.10.x gave the same findings
+// an id. They are not the validator's: 7.0 routes more CodeableConcepts to
+// tx.fhir.de (#465), whose Ontoserver answers them without ids
+// (hapifhir/org.hl7.fhir.core#2708; fixed in Ontoserver 6.30.1, not yet
+// deployed there in October 2026). Baselines and messageId suppressions key on
+// the id, so an unpinned upgrade silently stops matching them (#449).
 //
-// The text is still the validator's own: it is formatted from a template in
-// the Messages.properties bundled with the JAR. Matching the text back against
+// The text still follows the validator's wording, which the terminology
+// ecosystem shares: it fits a template in the Messages.properties bundled with
+// the JAR. Matching the text back against
 // those templates recovers the id. The templates are read from the JAR that
 // ran, never from a copy, because they change between releases.
 

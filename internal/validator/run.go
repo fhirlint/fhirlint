@@ -28,9 +28,9 @@ type Issue struct {
 
 	// MessageIDInferred marks a MessageID that the validator did not state but
 	// fhirlint recovered by matching the text against the JAR's message
-	// templates. 7.0.x leaves the id off many terminology issues
-	// (hapifhir/org.hl7.fhir.core#2708), and baselines and suppressions key on
-	// it (#449).
+	// templates. Under 7.0.x many terminology issues, answered by tx.fhir.de,
+	// arrive without one (see messageid.go), and baselines and suppressions key
+	// on it (#449).
 	MessageIDInferred bool `json:"messageIdInferred,omitempty"`
 
 	// OriginalSeverity is what the validator reported before a severity-override
