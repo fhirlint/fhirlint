@@ -214,6 +214,14 @@ func evalCall(c call, focus, this []value) ([]value, error) {
 		if len(focus) > 1 {
 			return nil, fmt.Errorf("toString() expects a single item")
 		}
+		if r, ok := focus[0].(gjson.Result); ok {
+			// The spec converts only primitives and Quantity; any other complex
+			// type has no string form and yields empty (#484).
+			if q, ok := quantityString(r); ok {
+				return []value{q}, nil
+			}
+			return nil, nil
+		}
 		return []value{formatScalar(focus[0])}, nil
 	case "startsWith", "endsWith", "contains", "matches":
 		return evalStringFunc(c, focus, this)
@@ -568,6 +576,40 @@ func formatScalar(v value) string {
 	default:
 		return fmt.Sprintf("%v", t)
 	}
+}
+
+// quantityFields are the elements a Quantity may carry. The engine has no type
+// information, so an object counts as a Quantity when it has a numeric value, a
+// unit or code, and nothing outside this set.
+var quantityFields = map[string]bool{
+	"id": true, "extension": true, "value": true, "comparator": true,
+	"unit": true, "system": true, "code": true,
+}
+
+// quantityString formats r the way FHIRPath's toString() does a Quantity,
+// value and unit, e.g. "1.0 'kg'". The value keeps its JSON text, so 1.0 stays
+// 1.0. It reports false for an object that is not a Quantity.
+func quantityString(r gjson.Result) (string, bool) {
+	v := r.Get("value")
+	if !r.IsObject() || v.Type != gjson.Number {
+		return "", false
+	}
+	unit := r.Get("code").String()
+	if unit == "" {
+		unit = r.Get("unit").String()
+	}
+	if unit == "" {
+		return "", false
+	}
+	isQuantity := true
+	r.ForEach(func(k, _ gjson.Result) bool {
+		isQuantity = quantityFields[k.String()]
+		return isQuantity
+	})
+	if !isQuantity {
+		return "", false
+	}
+	return v.Raw + " '" + unit + "'", true
 }
 
 func typeName(v value) string {

@@ -135,3 +135,29 @@ func TestEmptyPredicateIsFalse(t *testing.T) {
 		t.Error("comparison with a missing element should be false")
 	}
 }
+
+// toString() converts primitives and Quantity only; any other complex type
+// yields empty, as the FHIRPath spec says and validator 7.0.2 does (#484).
+func TestToString(t *testing.T) {
+	const obs = `{
+  "resourceType": "Observation",
+  "code": {"coding": [{"system": "http://loinc.org", "code": "29463-7"}], "text": "Weight"},
+  "valueQuantity": {"value": 72.0, "unit": "kg", "system": "http://unitsofmeasure.org", "code": "kg"},
+  "referenceRange": [{"low": {"value": 5, "unit": "kilogram"}}],
+  "component": [{"valueQuantity": {"value": 1, "extension": [{"url": "x", "valueString": "y"}]}}],
+  "status": "final"
+}`
+	for expr, want := range map[string]bool{
+		"code.toString().empty()":                          true,
+		"code.coding.first().toString().empty()":           true,
+		`valueQuantity.toString() = '72.0 \'kg\''`:         true,
+		`referenceRange.low.toString() = '5 \'kilogram\''`: true,
+		"component.valueQuantity.toString().empty()":       true, // no unit: not formatted as a Quantity
+		"status.toString() = 'final'":                      true,
+		"valueQuantity.value.toString() = '72'":            true,
+	} {
+		if got := evalBool(t, expr, obs); got != want {
+			t.Errorf("%s = %v, want %v", expr, got, want)
+		}
+	}
+}
