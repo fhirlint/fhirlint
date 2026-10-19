@@ -26,8 +26,8 @@ fhirlint profiles
 
 | Alias | IG package | Covers |
 |-------|-----------|--------|
-| `kbv-basis` | `kbv.basis#1.9.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
-| `kbv-patient` | `kbv.basis#1.9.0` | KBV Patient profile specifically |
+| `kbv-basis` | `kbv.basis#1.10.0` | KBV base profiles (Patient, Practitioner, Organization, …) |
+| `kbv-patient` | `kbv.basis#1.10.0` | KBV Patient profile specifically |
 | `mii` | all 16 packages below | MII core dataset, complete |
 | `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` | Patient, Encounter, Condition, Procedure, Vitalstatus — replaces person/fall/diagnose/prozedur |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` | Observation, DiagnosticReport |
