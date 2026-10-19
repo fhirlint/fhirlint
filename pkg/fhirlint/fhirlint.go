@@ -201,8 +201,8 @@ type Issue struct {
 
 	// MessageIDInferred reports that the validator did not state MessageID and
 	// fhirlint recovered it by matching Message against the validator's own
-	// message templates. Validator 7.0.x leaves the id off many terminology
-	// issues.
+	// message templates. Under validator 7.0.x many terminology issues,
+	// answered by tx.fhir.de, arrive without an id.
 	MessageIDInferred bool
 
 	// Redacted reports that Options.Redact removed this finding's message text.

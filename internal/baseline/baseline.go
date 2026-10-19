@@ -134,8 +134,8 @@ func Apply(results []*validator.Result, bf *BaselineFile) int {
 // ApplyReport is Apply, and also counts the active issues that probably only
 // missed the baseline because their message id changed: an issue without a
 // validator-stated id, at a file and location where a baseline entry went
-// unmatched. Validator 7.0.x drops or changes ids on terminology issues
-// (#449), and without this the result is a silent "new finding" plus a stale
+// unmatched. Under validator 7.0.x, terminology issues answered by tx.fhir.de
+// arrive without an id or under another one (#449, #485), and without this the result is a silent "new finding" plus a stale
 // entry that look unrelated.
 func ApplyReport(results []*validator.Result, bf *BaselineFile) (stale, drifted int) {
 	remaining := make(map[string]int, len(bf.Entries))

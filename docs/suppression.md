@@ -43,7 +43,7 @@ fhirlint supports three ways to identify an issue to suppress:
 
 Every issue the HL7 validator emits has a stable message ID. fhirlint shows it in JSON output as `messageId`. Use this when you want to suppress exactly one specific message type.
 
-Validator 7.0.x leaves the ID off many terminology issues ([hapifhir/org.hl7.fhir.core#2708](https://github.com/hapifhir/org.hl7.fhir.core/issues/2708)). fhirlint recovers it from the message text and marks the issue `"messageIdInferred": true`, so `messageId` rules keep matching. Where 7.0 rewrote the message itself, the recovered ID is that of the new text: a rule for `UNKNOWN_CODESYSTEM_VERSION_NONE` does not match the 7.0 form, which is `UNKNOWN_CODESYSTEM_VERSION`. See [Message IDs and validator 7.0](baseline.md#message-ids-and-validator-70).
+Under validator 7.0, many terminology issues arrive without an ID. They are answers from tx.fhir.de (Ontoserver), which the validator's terminology routing uses for more code systems than in 6.10.x. fhirlint recovers the ID from the message text and marks the issue `"messageIdInferred": true`, so `messageId` rules keep matching. Where tx.fhir.de words a finding differently from tx.fhir.org, the recovered ID is that of its text: a rule for `UNKNOWN_CODESYSTEM_VERSION_NONE` does not match the tx.fhir.de form, which is `UNKNOWN_CODESYSTEM_VERSION`. See [Message IDs and validator 7.0](baseline.md#message-ids-and-validator-70).
 
 ```bash
 fhirlint validate patient.json --suppress messageId:Measure_M_POPULATIONIDENTIFIER

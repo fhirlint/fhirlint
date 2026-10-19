@@ -1754,15 +1754,15 @@ func cacheKeyValidator(opts validator.Options) string {
 
 // warnBaselineIDDrift explains findings that missed the baseline only because
 // the validator no longer states the message id they were recorded under.
-// Validator 7.0.x drops or changes the id on many terminology issues (#449,
-// hapifhir/org.hl7.fhir.core#2708); unexplained, that reads as new findings
+// Under validator 7.0.x many terminology issues come from tx.fhir.de without an
+// id or under another one (#449, #485); unexplained, that reads as new findings
 // next to stale entries, which is exactly what a baseline should prevent.
 func warnBaselineIDDrift(w io.Writer, drifted int) {
 	if drifted == 0 {
 		return
 	}
 	_, _ = fmt.Fprintf(w, "warn: %d finding(s) missed the baseline at a location where a baseline entry went unmatched — "+
-		"the validator changed or dropped their message id (validator 7.0.x does this for terminology issues). "+
+		"their message id changed or is missing (under validator 7.0.x, terminology issues answered by tx.fhir.de arrive without one). "+
 		"Review and run --generate-baseline, or pin --validator-version 6.10.4\n", drifted)
 }
 

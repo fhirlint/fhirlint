@@ -271,7 +271,7 @@ func TestApply_StatedIDDoesNotMatchEmptyIDEntry(t *testing.T) {
 	}
 }
 
-// Validator 7.0.x reports a finding the baseline recorded under
+// Under validator 7.0.x, tx.fhir.de reports a finding the baseline recorded under
 // UNKNOWN_CODESYSTEM_VERSION_NONE without an id, or under a different one.
 // It misses, and the miss is counted as drift instead of passing silently.
 func TestApplyReport_CountsIDDrift(t *testing.T) {
