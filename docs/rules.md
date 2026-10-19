@@ -87,7 +87,9 @@ to compile (rather than evaluate incorrectly).
   `count()`, `first()`, `last()`
 - Boolean: `not()`, `hasValue()`
 - String: `startsWith(s)`, `endsWith(s)`, `contains(s)`, `matches(regex)`,
-  `length()`, `toString()`
+  `length()`, `toString()`. As in the FHIRPath spec, `toString()` converts
+  primitives and Quantity (`72.0 'kg'`) and returns empty for any other
+  complex type, such as a CodeableConcept
 
 **Operators**
 - Equality: `=`, `!=`
