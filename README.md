@@ -2067,8 +2067,8 @@ Aliases are a convenience shortcut for common IG packages. Pass the full `name#v
 
 | Alias | Resolves to |
 |-------|-------------|
-| `kbv-basis` | `kbv.basis#1.9.0` |
-| `kbv-patient` | `kbv.basis#1.9.0` |
+| `kbv-basis` | `kbv.basis#1.10.0` |
+| `kbv-patient` | `kbv.basis#1.10.0` |
 | `mii` | all 16 MII Kerndatensatz packages (see below) |
 | `mii-base` | `de.medizininformatikinitiative.kerndatensatz.base#2026.0.1` |
 | `mii-laborbefund` | `de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.3` |

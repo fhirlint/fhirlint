@@ -28,8 +28,8 @@ import (
 // outdated (#434).
 var Aliases = map[string][]string{
 	// German profiles
-	"kbv-basis":   {"kbv.basis#1.9.0"},
-	"kbv-patient": {"kbv.basis#1.9.0"},
+	"kbv-basis":   {"kbv.basis#1.10.0"},
+	"kbv-patient": {"kbv.basis#1.10.0"},
 
 	// DiGA profiles are published by the KBV as the MIO DiGA Toolkit, not by the
 	// BfArM: there is no de.bfarm.diga package on any registry, and this alias
