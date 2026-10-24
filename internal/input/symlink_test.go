@@ -53,4 +53,30 @@ func TestInside(t *testing.T) {
 			t.Errorf("%s: Inside(%s) = %v, want %v", c.name, c.path, got, c.want)
 		}
 	}
+
+	// A relative root, as "fhirlint validate ." passes it, against an
+	// absolute link that stays inside and one that leaves.
+	absIn := link(filepath.Join(root, "sub", "a.json"), "abs-in.json")
+	t.Chdir(root)
+	if !Inside(".", absIn) || !Inside(".", "abs-in.json") {
+		t.Error("an absolute link inside a relative root was judged outside")
+	}
+	if Inside(".", "abs.json") {
+		t.Error("an absolute link out of a relative root was judged inside")
+	}
+}
+
+func TestWithin(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	for path, want := range map[string]bool{
+		"cache/not/yet":                    true,
+		filepath.Join(root, ".cache", "x"): true,
+		filepath.Join(t.TempDir(), "x"):    false,
+		"../elsewhere":                     false,
+	} {
+		if got := Within(".", path); got != want {
+			t.Errorf("Within(., %s) = %v, want %v", path, got, want)
+		}
+	}
 }

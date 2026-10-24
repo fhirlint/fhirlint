@@ -137,8 +137,11 @@ ignore:
 # Cache validation results per file hash (opt-in)
 # Skips re-validating files that haven't changed since the last run.
 # Combine with actions/cache in CI for faster repeated runs.
+# A cache-dir set here is refused if it lies inside the working directory or
+# an input's directory: the repository could commit entries into it. Pass
+# --cache-dir on the command line to choose such a directory deliberately.
 # cache: true
-# cache-dir: .fhirlint-cache/
+# cache-dir: /var/cache/fhirlint/
 
 # Suppression rules — silence known/accepted validation issues
 # Each rule silences matching issues from output and exit-code calculation.

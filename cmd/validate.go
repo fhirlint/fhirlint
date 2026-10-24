@@ -429,7 +429,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("cache") && viper.IsSet("cache") {
 		flagCache = viper.GetBool("cache")
 	}
-	if !cmd.Flags().Changed("cache-dir") && viper.IsSet("cache-dir") {
+	cacheDirFromConfig = !cmd.Flags().Changed("cache-dir") && viper.IsSet("cache-dir")
+	if cacheDirFromConfig {
 		flagCacheDir = viper.GetString("cache-dir")
 	}
 	if !cmd.Flags().Changed("timeout") && viper.IsSet("timeout") {
@@ -2100,6 +2101,44 @@ func (o *onceWarner) warn(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(o.w, format, args...)
 }
 
+// cacheDirFromConfig records that --cache-dir came from fhirlint.yml rather
+// than the command line, which makes it as untrusted as the repository (#498).
+var cacheDirFromConfig bool
+
+// checkCacheDir refuses a result cache the validated repository could have
+// filled. An entry is looked up by a hash of the file and the options, which
+// anyone can compute, so a cache inside the working directory or inside an
+// input's directory lets the repository commit "valid, no issues" for files
+// that are not (#498). That covers a cache-dir set in fhirlint.yml and the
+// default under a HOME that points into the workspace, as it can in CI. A
+// --cache-dir on the command line or FHIRLINT_CACHE_DIR is the caller's
+// choice and is only checked for ownership.
+func checkCacheDir(cacheDir string, untrusted bool, paths []string) error {
+	if untrusted {
+		roots := []string{"."}
+		seen := map[string]bool{}
+		for _, p := range paths {
+			if d := filepath.Dir(p); !seen[d] {
+				seen[d] = true
+				roots = append(roots, d)
+			}
+		}
+		for _, r := range roots {
+			if input.Within(r, cacheDir) {
+				return fmt.Errorf("the cache directory %s lies inside %s, which the validated files could fill; pass --cache-dir on the command line to use it anyway", absOrSame(cacheDir), absOrSame(r))
+			}
+		}
+	}
+	return resultcache.CheckDir(cacheDir)
+}
+
+func absOrSame(p string) string {
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return p
+}
+
 // runWithCache validates the given paths, consulting the result cache when --cache is enabled.
 // Cached results are used as-is; uncached paths are passed to the validator.
 // Fresh results are written back to the cache for future runs.
@@ -2123,6 +2162,13 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 			return runValidation(paths, opts)
 		}
 		cacheDir = dir
+	}
+	// Untrusted: a cache-dir from fhirlint.yml, or the default under HOME.
+	// --cache-dir and FHIRLINT_CACHE_DIR are the caller's own choice.
+	untrusted := cacheDirFromConfig || (flagCacheDir == "" && strings.TrimSpace(os.Getenv(cache.DirEnvVar)) == "")
+	if err := checkCacheDir(cacheDir, untrusted, paths); err != nil {
+		warn.warn("warn: --cache is set but %v — running without it\n", err)
+		return runValidation(paths, opts)
 	}
 
 	// The file-valued options go into the key as content fingerprints rather

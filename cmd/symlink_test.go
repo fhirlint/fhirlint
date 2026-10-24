@@ -142,3 +142,44 @@ func captureStderr(t *testing.T, fn func()) string {
 	out, _ := io.ReadAll(r)
 	return string(out)
 }
+
+// A cache the validated repository could have filled is refused unless the
+// caller chose it on the command line (#498).
+func TestCheckCacheDir(t *testing.T) {
+	repo := t.TempDir()
+	elsewhere := t.TempDir()
+	input := filepath.Join(t.TempDir(), "data")
+	if err := os.MkdirAll(input, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(repo)
+	paths := []string{filepath.Join(input, "p.json")}
+
+	cases := []struct {
+		name      string
+		dir       string
+		untrusted bool
+		refused   bool
+	}{
+		{"config dir in the working directory", filepath.Join(repo, ".cache"), true, true},
+		{"relative config dir, not created yet", "cache/x", true, true},
+		{"config dir in an input's directory", filepath.Join(input, ".cache"), true, true},
+		{"config dir elsewhere", filepath.Join(elsewhere, "cache"), true, false},
+		{"command-line dir in the working directory", filepath.Join(repo, ".cache"), false, false},
+	}
+	for _, c := range cases {
+		err := checkCacheDir(c.dir, c.untrusted, paths)
+		if (err != nil) != c.refused {
+			t.Errorf("%s: checkCacheDir(%s) = %v, refused want %v", c.name, c.dir, err, c.refused)
+		}
+	}
+
+	// A link in the working directory that leads elsewhere is judged by
+	// where it leads: the repository cannot fill that.
+	if err := os.Symlink(elsewhere, filepath.Join(repo, "out")); err != nil {
+		t.Skipf("symlinks not available: %v", err)
+	}
+	if err := checkCacheDir(filepath.Join(repo, "out", "cache"), true, paths); err != nil {
+		t.Errorf("a cache reached through a link out of the repository: %v", err)
+	}
+}

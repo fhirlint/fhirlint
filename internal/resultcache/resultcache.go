@@ -144,8 +144,20 @@ type Entry struct {
 }
 
 // Get retrieves a cached result. Returns os.ErrNotExist when there is no entry for key.
+//
+// An entry that is a symbolic link, or anything but a regular file, counts as
+// no entry: fhirlint only ever writes regular files there, so anything else
+// was put there by someone else (#498).
 func Get(cacheDir, key string) (*Entry, error) {
-	data, err := os.ReadFile(entryPath(cacheDir, key)) //nolint:gosec // path is derived from hex key
+	path := entryPath(cacheDir, key)
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, os.ErrNotExist
+	}
+	data, err := os.ReadFile(path) //nolint:gosec // path is derived from hex key
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +169,11 @@ func Get(cacheDir, key string) (*Entry, error) {
 }
 
 // Put writes a result to the cache, creating the cache directory if needed.
+//
+// It writes a fresh temp file and renames it over the entry. os.WriteFile
+// would follow a symbolic link planted under the entry's name and write
+// wherever it points; a rename replaces the link itself (#498). It also means
+// a concurrent run never reads half an entry.
 func Put(cacheDir, key string, entry Entry) error {
 	if err := os.MkdirAll(cacheDir, 0750); err != nil {
 		return err
@@ -165,7 +182,40 @@ func Put(cacheDir, key string, entry Entry) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(entryPath(cacheDir, key), data, 0600) //nolint:gosec // path is derived from hex key
+	tmp, err := os.CreateTemp(cacheDir, key+".*.tmp")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }() // a no-op once renamed
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), entryPath(cacheDir, key))
+}
+
+// CheckDir refuses a cache directory that exists but is not a directory
+// owned by the current user. A directory someone else owns, such as one in a
+// shared temp location, lets them plant entries (#498). A directory that does
+// not exist yet is fine: Put creates it.
+func CheckDir(cacheDir string) error {
+	info, err := os.Stat(cacheDir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", cacheDir)
+	}
+	if !ownedByCurrentUser(info) {
+		return fmt.Errorf("%s is owned by another user", cacheDir)
+	}
+	return nil
 }
 
 // Clear removes all .json cache entries from cacheDir, returning how many it
@@ -187,7 +237,8 @@ func Clear(cacheDir string) (int, error) {
 	removed, failed := 0, 0
 	var firstErr error
 	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+		// .tmp: what Put leaves behind when a run is killed mid-write.
+		if ext := filepath.Ext(e.Name()); e.IsDir() || (ext != ".json" && ext != ".tmp") {
 			continue
 		}
 		rerr := os.Remove(filepath.Join(cacheDir, e.Name()))
