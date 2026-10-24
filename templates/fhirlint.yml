@@ -23,6 +23,13 @@ spec:
     ig:
       default: ""
       description: Implementation guide package, e.g. kbv.basis#1.5.0 (optional).
+    no-repo-config:
+      type: boolean
+      default: false
+      description: >-
+        Ignore a fhirlint.yml and .fhirlintignore in the repository. Set it for
+        merge requests from forks, whose own config would otherwise decide how
+        they are checked.
 ---
 fhirlint:
   stage: $[[ inputs.stage ]]
@@ -36,12 +43,14 @@ fhirlint:
       IG_ARG=""
       if [ -n "$[[ inputs.profile ]]" ]; then PROFILE_ARG="--profile $[[ inputs.profile ]]"; fi
       if [ -n "$[[ inputs.ig ]]" ]; then IG_ARG="--ig $[[ inputs.ig ]]"; fi
+      REPO_CONFIG_ARG=""
+      if [ "$[[ inputs.no-repo-config ]]" = "true" ]; then REPO_CONFIG_ARG="--no-repo-config"; fi
       fhirlint validate "$[[ inputs.path ]]" \
         --fail-on "$[[ inputs.fail-on ]]" \
         --severity "$[[ inputs.severity ]]" \
         --format terminal --format junit --format codeclimate \
         --output gl-report \
-        $PROFILE_ARG $IG_ARG
+        $PROFILE_ARG $IG_ARG $REPO_CONFIG_ARG
   artifacts:
     when: always
     paths:

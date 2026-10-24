@@ -58,7 +58,7 @@ func init() {
 
 func runConfigCheck(_ *cobra.Command, _ []string) error {
 	path := viper.ConfigFileUsed()
-	if path == "" {
+	if path == "" && !noRepoConfig() {
 		// viper didn't find a config file — search explicitly so we can report
 		// errors in a file the user may have just created.
 		for _, name := range []string{"fhirlint.yml", ".fhirlint.yml"} {

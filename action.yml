@@ -50,6 +50,10 @@ inputs:
     description: 'Directory holding the terminology recording (default: .fhirlint-tx/)'
     required: false
     default: ''
+  no-repo-config:
+    description: "Ignore a fhirlint.yml and .fhirlintignore in the checked-out repository. Set it when validating pull requests from forks, whose own config would otherwise decide how they are checked"
+    required: false
+    default: 'false'
   version:
     description: "fhirlint version to install — a release tag (e.g. v1.3.0) or 'latest'"
     required: false
@@ -89,6 +93,7 @@ runs:
         IN_SINCE: ${{ inputs.since }}
         IN_TX_OFFLINE: ${{ inputs.tx-offline }}
         IN_TX_DIR: ${{ inputs.tx-dir }}
+        IN_NO_REPO_CONFIG: ${{ inputs.no-repo-config }}
       run: |
         set -euo pipefail
         # A shallow checkout has no merge base, so --since would fail with git's
@@ -123,6 +128,11 @@ runs:
           true|yes|1) args+=(--tx-offline) ;;
           ''|false|no|0) ;;
           *) echo "::error::'tx-offline' must be true or false, got '$IN_TX_OFFLINE'"; exit 1 ;;
+        esac
+        case "${IN_NO_REPO_CONFIG,,}" in
+          true|yes|1) args+=(--no-repo-config) ;;
+          ''|false|no|0) ;;
+          *) echo "::error::'no-repo-config' must be true or false, got '$IN_NO_REPO_CONFIG'"; exit 1 ;;
         esac
         echo "+ fhirlint ${args[*]}"
         fhirlint "${args[@]}"
