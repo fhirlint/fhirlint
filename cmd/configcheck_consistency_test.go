@@ -77,9 +77,9 @@ func TestAllValidateFlagsDocumented(t *testing.T) {
 	})
 }
 
-// The README's --fhir-version row is the one place the version list is not
-// derived from validator.FHIRVersions, so it is the one that silently goes
-// stale when a release is added (#306).
+// The README's --fhir-version row and the comment in fhirlint.yml.example are
+// the two places the version list is not derived from validator.FHIRVersions,
+// so they are the ones that silently go stale when a release is added (#306).
 func TestFHIRVersionsDocumentedInREADME(t *testing.T) {
 	data, err := os.ReadFile("../README.md")
 	if err != nil {
@@ -91,4 +91,24 @@ func TestFHIRVersionsDocumentedInREADME(t *testing.T) {
 			t.Errorf("FHIR version %s (%s) is supported but not mentioned in README.md", v.ID, v.Name)
 		}
 	}
+}
+
+// The example spells the list out in its comment, so compare it whole: a
+// release dropped from the table must disappear from the example too.
+func TestFHIRVersionsDocumentedInExampleConfig(t *testing.T) {
+	data, err := os.ReadFile("../fhirlint.yml.example")
+	if err != nil {
+		t.Fatalf("could not read fhirlint.yml.example: %v", err)
+	}
+	const prefix = "# FHIR version to validate against: "
+	want := prefix + strings.Join(validator.FHIRVersionIDs(), " | ")
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, prefix) {
+			if line != want {
+				t.Errorf("fhirlint.yml.example has\n\t%s\nwant\n\t%s", line, want)
+			}
+			return
+		}
+	}
+	t.Errorf("fhirlint.yml.example has no line starting with %q", prefix)
 }
