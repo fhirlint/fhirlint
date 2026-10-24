@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/input"
 )
 
 //go:embed builtin
@@ -70,10 +72,15 @@ func LoadSuite(dir string) ([]Case, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || !isCaseFile(p) {
+		// A case file or its expectation that links out of the directory is
+		// skipped like one without an expectation (#500).
+		if d.IsDir() || !isCaseFile(p) || input.LinkLeaves(dir, p, d) {
 			return nil
 		}
 		expPath := expectedPath(p)
+		if !input.Inside(dir, expPath) {
+			return nil
+		}
 		if _, statErr := os.Stat(expPath); statErr != nil {
 			// A FHIR file without a companion expectation is skipped, not an error.
 			return nil

@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -82,19 +84,56 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile, _ := rootCmd.PersistentFlags().GetString("config"); cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		viper.SetConfigName("fhirlint")
-		viper.AddConfigPath(".")
-		// Walk up to parent directories (like golangci-lint)
-		viper.AddConfigPath("..")
-		viper.AddConfigPath("../..")
-	}
-
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
 
-	// Silently ignore missing config — it's optional
+	if cfgFile, _ := rootCmd.PersistentFlags().GetString("config"); cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		found := discoverConfig()
+		if found == "" {
+			return // no config — it's optional
+		}
+		viper.SetConfigFile(found)
+	}
+
+	// Silently ignore an unreadable config here; `fhirlint config check`
+	// reports what is wrong with it.
 	_ = viper.ReadInConfig()
+}
+
+// discoverConfig finds the fhirlint.yml viper would pick up in the working
+// directory or one of the two above it, and refuses one that is a symbolic
+// link out of the directory it was found in (#500). A repository could
+// otherwise make fhirlint read a file elsewhere on the machine as its config,
+// and `config check` quote it. A file passed with --config stays trusted.
+//
+// It follows viper's own search (searchInPath in viper 1.21: each of
+// SupportedExts in order, then the bare name, since a config type is set) but
+// only stats, so a link to something like /dev/zero is refused before it is
+// read.
+func discoverConfig() string {
+	// Walk up to parent directories (like golangci-lint)
+	for _, dir := range []string{".", "..", "../.."} {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			continue
+		}
+		names := make([]string, 0, len(viper.SupportedExts)+1)
+		for _, ext := range viper.SupportedExts {
+			names = append(names, "fhirlint."+ext)
+		}
+		for _, name := range append(names, "fhirlint") {
+			p := filepath.Join(abs, name)
+			if st, err := os.Stat(p); err != nil || st.IsDir() {
+				continue
+			}
+			if !input.Inside(abs, p) {
+				fmt.Fprintf(os.Stderr, "warn: ignoring %s — it is a symbolic link that leads outside its directory; pass it with --config to use it anyway\n", p)
+				return ""
+			}
+			return p
+		}
+	}
+	return ""
 }

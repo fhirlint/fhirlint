@@ -100,3 +100,44 @@ func writeFile(t *testing.T, path, body string) {
 		t.Fatal(err)
 	}
 }
+
+// A case or an expectation that links out of the suite is skipped like a case
+// without an expectation (#500).
+func TestLoadSuite_SkipsLinksThatLeaveTheDirectory(t *testing.T) {
+	base := t.TempDir()
+	suite := filepath.Join(base, "suite")
+	if err := os.MkdirAll(suite, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	write := func(p, body string) {
+		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(suite, "ok.json"), `{"resourceType":"Patient"}`)
+	write(filepath.Join(suite, "ok"+expectedSuffix), `{"valid":true}`)
+	write(filepath.Join(base, "secret.json"), `{"resourceType":"Patient"}`)
+	write(filepath.Join(base, "secret"+expectedSuffix), `{"valid":true}`)
+	write(filepath.Join(suite, "exp"+".json"), `{"resourceType":"Patient"}`)
+	for link, target := range map[string]string{
+		"case.json":             filepath.Join(base, "secret.json"),
+		"case" + expectedSuffix: filepath.Join(suite, "ok"+expectedSuffix),
+		"exp" + expectedSuffix:  filepath.Join(base, "secret"+expectedSuffix),
+	} {
+		if err := os.Symlink(target, filepath.Join(suite, link)); err != nil {
+			t.Skipf("symlinks not available: %v", err)
+		}
+	}
+
+	cases, err := LoadSuite(suite)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) != 1 || cases[0].Name != "ok.json" {
+		names := []string{}
+		for _, c := range cases {
+			names = append(names, c.Name)
+		}
+		t.Errorf("want only ok.json, got %v", names)
+	}
+}
