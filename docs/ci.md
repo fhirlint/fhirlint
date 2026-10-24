@@ -344,16 +344,16 @@ The quickest way to validate FHIR on GitLab is the published CI/CD Component —
 
 ```yaml
 include:
-  - component: gitlab.com/fhirlint/fhirlint/fhirlint@v1.5.0
+  - component: gitlab.com/fhirlint/fhirlint/fhirlint@v1.16.0
     inputs:
       path: ./fhir/
       fail-on: error
-      image-version: "1.5.0"
+      image-version: "1.16.0"
 ```
 
 Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`, `no-repo-config`. Each input that reaches the job's script is constrained: `fail-on` and `severity` to their values; `image-version` to `latest` or `X.Y.Z`, optionally `@sha256:<digest>`; `path`, `profile` and `ig` to path and URL characters, so a value cannot carry quotes, backticks or `$( )` into the shell. `profile` and `ig` take one value each. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
 
-> **Two version references, two formats.** The component version (`@v1.5.0`) is the Git tag / Catalog version and carries the `v` prefix. The `image-version` input is the Docker image tag and does **not** (`1.5.0`). Pin both to the same release for reproducible pipelines rather than using `latest`. Browse published versions in the [CI/CD Catalog](https://gitlab.com/fhirlint/fhirlint).
+> **Two version references, two formats.** The component version (`@v1.16.0`) is the Git tag / Catalog version and carries the `v` prefix. The `image-version` input is the Docker image tag and does **not** (`1.16.0`). Pin both to the same release for reproducible pipelines rather than using `latest`. Browse published versions in the [CI/CD Catalog](https://gitlab.com/fhirlint/fhirlint).
 
 If you prefer to wire it up by hand, the raw `.gitlab-ci.yml` below does the same thing.
 
