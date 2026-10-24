@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fhirlint/fhirlint/internal/diff"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -91,15 +92,15 @@ func DiffTerminal(d *diff.Result, sides DiffSides, showUnchanged bool) {
 }
 
 func diffLine(mark string, iss diff.Issue) string {
-	id := iss.MessageID
+	id := termsafe.Line(iss.MessageID)
 	if id == "" {
 		id = "—"
 	}
 	loc := ""
 	if iss.Location != "" {
-		loc = dimStyle.Render(" @ " + iss.Location)
+		loc = dimStyle.Render(" @ " + termsafe.Line(iss.Location))
 	}
-	return fmt.Sprintf("  %s %s  %s%s", mark, fileStyle.Render(iss.File), id, loc)
+	return fmt.Sprintf("  %s %s  %s%s", mark, fileStyle.Render(termsafe.Line(iss.File)), id, loc)
 }
 
 func severityMark(severity string) string {

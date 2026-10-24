@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 )
 
 // Terminal renders the stats report as aligned, human-readable text.
@@ -27,6 +29,8 @@ func Terminal(r *Report) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
+// row is one histogram line. Its label comes from the input files, so it is
+// already made safe for the terminal (#496) when the row is built.
 type row struct {
 	label string
 	count int
@@ -35,7 +39,7 @@ type row struct {
 func typeRows(ts []TypeCount) []row {
 	out := make([]row, len(ts))
 	for i, t := range ts {
-		out[i] = row{t.Type, t.Count}
+		out[i] = row{termsafe.Line(t.Type), t.Count}
 	}
 	return out
 }
@@ -43,7 +47,7 @@ func typeRows(ts []TypeCount) []row {
 func profileRows(ps []ProfileCount) []row {
 	out := make([]row, len(ps))
 	for i, p := range ps {
-		out[i] = row{p.Profile, p.Count}
+		out[i] = row{termsafe.Line(p.Profile), p.Count}
 	}
 	return out
 }

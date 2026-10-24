@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"os"
 	"strings"
+
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 )
 
 // Terminal renders a concise human-readable qualification summary.
@@ -23,10 +25,12 @@ func Terminal(r *Report) string {
 		"",
 	}
 
+	// Case names are file names and details quote validator messages, so both
+	// go through termsafe before they reach the terminal (#496).
 	width := 0
 	for _, c := range r.Cases {
-		if len(c.Name) > width {
-			width = len(c.Name)
+		if n := len(termsafe.Line(c.Name)); n > width {
+			width = n
 		}
 	}
 	for _, c := range r.Cases {
@@ -34,7 +38,7 @@ func Terminal(r *Report) string {
 		if !c.Pass {
 			status = "FAIL"
 		}
-		lines = append(lines, fmt.Sprintf("  %s  %-*s  → %s", status, width, c.Name, c.Detail))
+		lines = append(lines, fmt.Sprintf("  %s  %-*s  → %s", status, width, termsafe.Line(c.Name), termsafe.Line(c.Detail)))
 	}
 
 	lines = append(lines, "")

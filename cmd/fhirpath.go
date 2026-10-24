@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/input"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -97,16 +98,17 @@ func runFHIRPath(_ *cobra.Command, args []string) error {
 
 // printFHIRPathTerminal prints a single result item plainly, multiple items
 // indexed, and an empty result as an explicit "(empty)" so "no match" is
-// distinguishable from an error.
+// distinguishable from an error. The items are values from the resource, so
+// they go through termsafe (#496).
 func printFHIRPathTerminal(r *validator.FHIRPathResult) {
 	switch {
 	case r.Empty():
 		fmt.Println("(empty)")
 	case len(r.Items) == 1:
-		fmt.Println(r.Items[0])
+		fmt.Println(termsafe.Line(r.Items[0]))
 	default:
 		for i, item := range r.Items {
-			fmt.Printf("[%d] %s\n", i, item)
+			fmt.Printf("[%d] %s\n", i, termsafe.Line(item))
 		}
 	}
 }

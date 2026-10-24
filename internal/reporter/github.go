@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -91,8 +92,11 @@ func gitHubLevel(severity string) string {
 
 // escapeGitHubData escapes the message body of a workflow command. Without this
 // a newline would end the command and the rest of the message would be printed
-// as plain log output instead of becoming part of the annotation.
+// as plain log output instead of becoming part of the annotation. The runner
+// echoes the command into the job log, which renders ANSI, so other control
+// characters from the input file are made visible first (#496).
 func escapeGitHubData(s string) string {
+	s = termsafe.Text(s)
 	s = strings.ReplaceAll(s, "%", "%25")
 	s = strings.ReplaceAll(s, "\r", "%0D")
 	s = strings.ReplaceAll(s, "\n", "%0A")

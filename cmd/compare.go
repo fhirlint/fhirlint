@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/profiles"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -216,9 +217,10 @@ func compareDestDir() (dir string, cleanup func(), err error) {
 
 // printCompareTerminal renders the difference list as an aligned, severity-marked
 // change report. An empty list is reported explicitly so "equivalent" is
-// distinguishable from a failure.
+// distinguishable from a failure. Canonicals, paths and messages come from the
+// two profiles, which are third-party packages more often than not (#496).
 func printCompareTerminal(r *validator.CompareResult) {
-	fmt.Printf("Comparing %s → %s\n", r.Left, r.Right)
+	fmt.Printf("Comparing %s → %s\n", termsafe.Line(r.Left), termsafe.Line(r.Right))
 	if !r.Differs() {
 		fmt.Println("  no differences — the profiles are equivalent")
 		return
@@ -226,13 +228,13 @@ func printCompareTerminal(r *validator.CompareResult) {
 
 	width := 0
 	for _, m := range r.Messages {
-		if len(m.Path) > width {
-			width = len(m.Path)
+		if n := len(termsafe.Line(m.Path)); n > width {
+			width = n
 		}
 	}
 	fmt.Printf("  %d difference(s)\n\n", len(r.Messages))
 	for _, m := range r.Messages {
-		fmt.Printf("  %s %-*s  %s\n", compareSeverityMarker(m.Severity), width, m.Path, m.Message)
+		fmt.Printf("  %s %-*s  %s\n", compareSeverityMarker(m.Severity), width, termsafe.Line(m.Path), termsafe.Line(m.Message))
 	}
 }
 

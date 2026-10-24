@@ -5,6 +5,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 )
 
 // maxSnippetWidth is how much of a line is shown before it is truncated around
@@ -30,11 +33,8 @@ func sourceSnippet(path string, line, col int) []string {
 		return nil
 	}
 
-	// Tabs would misalign the caret, since one tab is one column to the
-	// validator but several on screen.
-	text = strings.ReplaceAll(text, "\t", " ")
-
 	text, col = truncateAround(text, col, maxSnippetWidth)
+	text, col = escapeAround(text, col)
 
 	gutter := strconv.Itoa(line)
 	pad := strings.Repeat(" ", len(gutter))
@@ -64,6 +64,18 @@ func readLine(path string, n int) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// escapeAround makes the line safe to print (#496) and moves col by however
+// much the escapes before it widened the text. A tab becomes one space, which
+// also keeps the caret aligned: one tab is one column to the validator but
+// several on screen.
+func escapeAround(text string, col int) (string, int) {
+	r := []rune(text)
+	if col > 0 && col-1 <= len(r) {
+		col = utf8.RuneCountInString(termsafe.Line(string(r[:col-1]))) + 1
+	}
+	return termsafe.Line(text), col
 }
 
 // truncateAround narrows text to at most width runes centred on col, returning
