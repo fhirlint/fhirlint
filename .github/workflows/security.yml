@@ -37,3 +37,37 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
           govulncheck ./...
+
+  # CLAUDE.md, the Claude Code plugin (.claude-plugin/, hooks/, skills/) and
+  # any agent settings a pull request adds are loaded as trusted instructions
+  # or run automatically. The plugin is installed from main, so a change to it
+  # reaches users without a release (#501).
+  cfgaudit:
+    name: cfgaudit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The config lives outside the workspace, so a .cfgaudit.yml in the pull
+      # request cannot turn rules off; the action mounts it read-only.
+      # content-paths also scans the Markdown docs for hidden content.
+      - name: Write the scan config
+        run: |
+          cat > "$RUNNER_TEMP/cfgaudit.yml" <<'YAML'
+          content-paths:
+            - "*.md"
+            - "docs/**/*.md"
+            - ".github/**/*.md"
+            - "skills/**/*.md"
+          YAML
+
+      - name: Scan agent instructions, settings, the plugin and docs
+        uses: cfgaudit/cfgaudit@d490362f1889e84c2704ae304a0e6bb1863697fa # v1.18.1
+        with:
+          plugins: .
+          config: ${{ runner.temp }}/cfgaudit.yml
+          strict: "true"

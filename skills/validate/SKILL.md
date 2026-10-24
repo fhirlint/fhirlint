@@ -1,7 +1,7 @@
 ---
 name: validate
 description: Validate FHIR resources (JSON/XML) with the fhirlint CLI, then explain the findings and fix the offending resources in place. Use when the user asks to validate, lint, or check FHIR resources/bundles/profiles, when working in a repo of FHIR resources, or when a FHIR file has validation errors to diagnose. Supports German profiles (KBV, MII, ISiK, DiGA).
-allowed-tools: Bash, Read, Edit, Write, Glob, Grep
+allowed-tools: Bash(fhirlint:*), Read, Edit, Write, Glob, Grep
 ---
 
 # Validate FHIR resources with fhirlint
