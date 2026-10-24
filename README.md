@@ -186,7 +186,7 @@ Use the action to validate FHIR resources in one step — it installs fhirlint a
     severity: warning
 ```
 
-Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, `since`, `tx-offline`, `tx-dir`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
+Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format`, `output`, `since`, `tx-offline`, `tx-dir`, `no-repo-config`, and `version` (a release tag or `latest`). `profile` and `ig` accept multiple values, one per line. The action runs on Linux runners (Java 17+ is preinstalled on `ubuntu-latest`).
 
 #### Validating only what the pull request changed
 
@@ -2003,6 +2003,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
 | `--watch-interval` | — | How often `--watch` looks for changes, in milliseconds (default: 1000) |
 | `--watch-settle-time` | — | How long `--watch` waits after a change before re-validating, in milliseconds (default: 100) |
+| `--no-repo-config` | `false` | Ignore a `fhirlint.yml` and `.fhirlintignore` found in the checked directory; only `--config` is read. See [Limits for untrusted pull requests](docs/ci.md#limits-for-untrusted-pull-requests) |
 | `--jar` | — | Path to a local validator JAR (overrides auto-download; also via `FHIRLINT_JAR`) |
 | `--validator-version` | latest | Pin the auto-downloaded validator to an upstream release, e.g. `6.9.12` (also via `FHIRLINT_VALIDATOR_VERSION`) |
 

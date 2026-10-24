@@ -509,7 +509,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	// Merge .fhirlintignore patterns into the exclude list.
 	excludePatterns := append([]string{}, flagExclude...)
-	if ignorePatterns, err := loadIgnoreFile(".fhirlintignore"); err != nil {
+	if ignorePatterns, err := loadRepoIgnoreFile(); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "warning: reading .fhirlintignore: %v\n", err)
 	} else {
 		excludePatterns = append(excludePatterns, ignorePatterns...)
@@ -1918,6 +1918,19 @@ func optsWithProfileMap(opts validator.Options, filePath string, profileMap map[
 	}
 	opts.Profiles = append(append([]string{}, opts.Profiles...), extra...)
 	return opts
+}
+
+// loadRepoIgnoreFile reads the .fhirlintignore in the working directory, or
+// skips it under --no-repo-config with a note when there is one (#499).
+func loadRepoIgnoreFile() ([]string, error) {
+	const name = ".fhirlintignore"
+	if noRepoConfig() {
+		if _, err := os.Lstat(name); err == nil {
+			fmt.Fprintf(os.Stderr, "note: ignoring %s (--no-repo-config)\n", name)
+		}
+		return nil, nil
+	}
+	return loadIgnoreFile(name)
 }
 
 // loadIgnoreFile reads a gitignore-style ignore file and returns its patterns.

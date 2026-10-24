@@ -351,7 +351,7 @@ include:
       image-version: "1.5.0"
 ```
 
-Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
+Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`, `no-repo-config`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
 
 > **Two version references, two formats.** The component version (`@v1.5.0`) is the Git tag / Catalog version and carries the `v` prefix. The `image-version` input is the Docker image tag and does **not** (`1.5.0`). Pin both to the same release for reproducible pipelines rather than using `latest`. Browse published versions in the [CI/CD Catalog](https://gitlab.com/fhirlint/fhirlint).
 
@@ -468,6 +468,27 @@ Set all of them explicitly in such a job:
 - **`--validation-timeout`** and **`--max-messages`** stop the validator early and report what it found so far, so a pathological resource produces partial results instead of a killed run. Reaching either bound fails the run, because files with errors may then be reported as valid; see [Bounding a run](../README.md#bounding-a-run). Keep them below `--timeout`, or `--timeout` fires first and nothing is reported.
 
 The values above are starting points, not recommendations for every repository: a large IG can legitimately need more time and memory than a handful of examples.
+
+### The pull request's own config
+
+fhirlint reads `fhirlint.yml` (searched in the working directory and the two above it) and `.fhirlintignore` from where it runs. In a pull request from a fork, those are the author's files, and they decide how the pull request is checked. They can:
+- suppress or re-level any finding (`suppress:`, `severity-override:`, `baseline:`);
+- set `fail-on: never`;
+- `ignore:` or `exclude:` every file;
+- send every code to a terminology server they name, or replay a recording they ship (`tx-offline`, `tx-dir`);
+- choose paths fhirlint writes to (`tx-log`).
+
+Pass `--no-repo-config` (Action and GitLab component input: `no-repo-config: true`). fhirlint then ignores both files with a note, and reads only a config you pass with `--config`. Keep that file outside the checkout, or take it from the base branch:
+
+```yaml
+      - name: Validate FHIR resources
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          git show "origin/$BASE_REF:fhirlint.yml" > "$RUNNER_TEMP/fhirlint.yml"
+          fhirlint validate ./fhir/ --no-repo-config --config "$RUNNER_TEMP/fhirlint.yml"
+```
 
 ---
 

@@ -56,6 +56,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().String("config", "", "Config file (default: fhirlint.yml or .fhirlint.yml in project root)")
+	rootCmd.PersistentFlags().Bool("no-repo-config", false,
+		"Ignore a fhirlint.yml and .fhirlintignore found in the checked directory; read only --config. For checking pull requests you do not control")
 	rootCmd.PersistentFlags().String("jar", "", "Path to a local validator_cli.jar (overrides auto-download, also: FHIRLINT_JAR env var)")
 	rootCmd.PersistentFlags().String("validator-version", "",
 		"Pin the auto-downloaded validator JAR to an upstream release, e.g. 6.9.12 (default: latest)")
@@ -94,12 +96,27 @@ func initConfig() {
 		if found == "" {
 			return // no config — it's optional
 		}
+		if noRepoConfig() {
+			fmt.Fprintf(os.Stderr, "note: ignoring %s (--no-repo-config)\n", found)
+			return
+		}
 		viper.SetConfigFile(found)
 	}
 
 	// Silently ignore an unreadable config here; `fhirlint config check`
 	// reports what is wrong with it.
 	_ = viper.ReadInConfig()
+}
+
+// noRepoConfig reports --no-repo-config: the checked directory is someone
+// else's, such as a pull request from a fork, so its own fhirlint.yml and
+// .fhirlintignore must not decide how it is checked. They can suppress or
+// re-level any finding, ignore every file, name the terminology server that
+// receives the codes, and choose paths fhirlint writes to (#499). Only a file
+// passed with --config is read.
+func noRepoConfig() bool {
+	v, _ := rootCmd.PersistentFlags().GetBool("no-repo-config")
+	return v
 }
 
 // discoverConfig finds the fhirlint.yml viper would pick up in the working

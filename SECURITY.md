@@ -12,7 +12,7 @@ Fixes go into the latest release. There are no maintained release branches, so u
 
 fhirlint is usually pointed at data it has no reason to trust — resources from an API, a partner, or a contributor's pull request — and it runs in CI where that data reaches it automatically.
 
-**Trusted:** the fhirlint binary and its configuration (`fhirlint.yml`, CLI flags, suppression rules), and the validator JAR *after* it has been verified.
+**Trusted:** the fhirlint binary and its configuration (`fhirlint.yml`, CLI flags, suppression rules), and the validator JAR *after* it has been verified. When the checked directory is someone else's, such as a pull request from a fork, its `fhirlint.yml` and `.fhirlintignore` are theirs too: run with `--no-repo-config` and pass your own `--config`. See [Limits for untrusted pull requests](docs/ci.md#limits-for-untrusted-pull-requests).
 
 **Untrusted:** the FHIR resources being validated, responses from a terminology server, anything fetched via `--url`, and the JAR download until it is verified.
 

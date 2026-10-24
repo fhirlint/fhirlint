@@ -69,7 +69,7 @@ func runStats(_ *cobra.Command, args []string) error {
 	}
 
 	excludePatterns := append([]string{}, flagStatsExclude...)
-	if ignore, ierr := loadIgnoreFile(".fhirlintignore"); ierr != nil {
+	if ignore, ierr := loadRepoIgnoreFile(); ierr != nil {
 		fmt.Fprintf(os.Stderr, "warning: reading .fhirlintignore: %v\n", ierr)
 	} else {
 		excludePatterns = append(excludePatterns, ignore...)
