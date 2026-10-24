@@ -13,9 +13,15 @@ workflow:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-\S+)?$/
 
+# The release: keyword runs glab from this image, pinned by version and digest;
+# release-cli is deprecated since GitLab 18.0 and :latest is a moving tag on the
+# only job that publishes (#504). The hosted runner tag keeps it off any
+# self-hosted runner, and the resource group runs one release at a time.
 create-release:
   stage: deploy
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  image: registry.gitlab.com/gitlab-org/cli:v1.123.0@sha256:825b089e4a02ea31c52b71fd483427518bf673d114fa5f402b070ca6993459d6
+  tags: [saas-linux-small-amd64]
+  resource_group: release
   script:
     - echo "Publishing $CI_COMMIT_TAG to the GitLab CI/CD Catalog"
   release:

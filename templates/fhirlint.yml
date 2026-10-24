@@ -6,23 +6,37 @@ spec:
     path:
       default: "."
       description: File or directory of FHIR resources to validate.
+      # Interpolated into the script inside double quotes (#504): path
+      # characters and $VAR or ${VAR} references only, no quotes, backticks or
+      # $( ).
+      regex: '^([A-Za-z0-9 ._/@+-]|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})*$'
     image-version:
       default: latest
       description: >-
-        fhirlint Docker image tag (no "v" prefix). Pin to a release
-        (e.g. "1.4.0") for reproducible builds rather than relying on "latest".
+        fhirlint Docker image tag (no "v" prefix), optionally with its digest:
+        X.Y.Z@sha256:<digest>. Pin to a release (e.g. "1.4.0") for
+        reproducible builds rather than relying on "latest".
+      regex: '^(latest|[0-9]+\.[0-9]+\.[0-9]+)(@sha256:[0-9a-f]{64})?$'
     fail-on:
       default: error
-      description: "Exit non-zero at this severity or above: error | warning | information | never."
+      options: [error, warning, information, never]
+      description: Exit non-zero at this severity or above.
     severity:
       default: information
-      description: "Minimum severity to display: information | warning | error."
+      options: [information, warning, error]
+      description: Minimum severity to display.
     profile:
       default: ""
       description: Profile alias or URL to validate against (optional).
+      # Interpolated inside double quotes (#504): alias, canonical URL or
+      # URL|version characters only.
+      regex: '^[A-Za-z0-9._:/#|@%+~=?&-]*$'
     ig:
       default: ""
       description: Implementation guide package, e.g. kbv.basis#1.5.0 (optional).
+      # Interpolated inside double quotes (#504): package id, version, path or
+      # URL characters only.
+      regex: '^[A-Za-z0-9._:/#|@%+~=?&-]*$'
     no-repo-config:
       type: boolean
       default: false
@@ -34,28 +48,28 @@ spec:
 fhirlint:
   stage: $[[ inputs.stage ]]
   image:
-    name: ghcr.io/fhirlint/fhirlint:$[[ inputs.image-version ]]
+    name: "ghcr.io/fhirlint/fhirlint:$[[ inputs.image-version ]]"
     # Override the image's ENTRYPOINT so GitLab runs the script via the shell.
     entrypoint: [""]
   script:
     - |
-      PROFILE_ARG=""
-      IG_ARG=""
-      if [ -n "$[[ inputs.profile ]]" ]; then PROFILE_ARG="--profile $[[ inputs.profile ]]"; fi
-      if [ -n "$[[ inputs.ig ]]" ]; then IG_ARG="--ig $[[ inputs.ig ]]"; fi
-      REPO_CONFIG_ARG=""
-      if [ "$[[ inputs.no-repo-config ]]" = "true" ]; then REPO_CONFIG_ARG="--no-repo-config"; fi
+      set --
+      if [ -n "$[[ inputs.profile ]]" ]; then set -- "$@" --profile "$[[ inputs.profile ]]"; fi
+      if [ -n "$[[ inputs.ig ]]" ]; then set -- "$@" --ig "$[[ inputs.ig ]]"; fi
+      if [ "$[[ inputs.no-repo-config ]]" = "true" ]; then set -- "$@" --no-repo-config; fi
       fhirlint validate "$[[ inputs.path ]]" \
         --fail-on "$[[ inputs.fail-on ]]" \
         --severity "$[[ inputs.severity ]]" \
         --format terminal --format junit --format codeclimate \
         --output gl-report \
-        $PROFILE_ARG $IG_ARG $REPO_CONFIG_ARG
+        "$@"
   artifacts:
     when: always
     paths:
       - gl-report.xml
       - gl-report.json
+    # Long enough to cover a merge request review (#504).
+    expire_in: 30 days
     reports:
       # Per-file pass/fail in the pipeline's Tests tab.
       junit: gl-report.xml
