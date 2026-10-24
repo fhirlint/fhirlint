@@ -45,6 +45,7 @@ jobs:
           - { pkg: ./internal/validator, target: FuzzParseOutput }
           - { pkg: ./internal/reporter, target: FuzzSourceSnippet }
           - { pkg: ./internal/reporter, target: FuzzTruncateAround }
+          - { pkg: ./internal/termsafe, target: FuzzLine }
           - { pkg: ./internal/txreplay, target: FuzzKey }
           - { pkg: ./internal/txreplay, target: FuzzCanonicalQuery }
           - { pkg: ./internal/lsp, target: FuzzRead }

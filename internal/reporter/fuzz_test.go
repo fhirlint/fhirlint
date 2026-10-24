@@ -3,7 +3,9 @@ package reporter
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -26,6 +28,12 @@ func FuzzSourceSnippet(f *testing.F) {
 		out := sourceSnippet(path, line, col)
 		if len(out) > 2 {
 			t.Errorf("a snippet is one line and at most one caret line, got %d", len(out))
+		}
+		// The line is raw input file content on its way to a terminal (#496).
+		for _, l := range out {
+			if strings.ContainsFunc(l, unicode.IsControl) {
+				t.Errorf("snippet line %q contains a control character", l)
+			}
 		}
 	})
 }

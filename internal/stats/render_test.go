@@ -59,3 +59,18 @@ func TestJSON_RoundTrips(t *testing.T) {
 		t.Errorf("round-tripped report mismatch: %+v", r)
 	}
 }
+
+// Resource types and profile URLs are read from the input files (#496).
+func TestTerminal_EscapesControlCharacters(t *testing.T) {
+	r := &Report{
+		ResourceTypes: []TypeCount{{Type: "Patient\x1b[2J", Count: 1}},
+		Profiles:      []ProfileCount{{Profile: "https://p\x1b]8;;u\x07", Count: 1}},
+	}
+	out := Terminal(r)
+	if strings.Contains(out, "\x1b") || strings.Contains(out, "\x07") {
+		t.Errorf("raw control character in output:\n%q", out)
+	}
+	if !strings.Contains(out, `Patient\x1b[2J`) || !strings.Contains(out, `https://p\x1b]8;;u\x07`) {
+		t.Errorf("escaped values missing:\n%s", out)
+	}
+}

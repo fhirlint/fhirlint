@@ -96,3 +96,17 @@ func TestHTML_ContainsBannerAndCases(t *testing.T) {
 		}
 	}
 }
+
+// Case names are file names and details quote validator messages (#496).
+func TestTerminal_EscapesControlCharacters(t *testing.T) {
+	r := sampleReport(false)
+	r.Cases[0].Name = "case\x1b[2J"
+	r.Cases[0].Detail = "got '\x1b]8;;u\x07x'"
+	out := Terminal(r)
+	if strings.Contains(out, "\x1b") || strings.Contains(out, "\x07") {
+		t.Errorf("raw control character in output:\n%q", out)
+	}
+	if !strings.Contains(out, `case\x1b[2J`) || !strings.Contains(out, `\x1b]8;;u\x07x`) {
+		t.Errorf("escaped values missing:\n%s", out)
+	}
+}

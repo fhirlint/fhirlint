@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fhirlint/fhirlint/internal/explain"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"github.com/muesli/termenv"
 )
@@ -31,11 +32,14 @@ var (
 // that slot instead: it is the handle a reader searches, suppresses and runs
 // `fhirlint explain` by. The explain hint further down only appears for IDs
 // fhirlint can explain, so it cannot be relied on to surface the ID.
+//
+// The message quotes values from the input file, so it goes through termsafe,
+// like every other text in this report that fhirlint did not write (#496).
 func issueHeadline(issue validator.Issue) string {
 	if issue.Redacted && issue.MessageID != "" {
-		return issue.Message + " " + issue.MessageID
+		return termsafe.Line(issue.Message + " " + issue.MessageID)
 	}
-	return issue.Message
+	return termsafe.Line(issue.Message)
 }
 
 func Terminal(result *validator.Result, minSeverity string, showSuppressed, quiet, showSource bool) {
@@ -47,7 +51,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 		return
 	}
 
-	label := result.Label
+	label := termsafe.Line(result.Label)
 	if result.Cached {
 		label += dimStyle.Render(" ↩ cached")
 	}
@@ -70,7 +74,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 			fmt.Println(dimStyle.Render("           ↕ reported as " + issue.OriginalSeverity))
 		}
 		if issue.Location != "" {
-			fmt.Println(dimStyle.Render("           @ " + issue.Location))
+			fmt.Println(dimStyle.Render("           @ " + termsafe.Line(issue.Location)))
 		}
 		if showSource {
 			// Resolved against SourcePath, not Filename: for preprocessed input
@@ -83,7 +87,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 		// Surface a hint once per message ID when we can explain it.
 		if issue.MessageID != "" && !hinted[issue.MessageID] && explain.Known(issue.MessageID) {
 			hinted[issue.MessageID] = true
-			fmt.Println(dimStyle.Render("           ↳ Run: fhirlint explain " + issue.MessageID))
+			fmt.Println(dimStyle.Render("           ↳ Run: fhirlint explain " + termsafe.Line(issue.MessageID)))
 		}
 	}
 
@@ -91,10 +95,10 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 		for _, issue := range result.Suppressed {
 			fmt.Println(dimStyle.Render("  ↷ SUPP  ") + dimStyle.Render(issueHeadline(issue)))
 			if issue.Location != "" {
-				fmt.Println(dimStyle.Render("           @ " + issue.Location))
+				fmt.Println(dimStyle.Render("           @ " + termsafe.Line(issue.Location)))
 			}
 			if issue.SuppressReason != "" {
-				fmt.Println(dimStyle.Render("           ↳ " + issue.SuppressReason))
+				fmt.Println(dimStyle.Render("           ↳ " + termsafe.Line(issue.SuppressReason)))
 			}
 		}
 	}

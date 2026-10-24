@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -133,10 +134,12 @@ func severityLabel(severity string) string {
 
 // mdEscape makes a string safe to embed in a single Markdown table cell:
 // pipes are escaped and newlines are flattened so they don't break the row.
+// Other control characters are made visible: a report written to stdout lands
+// in a terminal (#496).
 func mdEscape(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\r\n", " ")
 	s = strings.ReplaceAll(s, "\n", " ")
 	s = strings.ReplaceAll(s, "\r", " ")
-	return strings.TrimSpace(s)
+	return strings.TrimSpace(termsafe.Line(s))
 }
