@@ -103,6 +103,7 @@ func TestFHIRVersionsDocumentedInExampleConfig(t *testing.T) {
 	const prefix = "# FHIR version to validate against: "
 	want := prefix + strings.Join(validator.FHIRVersionIDs(), " | ")
 	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSuffix(line, "\r") // a Windows checkout has CRLF
 		if strings.HasPrefix(line, prefix) {
 			if line != want {
 				t.Errorf("fhirlint.yml.example has\n\t%s\nwant\n\t%s", line, want)
