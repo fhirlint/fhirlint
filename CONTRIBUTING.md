@@ -84,6 +84,7 @@ refactor: extract buildArgs as pure function
 - Update `README.md` if the flag table or usage examples are affected
 - PRs go directly against `main`
 - `go.mod` and `go.sum` must be tidy: CI runs `go mod tidy -diff`
+- A change to the plugin (`hooks/`, `skills/`, `.claude-plugin/`), the Action, the GitLab component or pipeline, the workflows, the release build, the JAR signing key or agent config such as `CLAUDE.md` fails the **Sensitive paths** check until a maintainer reviews it and sets the `sensitive-paths-reviewed` label. A new push removes the label again. The full list is in `.github/workflows/sensitive-paths.yml`.
 
 ## AI-assisted contributions
 
