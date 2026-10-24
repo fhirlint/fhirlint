@@ -1,6 +1,14 @@
 ## Summary
 
-<!-- What does this PR do and why? -->
+<!-- What does this PR do and why? Link the issue. -->
+
+## How to test
+
+<!-- Commands or steps a reviewer can run. -->
+
+## AI assistance
+
+<!-- None, or which tool and for what (see CONTRIBUTING.md). -->
 
 ## Checklist
 
@@ -9,3 +17,4 @@
 - [ ] `README.md` updated if flag table or usage examples are affected
 - [ ] `go test ./...` passes locally
 - [ ] `golangci-lint run` passes locally
+- [ ] `go mod tidy -diff` reports nothing

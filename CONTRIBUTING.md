@@ -83,6 +83,16 @@ refactor: extract buildArgs as pure function
 - New functionality requires tests — unit tests at minimum, integration tests where the JAR is involved
 - Update `README.md` if the flag table or usage examples are affected
 - PRs go directly against `main`
+- `go.mod` and `go.sum` must be tidy: CI runs `go mod tidy -diff`
+
+## AI-assisted contributions
+
+Contributions written with AI tools are welcome on the same terms as any other:
+
+- **Say so** in the "AI assistance" field of the pull request template: which tool, and for what. Not as a `Co-Authored-By` line in the commit (see above).
+- **Understand and stand behind every line.** You are the author. "The model wrote it" is not an answer in review.
+- **Check FHIR and validator claims against the source:** the FHIR specification, the IG, or the HL7 validator's code and messages. Do not take a model's word for them. Message ids, element paths, terminology behaviour and version numbers are where generated text is most often confidently wrong.
+- **One issue per pull request.** Generated changes tend to sprawl; keep them to what the issue asks for.
 
 ## Adding a new flag
 
