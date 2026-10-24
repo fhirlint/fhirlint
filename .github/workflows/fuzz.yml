@@ -60,10 +60,22 @@ jobs:
         with:
           persist-credentials: false
 
+      # Not go.mod's toolchain: go1.26.x reports a -fuzztime deadline that fires
+      # mid-shutdown as "context deadline exceeded", failing a run that found
+      # nothing (golang/go#75804, #513). The fix is in every go1.27.x and is due
+      # in go1.26.11. Go back to go-version-file: go.mod once go.mod is there;
+      # the next step warns when it is.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
+          go-version: "1.27.3"
           cache: true
+
+      - name: Check the toolchain pin is still needed
+        run: |
+          want=$(go mod edit -json | jq -r .Go)
+          if [ "$(printf '%s\n' 1.26.11 "$want" | sort -V | head -1)" = 1.26.11 ]; then
+            echo "::warning file=.github/workflows/fuzz.yml::go.mod is at go $want, which has the golang/go#75804 fix: switch setup-go back to go-version-file: go.mod (#513)"
+          fi
 
       - name: Verify module cache integrity
         run: go mod verify
