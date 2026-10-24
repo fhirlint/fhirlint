@@ -10,6 +10,7 @@
 [![Lint](https://github.com/fhirlint/fhirlint/actions/workflows/lint.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/lint.yml)
 [![Security](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml)
 [![agent security: cfgaudit](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cfgaudit/cfgaudit/main/assets/badge/v1.json)](https://github.com/cfgaudit/cfgaudit)
+[![CI/CD security: glsec](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/glsec/glsec/main/assets/badge/v1.json)](https://github.com/glsec/glsec)
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
