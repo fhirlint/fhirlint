@@ -52,7 +52,7 @@ The security-relevant question is whether untrusted input can make fhirlint do s
 
 ### Repository controls
 
-Secret scanning and Dependabot security updates are enabled on this repository. Every pull request runs unit tests, `golangci-lint`, `govulncheck`, `zizmor` (GitHub Actions auditing), and Docker gates (hadolint, Trivy, dockle). Releases and image publishes are gated on those runs being green.
+Secret scanning and Dependabot security updates are enabled on this repository. Every pull request runs unit tests, `golangci-lint`, `govulncheck`, `zizmor` (GitHub Actions auditing), `cfgaudit` (CLAUDE.md, the Claude Code plugin, its hooks and skills, with a config the pull request cannot change), and Docker gates (hadolint, Trivy, dockle). Releases and image publishes are gated on those runs being green.
 
 ## Third-party dependency: HL7 FHIR Validator JAR
 

@@ -1,7 +1,7 @@
 ---
 name: audit
 description: Check the bundled HL7 FHIR validator JAR and the IG packages pinned in fhirlint.lock for updates and known security advisories using `fhirlint audit`. Use when the user asks whether their FHIR validator or implementation guides are up to date or secure, wants to audit the validator toolchain, or is reviewing supply-chain/security posture of their FHIR setup.
-allowed-tools: Bash
+allowed-tools: Bash(fhirlint:*)
 ---
 
 # Audit the FHIR toolchain
