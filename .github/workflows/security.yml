@@ -71,3 +71,30 @@ jobs:
           plugins: .
           config: ${{ runner.temp }}/cfgaudit.yml
           strict: "true"
+
+  # The GitLab mirror publishes the CI/CD Catalog version from .gitlab-ci.yml,
+  # and templates/ is the component users include. Nothing on GitLab lints
+  # either, so it happens here (#504); --strict fails on warnings too.
+  # --no-repo-config: a .glsec.yml in the pull request must not decide how it
+  # is checked.
+  glsec:
+    name: glsec
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      # Pinned; the Go checksum database verifies the module.
+      - name: Lint the GitLab pipeline and the component
+        run: |
+          go install github.com/glsec/glsec/cmd/glsec@v1.23.0
+          glsec --no-repo-config --strict .gitlab-ci.yml
+          glsec --no-repo-config --strict templates/fhirlint.yml

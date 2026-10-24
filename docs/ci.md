@@ -351,7 +351,7 @@ include:
       image-version: "1.5.0"
 ```
 
-Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`, `no-repo-config`. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
+Inputs: `stage`, `path`, `image-version`, `fail-on`, `severity`, `profile`, `ig`, `no-repo-config`. Each input that reaches the job's script is constrained: `fail-on` and `severity` to their values; `image-version` to `latest` or `X.Y.Z`, optionally `@sha256:<digest>`; `path`, `profile` and `ig` to path and URL characters, so a value cannot carry quotes, backticks or `$( )` into the shell. `profile` and `ig` take one value each. The job emits a JUnit report (Tests tab) and a CodeClimate report (merge-request Code Quality widget) as artifacts.
 
 > **Two version references, two formats.** The component version (`@v1.5.0`) is the Git tag / Catalog version and carries the `v` prefix. The `image-version` input is the Docker image tag and does **not** (`1.5.0`). Pin both to the same release for reproducible pipelines rather than using `latest`. Browse published versions in the [CI/CD Catalog](https://gitlab.com/fhirlint/fhirlint).
 
