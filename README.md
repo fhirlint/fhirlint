@@ -1806,18 +1806,20 @@ fhirlint validate ./fhir/ --cache
 fhirlint validate ./fhir/ --cache --cache-dir .fhirlint-cache/
 ```
 
-Cache the result directory in CI with `actions/cache`:
+Cache the result directory in CI with `actions/cache`. Keep it outside the checkout:
 
 ```yaml
 - uses: actions/cache@v4
   with:
-    path: .fhirlint-cache
+    path: ${{ runner.temp }}/fhirlint-cache
     key: fhirlint-results-${{ runner.os }}-${{ hashFiles('fhirlint.yml', 'fhir/**') }}
     restore-keys: fhirlint-results-${{ runner.os }}-
 
 - name: Validate FHIR resources
-  run: fhirlint validate ./fhir/ --cache --cache-dir .fhirlint-cache/
+  run: fhirlint validate ./fhir/ --cache --cache-dir "${{ runner.temp }}/fhirlint-cache"
 ```
+
+A cache entry is found by a hash of the file and the options, which anyone can compute. A cache directory inside the checkout can therefore be filled by the pull request being checked, with entries that report its files as valid. fhirlint refuses such a directory when it comes from `fhirlint.yml`, or is the default under a `HOME` that points into the workspace, and then runs without the cache. It also refuses a cache directory owned by another user. It never reads or writes an entry through a symbolic link. A `--cache-dir` on the command line, or `FHIRLINT_CACHE_DIR`, is your own choice and is used as given, so point it outside the checkout.
 
 ### Validating only what changed
 
@@ -1860,7 +1862,7 @@ This composes with `--cache` rather than replacing it: `--since` needs no state 
     fhirlint validate ./fhir/ \
       --format json --output fhir-report.json \
       --tx-cache .fhirlint-tx-cache/ \
-      --cache --cache-dir .fhirlint-cache/ \
+      --cache --cache-dir "${{ runner.temp }}/fhirlint-cache" \
       --fail-on error
 
 - uses: actions/upload-artifact@v4
