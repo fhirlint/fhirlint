@@ -1209,7 +1209,9 @@ func runLockVerify(igs []string, running string) error {
 }
 
 // collectFHIRPaths returns all .json/.xml file paths for the given input,
-// skipping any paths that match an exclude pattern.
+// skipping any paths that match an exclude pattern, and any symbolic link that
+// leads outside the directory: its target would be quoted into the report
+// (#500). The link is named in the warning, never its target.
 func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, error) {
 	if in.Source != input.SourceDir {
 		return []string{in.Path}, nil
@@ -1236,6 +1238,14 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 			return nil
 		}
 		if !input.IsFHIRFile(fpath) {
+			return nil
+		}
+		if input.LinkLeaves(in.Path, fpath, d) {
+			root := in.Path
+			if abs, err := filepath.Abs(root); err == nil {
+				root = abs
+			}
+			fmt.Fprintf(os.Stderr, "warn: skipping %s — it is a symbolic link that leads outside %s\n", fpath, root)
 			return nil
 		}
 		paths = append(paths, fpath)
@@ -1910,6 +1920,7 @@ func optsWithProfileMap(opts validator.Options, filePath string, profileMap map[
 }
 
 // loadIgnoreFile reads a gitignore-style ignore file and returns its patterns.
+// It refuses one that is a symbolic link out of its directory (#500).
 func loadIgnoreFile(filename string) ([]string, error) {
 	f, err := os.Open(filename) //nolint:gosec // filename is a constant (".fhirlintignore")
 	if os.IsNotExist(err) {
@@ -1917,6 +1928,10 @@ func loadIgnoreFile(filename string) ([]string, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if !input.Inside(filepath.Dir(filename), filename) {
+		_ = f.Close()
+		return nil, fmt.Errorf("%s is a symbolic link that leads outside its directory", filename)
 	}
 	defer func() { _ = f.Close() }()
 	var patterns []string

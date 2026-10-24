@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fhirlint/fhirlint/internal/configcheck"
+	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,6 +63,10 @@ func runConfigCheck(_ *cobra.Command, _ []string) error {
 		// errors in a file the user may have just created.
 		for _, name := range []string{"fhirlint.yml", ".fhirlint.yml"} {
 			if _, err := os.Stat(name); err == nil {
+				if !input.Inside(".", name) {
+					// Checking it would quote the target (#500).
+					return fmt.Errorf("%s is a symbolic link that leads outside the working directory; pass it with --config to check it anyway", name)
+				}
 				path = name
 				break
 			}

@@ -306,6 +306,12 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 			}
 			return nil
 		}
+		// The reason of a skipped file quotes its parse error, so a link out of
+		// the directory would bring the target's content into the report (#500).
+		if input.LinkLeaves(root, path, d) {
+			skipped = append(skipped, SkippedFile{Path: path, Reason: "symbolic link that leads outside " + root})
+			return nil
+		}
 		walk(path)
 		return nil
 	})

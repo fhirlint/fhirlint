@@ -256,6 +256,9 @@ func ValidateFile(path string, opts Options) (*Result, error) {
 // invocation. It accepts the same extensions the CLI does, line-delimited
 // exports included — before #340 it silently skipped them, so a directory of
 // .ndjson returned no results and no error.
+//
+// A symbolic link that leads outside dir is skipped, as the CLI does: the
+// report would quote the file it points to (#500).
 func ValidateDir(dir string, opts Options) ([]*Result, error) {
 	var paths []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -265,7 +268,7 @@ func ValidateDir(dir string, opts Options) ([]*Result, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if !input.IsFHIRFile(path) {
+		if !input.IsFHIRFile(path) || input.LinkLeaves(dir, path, d) {
 			return nil
 		}
 		paths = append(paths, path)
