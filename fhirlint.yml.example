@@ -345,6 +345,13 @@ ignore:
 # and exit code are the same either way.
 # group: true
 
+# After the summary, list the N files the validator took longest on, with the
+# time it logged for each. The time is per file and excludes package loading,
+# also the packages the validator loads lazily while on a file, so a run can be
+# slow while every file looks fast. Cached files took no time in the run and
+# are not listed. Terminal output only; JSON always carries "durationMs" per file.
+# slowest: 10
+
 # Baseline file — suppress pre-existing issues and fail only on regressions.
 # Generate:  fhirlint validate resources/ --generate-baseline fhirlint-baseline.json
 # Use:       fhirlint validate resources/ --baseline fhirlint-baseline.json

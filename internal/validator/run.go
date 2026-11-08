@@ -59,6 +59,11 @@ type Result struct {
 	Suppressed []Issue `json:"suppressed,omitempty"` // populated after suppress.Apply
 	Cached     bool    `json:"cached,omitempty"`     // true when result came from the result cache
 
+	// DurationMs is how long the validator took on this file, as it logged it
+	// (#522). Zero when it logged no time, as for a crashed file, and for a
+	// cached result, which took no validation time in this run.
+	DurationMs int64 `json:"durationMs,omitempty"`
+
 	// ValidatorBuild is the validator's own description of itself, taken from
 	// the validator-version extension it adds to each OperationOutcome from
 	// 7.0.0 on — version, Git SHA and build date in one line, without the
@@ -716,6 +721,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 				return nil, err
 			}
 			attachSnapshotFailures(rs, snapshotFailures(out.stdout, paths))
+			attachDurations(rs, fileDurations(out.stdout, paths))
 			if crashes == 0 {
 				return rs, nil
 			}
