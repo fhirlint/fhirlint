@@ -1807,6 +1807,18 @@ warn: the validator crashed on in/BodyStructure-0c5948ba-….json; re-running th
 
 Each re-run costs a JVM start. After three crashes in one run, or when `--timeout` runs out during a re-run, the files still waiting are reported as `fatal` with `fhirlint-not-validated` rather than counted as valid. Neither kind of result goes into the `--cache`. If fhirlint cannot tell which file the validator was on, for example because it failed while loading packages, the run fails with `validator produced no result` as before.
 
+### When a profile has no snapshot
+
+When the validator cannot generate a profile's snapshot, its report says only that the profile "has no snapshot". The reason is printed on the validator's console. fhirlint reads it from there and attaches it to the finding:
+
+```
+  ✗ ERROR  StructureDefinition http://example.org/fhir/StructureDefinition/Slice-nonrepeating|1.0.0 has no snapshot - validation is against the snapshot, so it must be provided
+           @ Patient (line 1, col 2)
+           ↳ cause: Attempt to a slice an element that does not repeat: Patient.maritalStatus/Patient.maritalStatus … at element married (slice = {5})
+```
+
+JSON carries it as `"cause"` on the issue, and the other reports add a `Cause:` line to the message. If no finding names the profile, the failure is reported as an `error` of its own, with message id `fhirlint-snapshot-failed`. `--redact` removes the cause along with the message. [Server mode](docs/daemon.md) does not read the console yet, so its findings have no cause.
+
 ### Result caching
 
 `--cache` caches validation results per file content hash. Unchanged files are not re-validated, which significantly speeds up repeated runs in CI.

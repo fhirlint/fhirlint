@@ -126,3 +126,14 @@ func TestApplyOnEmptyInput(t *testing.T) {
 	redact.Apply(nil)
 	redact.Apply([]*validator.Result{})
 }
+
+// The cause from #521 quotes the profile, not the instance, but --redact keeps
+// only what describes the finding: severity, id, location.
+func TestApplyRemovesCause(t *testing.T) {
+	results := sampleResults()
+	results[0].Issues[0].Cause = "Attempt to slice " + phi
+	redact.Apply(results)
+	if results[0].Issues[0].Cause != "" {
+		t.Errorf("cause = %q, want it removed", results[0].Issues[0].Cause)
+	}
+}

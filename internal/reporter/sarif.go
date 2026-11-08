@@ -136,7 +136,7 @@ func buildSARIFReport(results []*validator.Result, minSeverity string, info RunI
 			sr := sarifResult{
 				RuleID:  ruleID,
 				Level:   sarifLevel(iss.Severity),
-				Message: sarifMessage{Text: termsafe.Clip(iss.Message)},
+				Message: sarifMessage{Text: termsafe.Clip(MessageWithCause(iss))},
 			}
 
 			if iss.OriginalSeverity != "" {

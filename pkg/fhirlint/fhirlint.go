@@ -209,6 +209,11 @@ type Issue struct {
 	// Carried through so a stripped finding can never be mistaken for one the
 	// validator described that tersely.
 	Redacted bool
+
+	// Cause is why the validator reported this issue, when it logged that on
+	// its console only, e.g. the exception behind a profile that "has no
+	// snapshot". Empty for almost every issue.
+	Cause string
 }
 
 // Validate validates a single FHIR resource from raw bytes (JSON or XML).
@@ -372,6 +377,7 @@ func toPublicResult(r *validator.Result) *Result {
 			MessageID:         iss.MessageID,
 			MessageIDInferred: iss.MessageIDInferred,
 			Redacted:          iss.Redacted,
+			Cause:             iss.Cause,
 		}
 	}
 	return &Result{
