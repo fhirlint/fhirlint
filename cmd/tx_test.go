@@ -226,3 +226,19 @@ func TestWarnRoutingBypass(t *testing.T) {
 		}
 	}
 }
+
+// #465: a registry recording replays with the endpoint path on -tx, because
+// the validator keeps it when it substitutes -tx for tx.fhir.org.
+func TestReplayTxPath(t *testing.T) {
+	reg := &txreplay.Manifest{Upstream: "https://tx.fhir.org/r4", Routing: txreplay.RoutingRegistry}
+	if got := replayTxPath(reg); got != "/r4" {
+		t.Errorf("registry: %q", got)
+	}
+	single := &txreplay.Manifest{Upstream: "https://tx.fhir.org/r4", Routing: txreplay.RoutingSingleServer}
+	if got := replayTxPath(single); got != "" {
+		t.Errorf("single-server: %q", got)
+	}
+	if replayTxPath(nil) != "" || replaysRegistry(nil) {
+		t.Error("no manifest")
+	}
+}

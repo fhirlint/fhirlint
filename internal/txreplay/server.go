@@ -44,6 +44,14 @@ type Server struct {
 	upstreamHeaders map[string]string
 	client          *http.Client
 
+	// Registry routing (#465): the tx registry the recorder forwards to, and
+	// the hosts its answers named. ecosystem is empty without routing.
+	ecosystem string
+	routed    map[string]bool
+	contacted map[string]bool
+	// base is this server's own URL, for rewriting registry answers.
+	base string
+
 	mu     sync.Mutex
 	misses []Miss
 
@@ -88,7 +96,8 @@ func (s *Server) Start() (string, error) {
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	go func() { _ = s.srv.Serve(ln) }()
-	return "http://" + ln.Addr().String(), nil
+	s.base = "http://" + ln.Addr().String()
+	return s.base, nil
 }
 
 // Stop shuts the server down. It is safe to call on a server that never started.
@@ -114,6 +123,16 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = r.Body.Close() }()
 
+	if s.ecosystem != "" {
+		switch {
+		case isRegistryPath(r.URL.Path):
+			s.serveRegistry(w, r, body)
+			return
+		case strings.HasPrefix(r.URL.Path, routePrefix):
+			s.serveRoute(w, r, body)
+			return
+		}
+	}
 	if s.upstream == "" {
 		s.replay(w, r, body)
 		return
@@ -124,22 +143,27 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 func (s *Server) replay(w http.ResponseWriter, r *http.Request, body []byte) {
 	in, ok := s.store.Lookup(r.Method, r.URL.Path, r.URL.RawQuery, body)
 	if !ok {
-		s.mu.Lock()
-		s.misses = append(s.misses, Miss{
-			Method: r.Method,
-			Path:   r.URL.Path,
-			Query:  r.URL.RawQuery,
-			Detail: describe(body),
-		})
-		s.mu.Unlock()
-		// The JAR treats some terminology failures as warnings rather than
-		// aborting, so the run must not be trusted to fail on its own — the
-		// caller checks Misses() afterwards. This response only keeps the
-		// validator from hanging.
-		writeOutcome(w, http.StatusNotFound, "not recorded: run 'fhirlint tx warm' to record this terminology request")
+		s.miss(w, r, body)
 		return
 	}
 	writeInteraction(w, in)
+}
+
+// miss records a request replay could not answer and says so to the JAR.
+func (s *Server) miss(w http.ResponseWriter, r *http.Request, body []byte) {
+	s.mu.Lock()
+	s.misses = append(s.misses, Miss{
+		Method: r.Method,
+		Path:   r.URL.Path,
+		Query:  r.URL.RawQuery,
+		Detail: describe(body),
+	})
+	s.mu.Unlock()
+	// The JAR treats some terminology failures as warnings rather than
+	// aborting, so the run must not be trusted to fail on its own — the
+	// caller checks Misses() afterwards. This response only keeps the
+	// validator from hanging.
+	writeOutcome(w, http.StatusNotFound, "not recorded: run 'fhirlint tx warm' to record this terminology request")
 }
 
 func (s *Server) record(w http.ResponseWriter, r *http.Request, body []byte) {
@@ -147,13 +171,29 @@ func (s *Server) record(w http.ResponseWriter, r *http.Request, body []byte) {
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}
+	in, ok := s.forward(w, r, body, target, nil)
+	if !ok {
+		return
+	}
+	if !s.keep(w, in, body) {
+		return
+	}
+	writeInteraction(w, in)
+}
+
+// forward sends the validator's request to target and returns the answer as
+// an Interaction. headers nil means the upstream credentials; routed servers
+// pass an empty map so that they never receive them. On failure it has
+// already answered the validator and reports false.
+func (s *Server) forward(w http.ResponseWriter, r *http.Request, body []byte, target string, headers map[string]string) (*Interaction, bool) {
 	// The destination is the terminology server the user chose for recording,
-	// not anything the incoming request controls: only the path and query come
-	// from the validator, and they are appended to that fixed base.
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, target, strings.NewReader(string(body))) //nolint:gosec // G704: target base is operator-supplied, not request-controlled
+	// the registry, or a server a registry answer named in this run — never
+	// anything the incoming request controls alone: only the path and query
+	// come from the validator.
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, target, strings.NewReader(string(body))) //nolint:gosec // G704: target base is operator-supplied or allowlisted, not request-controlled
 	if err != nil {
 		writeOutcome(w, http.StatusBadGateway, "building upstream request: "+err.Error())
-		return
+		return nil, false
 	}
 	// Carry the negotiation headers through: the terminology server keys its
 	// response format and FHIR version off them.
@@ -162,20 +202,23 @@ func (s *Server) record(w http.ResponseWriter, r *http.Request, body []byte) {
 			req.Header.Set(h, v)
 		}
 	}
-	for name, value := range s.upstreamHeaders {
+	if headers == nil {
+		headers = s.upstreamHeaders
+	}
+	for name, value := range headers {
 		req.Header.Set(name, value)
 	}
 
 	resp, err := s.client.Do(req) //nolint:gosec // G704: see the request construction above
 	if err != nil {
 		writeOutcome(w, http.StatusBadGateway, "terminology server unreachable: "+err.Error())
-		return
+		return nil, false
 	}
 	defer func() { _ = resp.Body.Close() }()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		writeOutcome(w, http.StatusBadGateway, "reading terminology response: "+err.Error())
-		return
+		return nil, false
 	}
 
 	in := &Interaction{
@@ -193,23 +236,26 @@ func (s *Server) record(w http.ResponseWriter, r *http.Request, body []byte) {
 	} else {
 		in.ResponseText = string(respBody)
 	}
+	return in, true
+}
 
-	// Pass infrastructure failures through without storing them. A 404 from a
-	// misconfigured endpoint would otherwise be replayed forever as if it were
-	// the terminology server's real answer.
-	if !recordable(resp.StatusCode) {
+// keep stores an answer worth replaying. An infrastructure failure is passed
+// to the validator unstored: a 404 from a misconfigured endpoint would
+// otherwise be replayed forever as if it were the server's real answer. It
+// reports false when it has already answered the validator.
+func (s *Server) keep(w http.ResponseWriter, in *Interaction, body []byte) bool {
+	if !recordable(in.Status) {
 		writeInteraction(w, in)
-		return
+		return false
 	}
-
 	s.mu.Lock()
-	err = s.store.Put(in, body)
+	err := s.store.Put(in, body)
 	s.mu.Unlock()
 	if err != nil {
 		writeOutcome(w, http.StatusInternalServerError, err.Error())
-		return
+		return false
 	}
-	writeInteraction(w, in)
+	return true
 }
 
 // recordable reports whether a response is an answer worth keeping. Terminology
@@ -231,10 +277,10 @@ func writeInteraction(w http.ResponseWriter, in *Interaction) {
 	}
 	w.WriteHeader(status)
 	if len(in.Response) > 0 {
-		_, _ = w.Write(in.Response)
+		_, _ = w.Write(in.Response) //nolint:gosec // G705: a terminology answer to the validator JAR, not a page a browser renders
 		return
 	}
-	_, _ = io.WriteString(w, in.ResponseText)
+	_, _ = io.WriteString(w, in.ResponseText) //nolint:gosec // G705: as above, the client is the validator JAR
 }
 
 func writeOutcome(w http.ResponseWriter, status int, msg string) {

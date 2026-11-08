@@ -38,19 +38,31 @@ fhirlint tx warm ./fhir/ --profile kbv-patient --ig kbv.basis#1.5.0
 
 Record against a specific server with `--terminology-server`. Without it, fhirlint records from the endpoint the validator would have used itself (`https://tx.fhir.org/r4` for FHIR R4 and R4B, `/r5` for R5).
 
-### Recording bypasses the validator's terminology routing
+### Terminology routing
 
-Run without `-tx`, the validator (6.2.8 and later) looks up each code system in the tx registry and sends some requests to the server the registry names for it, not to tx.fhir.org. tx.fhir.de, for example, is authoritative for the German SNOMED CT edition and a candidate for ATC. For recording, fhirlint makes the recorder the validator's `-tx`, and with an explicit `-tx` the validator sends everything there. So the recording holds tx.fhir.org's answers to questions a live run asks tx.fhir.de, and the two can differ.
+Run without `-tx`, the validator (6.2.8 and later) looks up each code system in the tx registry and sends some requests to the server the registry names for it, not to tx.fhir.org. tx.fhir.de, for example, is authoritative for the German SNOMED CT edition and a candidate for ATC. A recording has to capture those requests too, or its replay is not the live run.
 
-Measured with validator 7.0.1 on a `Medication` example from `kbv.basis#1.9.0`: live, `Medication.code` and `Medication.form` were checked by tx.fhir.de and produced 12 terminology warnings without message ids. Replayed from a tx.fhir.org recording, the same file produced 6 issues with ids (`UNKNOWN_CODESYSTEM_VERSION` and others). Validator 6.10.3 routes too, and sends single SNOMED codings to tx.fhir.de as well, but on this file it reports the same issues either way. The difference is in which requests are routed: 7.0 also sends a CodeableConcept to tx.fhir.de when one of its codings, here the PZN, is unknown to the registry, while 6.10.x sent such a CodeableConcept to tx.fhir.org. tx.fhir.de's answers to these requests are the id-less warnings (see [Message IDs and validator 7.0](baseline.md#message-ids-and-validator-70)).
+**With validator 7.0.4 or later**, `tx warm` without `--terminology-server` records with the routing intact (#465). The validator gets the recorder as `-tx` and the recorder's `/tx-reg` as `-ecosystem`, the registry option 7.0.4 added. The recorder forwards registry requests to `https://ecosystem.hl7.org/tx-reg` and rewrites the servers in each answer, other than tx.fhir.org, to a route through itself. The validator itself substitutes `-tx` for tx.fhir.org. A route is forwarded only to a server a registry answer named in the same run, so the recorder is not an open proxy, and the terminology server's credentials are sent neither to the registry nor to routed servers. The registry's answers are recorded too, so a replay also pins the routing decisions, which change over time independently of your resources. `manifest.json` then says:
 
-What this means in practice:
+```json
+"routing": "registry",
+"ecosystem": "https://ecosystem.hl7.org/tx-reg",
+"routed": ["tx.fhir.de"],
+```
 
-- A replay reproduces the recording, a single-server run. It does not reproduce a live run without `--terminology-server`.
-- Do not mix the two across environments. A team that replays in CI and validates live locally, or the other way round, can get different terminology findings on the same commit.
-- A live run with `--terminology-server <url>` is single-server too, so it matches a recording made from the same `<url>`.
+`routed` lists the servers requests were actually routed to. Measured with validator 7.0.5 on the `Medication` example `Medication-149e683b-…` from `kbv.basis#1.9.0`:
 
-`tx warm` prints a warning when the JAR routes (6.2.8 or newer), and `manifest.json` records `"routing": "single-server"`, so that `upstream` is not read as "the server the live run used". Recording with registry routing intact is not supported yet.
+| run | issues | same as live? |
+|---|---|---|
+| live, no `--terminology-server` | 16 | — |
+| replay of a recording with registry routing | 16 | yes: ids, locations and messages |
+| replay of a single-server recording (`--terminology-server https://tx.fhir.org/r4`) | 10 | no |
+
+Replaying a registry recording needs 7.0.4 or later as well, and `--tx-offline` and `fhirlint serve --tx-offline` refuse an older JAR.
+
+**Before 7.0.4**, and whenever `--terminology-server` is given, the recording is single-server: every request goes to the recorder's upstream. A replay then reproduces a single-server run, not a live run without `--terminology-server`. `tx warm` warns, and `manifest.json` records `"routing": "single-server"`, so that `upstream` is not read as "the server the live run used". A live run with `--terminology-server <url>` is single-server too, so it matches a recording made from the same `<url>`. Do not mix the two across environments: a team that replays a single-server recording in CI and validates live locally can get different terminology findings on the same commit.
+
+Measured with validator 7.0.1 on the same `Medication` before this existed: live, `Medication.code` and `Medication.form` were checked by tx.fhir.de and produced 12 terminology warnings without message ids. Replayed from a tx.fhir.org recording, the same file produced 6 issues with ids (`UNKNOWN_CODESYSTEM_VERSION` and others). Validator 6.10.3 routes too, but on this file it reports the same issues either way (see [Message IDs and validator 7.0](baseline.md#message-ids-and-validator-70)).
 
 The JAR's own terminology cache is **disabled during recording**. Otherwise it would answer some requests from `~/.fhir` without them ever reaching the recorder, and the recording would be complete only on the machine that made it.
 

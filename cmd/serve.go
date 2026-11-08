@@ -86,6 +86,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	txServer := flagServeTerminologyServer
 	txCache := flagServeTxCache
 	txSettings := ""
+	txEcosystem := ""
 	if flagServeTxOffline {
 		switch {
 		case flagServeNoTerminologyServer:
@@ -102,9 +103,16 @@ func runServe(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("no terminology recording in %s/ — record one first with: fhirlint tx warm <path>", dir)
 		}
 		txPlayer = txreplay.NewPlayer(store)
+		routed := replaysRegistry(store.ReadManifest())
+		if routed {
+			txPlayer.WithRegistry("")
+		}
 		baseURL, err := txPlayer.Start()
 		if err != nil {
 			return err
+		}
+		if routed {
+			txEcosystem = baseURL + "/tx-reg"
 		}
 		defer func() { _ = txPlayer.Stop() }()
 		// Validator 6.10.0+ refuses plain-HTTP destinations; exempt only this
@@ -115,7 +123,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		}
 		defer cleanupSettings()
 		txSettings = settingsPath
-		txServer = baseURL
+		txServer = baseURL + replayTxPath(store.ReadManifest())
 		// Every request has to reach the replay server, or an incomplete
 		// recording stays invisible behind the JAR's own cache.
 		txCache = "n/a"
@@ -130,6 +138,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		IGs:                 resolveIGs(flagServeIG),
 		NoTerminologyServer: flagServeNoTerminologyServer,
 		TerminologyServer:   txServer,
+		Ecosystem:           txEcosystem,
 		TxCache:             txCache,
 		FHIRSettings:        txSettings,
 		JARPath:             viper.GetString("jar"),
