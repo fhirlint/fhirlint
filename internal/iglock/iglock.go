@@ -30,6 +30,13 @@ type LockFile struct {
 	// "unknown, do not check" when absent so those keep working.
 	Validator string           `json:"validator,omitempty"`
 	Packages  map[string]Entry `json:"packages"`
+	// Implicit are the packages the validator loaded on its own, because the
+	// input named a canonical they define (#520): the newest version,
+	// pre-releases included, so a new release can change the result. nil in a
+	// lock file written before fhirlint recorded them, which then only warns;
+	// once --lock has written the section, even empty, an implicit package
+	// outside it fails the run.
+	Implicit map[string]Entry `json:"implicit"`
 }
 
 // VerifyValidator checks the running validator against the version recorded in
@@ -134,7 +141,16 @@ func Read(path string) (*LockFile, error) {
 
 // Write serialises lf as pretty-printed JSON and writes it to path.
 func Write(path string, lf *LockFile) error {
-	data, err := json.MarshalIndent(lf, "", "  ")
+	var v any = lf
+	if lf.Implicit == nil {
+		// Not "implicit": null: a lock file that never recorded implicit
+		// packages stays as it was written.
+		v = struct {
+			Validator string           `json:"validator,omitempty"`
+			Packages  map[string]Entry `json:"packages"`
+		}{lf.Validator, lf.Packages}
+	}
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -178,6 +194,19 @@ func Verify(lf *LockFile, igs []string, w io.Writer) error {
 // IGs not in "name#version" format are skipped.
 // Returns the number of entries added or updated.
 func Update(lf *LockFile, igs []string) (int, error) {
+	return updateInto(lf.Packages, igs)
+}
+
+// UpdateImplicit records the packages the validator loaded on its own, in
+// "id#version" form, and opts the lock file into checking them.
+func UpdateImplicit(lf *LockFile, refs []string) (int, error) {
+	if lf.Implicit == nil {
+		lf.Implicit = make(map[string]Entry)
+	}
+	return updateInto(lf.Implicit, refs)
+}
+
+func updateInto(m map[string]Entry, igs []string) (int, error) {
 	count := 0
 	for _, ig := range igs {
 		name, version := ParseIGID(ig)
@@ -191,11 +220,53 @@ func Update(lf *LockFile, igs []string) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("hashing %s: %w", ig, err)
 		}
-		lf.Packages[ig] = Entry{
+		m[ig] = Entry{
 			URL:    PackageURL(name, version),
 			SHA256: hash,
 		}
 		count++
 	}
 	return count, nil
+}
+
+// VerifyImplicit checks the packages the validator loaded on its own against
+// the lock file. A lock file without the implicit section predates it and only
+// gets a warning; with the section, a package outside it, or one whose content
+// changed, is an error. Fewer packages than recorded is fine: cached results
+// load nothing.
+func VerifyImplicit(lf *LockFile, refs []string, w io.Writer) error {
+	if len(refs) == 0 {
+		return nil
+	}
+	if lf.Implicit == nil {
+		_, _ = fmt.Fprintf(w, "warn: %s does not record the %d package(s) the validator loaded on its own — run with --lock to record them, so that a new version fails the run\n",
+			LockFileName, len(refs))
+		return nil
+	}
+	var missing []string
+	for _, ref := range refs {
+		entry, ok := lf.Implicit[ref]
+		if !ok {
+			missing = append(missing, ref)
+			continue
+		}
+		name, version := ParseIGID(ref)
+		got, err := HashPackage(name, version)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("hashing %s: %w", ref, err)
+		}
+		if got != entry.SHA256 {
+			return fmt.Errorf("lock file mismatch for %s, which the validator loaded on its own: expected sha256 %s, got %s — run with --lock to update", ref, entry.SHA256, got)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("the validator loaded %s on its own, which %s does not record: "+
+			"a new version was published, or the input names a new canonical — "+
+			"pin the version you mean with --ig <id>#<version>, or run with --lock to accept it",
+			strings.Join(missing, ", "), LockFileName)
+	}
+	return nil
 }

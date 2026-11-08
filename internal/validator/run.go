@@ -64,6 +64,12 @@ type Result struct {
 	// cached result, which took no validation time in this run.
 	DurationMs int64 `json:"durationMs,omitempty"`
 
+	// ImplicitPackages are the packages the validator loaded while on this
+	// file without anyone requesting them (#520). Per run in truth: the JSON
+	// report lifts them into its meta once. Not serialised per file, and not
+	// cached, because a replayed result loaded nothing.
+	ImplicitPackages []PackageRef `json:"-"`
+
 	// ValidatorBuild is the validator's own description of itself, taken from
 	// the validator-version extension it adds to each OperationOutcome from
 	// 7.0.0 on — version, Git SHA and build date in one line, without the
@@ -722,6 +728,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 			}
 			attachSnapshotFailures(rs, snapshotFailures(out.stdout, paths))
 			attachDurations(rs, fileDurations(out.stdout, paths))
+			attachImplicitPackages(rs, implicitPackages(out.stdout, paths))
 			if crashes == 0 {
 				return rs, nil
 			}

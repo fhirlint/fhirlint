@@ -1086,11 +1086,17 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// Handle fhirlint.lock: verify existing lock, or write/update when --lock is set.
 	allIGs := collectAllIGs(opts.IGs, overrides)
 	running := validator.RunValidatorVersion(opts)
+	implicit := validator.ImplicitPackages(results)
+	reportImplicitPackages(os.Stderr, implicit, allIGs)
+	implicitRefs := make([]string, len(implicit))
+	for i, p := range implicit {
+		implicitRefs[i] = p.String()
+	}
 	if flagLock {
-		if lerr := runLockWrite(allIGs, running); lerr != nil {
+		if lerr := runLockWrite(allIGs, implicitRefs, running); lerr != nil {
 			return lerr
 		}
-	} else if lerr := runLockVerify(allIGs, running); lerr != nil {
+	} else if lerr := runLockVerify(allIGs, implicitRefs, running); lerr != nil {
 		return lerr
 	}
 
@@ -1174,7 +1180,7 @@ func collectAllIGs(base []string, overrides []configOverride) []string {
 
 // runLockWrite writes or updates fhirlint.lock with current IG hashes and the
 // validator version in use.
-func runLockWrite(igs []string, running string) error {
+func runLockWrite(igs, implicit []string, running string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
@@ -1186,6 +1192,14 @@ func runLockWrite(igs []string, running string) error {
 	if err != nil {
 		return err
 	}
+	// Written even when empty: the section opts the lock file into failing on
+	// a package the validator loads on its own later (#520).
+	implicitSectionNew := lf.Implicit == nil
+	m, err := iglock.UpdateImplicit(lf, implicit)
+	if err != nil {
+		return err
+	}
+	n += m
 	// Record the validator too, so the lock covers every input that can change
 	// the result. This is also why an unchanged package set no longer short-
 	// circuits: the validator may still need recording.
@@ -1193,7 +1207,7 @@ func runLockWrite(igs []string, running string) error {
 	if validatorChanged {
 		lf.Validator = running
 	}
-	if n == 0 && !validatorChanged {
+	if n == 0 && !validatorChanged && !implicitSectionNew {
 		return nil
 	}
 	if err := iglock.Write(iglock.LockFileName, lf); err != nil {
@@ -1206,7 +1220,7 @@ func runLockWrite(igs []string, running string) error {
 
 // runLockVerify verifies IGs and the validator version against fhirlint.lock
 // when the file exists.
-func runLockVerify(igs []string, running string) error {
+func runLockVerify(igs, implicit []string, running string) error {
 	lf, err := iglock.Read(iglock.LockFileName)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", iglock.LockFileName, err)
@@ -1217,7 +1231,10 @@ func runLockVerify(igs []string, running string) error {
 	if err := iglock.VerifyValidator(lf, running, os.Stderr); err != nil {
 		return err
 	}
-	return iglock.Verify(lf, igs, os.Stderr)
+	if err := iglock.Verify(lf, igs, os.Stderr); err != nil {
+		return err
+	}
+	return iglock.VerifyImplicit(lf, implicit, os.Stderr)
 }
 
 // collectFHIRPaths returns all .json/.xml file paths for the given input,
