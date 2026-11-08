@@ -1,0 +1,44 @@
+FHIR Validation tool Version 7.0.3 (Git# 28e9fac6d79d). Built 2026-10-21T16:46:58.228Z (18 days old)
+  Java:   21.0.12.1 from /usr/lib/jvm/java-21-openjdk-amd64 on amd64 (64bit). 1200MB available
+  Paths:  Current = /work, Package Cache = /home/user/.fhir/packages
+  Params: in/us.json in/us2.json -version 4.0.1 -tx n/a -output out7.json
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v4.0.1 from hl7.fhir.r4.core#4.0.1
+  Load hl7.terminology.r4#6.2.0 - 4288 resources (00:05.697)
+  Load hl7.fhir.uv.extensions.r4#5.2.0 - 759 resources (00:00.981)
+  Loaded FHIR - 8265 resources (00:00.002)
+  Terminology Cache at /tmp/default-tx-cache
+  Terminology server null - Version n/a: No Terminology Server (00:00.051)
+  Load hl7.terminology#7.5.0 - 4190 resources (00:01.273)
+  Load hl7.terminology.r5#7.5.0 - 4190 resources (00:00.335)
+  Load hl7.fhir.uv.extensions#5.4.0 - 885 resources (00:00.753)
+  Package Summary: [hl7.fhir.r4.core#4.0.1, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r4#6.2.0, hl7.fhir.uv.extensions.r4#5.2.0, hl7.terminology#7.5.0, hl7.terminology.r5#7.5.0, hl7.fhir.uv.extensions#5.4.0]
+  Get set... 
+  ...go! (00:01.365)
+Cached new session. Cache size = 1
+Sources to validate: in/us.jsonin/us2.json
+Validating
+  Validate in/us.json
+  Load hl7.terminology.r4#7.1.0 - 4072 resources (00:02.029)
+  Load hl7.terminology.r5#5.3.0 - 4202 resources (00:00.187)
+  Load hl7.fhir.uv.extensions#5.1.0-snapshot1 - 1379 resources (00:00.081)
+  Load hl7.fhir.uv.extensions.r4#1.0.0 - 1329 resources (00:00.886)
+  Load hl7.terminology#5.5.0 - 4225 resources (00:00.076)
+  Load hl7.fhir.uv.smart-app-launch#2.2.0 - 12 resources (00:00.000)
+  Load hl7.fhir.uv.xver-r5.r4#0.1.0 - 4707 resources (00:00.145)
+  Load hl7.fhir.uv.tools.r4#1.1.2 - 118 resources (00:00.013)
+  Load hl7.fhir.r4.examples#4.0.1 - 4581 resources (00:01.301)
+  Load hl7.terminology.r4#6.5.0 - 4357 resources (00:00.150)
+  Load hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1 - 855 resources (00:00.560)
+  Load hl7.fhir.uv.sdc#4.0.0 - 181 resources (00:00.010)
+  Load us.cdc.phinvads#0.12.0 - 1967 resources (00:00.082)
+  Load hl7.fhir.uv.extensions.r4#5.3.0 - 885 resources (00:00.600)
+  Load hl7.fhir.us.core#9.0.0 - 215 resources (00:00.002)
+ 00:00.372
+  Validate in/us2.json
+ 00:04.053
+Done. Times: Loading: 00:10.566, validation: 00:10.555 (#2). Memory = 725Mb
+
+Done. Times: Loading: 00:10.566, validation: 00:10.555 (#2). Max Memory = 1Gb

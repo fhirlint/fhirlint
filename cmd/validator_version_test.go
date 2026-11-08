@@ -90,7 +90,7 @@ func TestRunLockWrite_RecordsTheRunningValidator(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	running := validator.RunValidatorVersion(validator.Options{JARPath: fakeJAR(t, "7.0.1")})
-	if err := runLockWrite(nil, running); err != nil {
+	if err := runLockWrite(nil, nil, running); err != nil {
 		t.Fatal(err)
 	}
 	lf, err := iglock.Read(iglock.LockFileName)
@@ -107,7 +107,7 @@ func TestRunLockWrite_RecordsTheRunningValidator(t *testing.T) {
 	if err := iglock.Write(iglock.LockFileName, lf); err != nil {
 		t.Fatal(err)
 	}
-	if err := runLockVerify(nil, running); err == nil {
+	if err := runLockVerify(nil, nil, running); err == nil {
 		t.Error("lock for 6.10.3 verified against a 7.0.1 --jar run")
 	}
 }

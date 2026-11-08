@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -39,7 +40,7 @@ func TestJSON_MetaSaysWhatProducedTheReport(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Meta == nil || *got.Meta != info {
+	if got.Meta == nil || !reflect.DeepEqual(*got.Meta, info) {
 		t.Errorf("meta = %+v, want %+v", got.Meta, info)
 	}
 	// Once, at the top — not repeated per file.
@@ -229,5 +230,18 @@ func TestRunInfo_CachedResultsCarryNoBuildLine(t *testing.T) {
 	mixed := info.WithResults([]*validator.Result{&cached, fresh})
 	if mixed.ValidatorBuild != build {
 		t.Errorf("mixed run: build %q, want the uncached result's", mixed.ValidatorBuild)
+	}
+}
+
+// #520: the run's implicit packages appear once, in the JSON meta.
+func TestRunInfo_ImplicitPackagesFromResults(t *testing.T) {
+	ref := validator.PackageRef{ID: "hl7.fhir.us.core", Version: "9.0.0"}
+	results := []*validator.Result{{ImplicitPackages: []validator.PackageRef{ref}}, {ImplicitPackages: []validator.PackageRef{ref}}}
+	info := RunInfo{}.WithResults(results)
+	if len(info.ImplicitPackages) != 1 || info.ImplicitPackages[0] != ref {
+		t.Errorf("ImplicitPackages = %v", info.ImplicitPackages)
+	}
+	if (RunInfo{}).WithResults(nil).empty() != true {
+		t.Error("a run without anything to say is not empty")
 	}
 }

@@ -25,12 +25,19 @@ type RunInfo struct {
 	ValidatorBuild string `json:"validatorBuild,omitempty"`
 	// FHIRVersion is the FHIR release the run validated against.
 	FHIRVersion string `json:"fhirVersion,omitempty"`
+	// ImplicitPackages are the packages the validator loaded during the run
+	// that no --ig, fhirlint.yml or fhirlint.lock named (#520). The findings
+	// depend on them as much as on the requested ones.
+	ImplicitPackages []validator.PackageRef `json:"implicitPackages,omitempty"`
 }
 
 // WithResults fills ValidatorBuild from the results when the validator stated
 // it. Every outcome of a run carries the same line, so the first is enough;
 // a value already set (a caller that knows better) is kept.
 func (info RunInfo) WithResults(results []*validator.Result) RunInfo {
+	if info.ImplicitPackages == nil {
+		info.ImplicitPackages = validator.ImplicitPackages(results)
+	}
 	if info.ValidatorBuild != "" {
 		return info
 	}
@@ -54,7 +61,8 @@ func (info RunInfo) validatorLine() string {
 
 // empty reports whether there is nothing to say.
 func (info RunInfo) empty() bool {
-	return info == RunInfo{}
+	return info.Fhirlint == "" && info.Validator == "" && info.ValidatorBuild == "" &&
+		info.FHIRVersion == "" && len(info.ImplicitPackages) == 0
 }
 
 // provenanceLine renders the run info as one sentence for prose formats,

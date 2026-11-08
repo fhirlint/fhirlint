@@ -323,3 +323,87 @@ func TestLockFile_RoundTripsValidator(t *testing.T) {
 		t.Errorf("expected validator 6.9.12 to round-trip, got %q", read.Validator)
 	}
 }
+
+func fakePackage(t *testing.T, dir, name, version, manifest string) {
+	t.Helper()
+	pkgDir := filepath.Join(dir, ".fhir", "packages", name+"#"+version, "package")
+	if err := os.MkdirAll(pkgDir, 0750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkgDir, "package.json"), []byte(manifest), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// #520: a lock file written before implicit packages were recorded only warns.
+func TestVerifyImplicit_OldLockWarns(t *testing.T) {
+	var w strings.Builder
+	lf := &iglock.LockFile{Packages: map[string]iglock.Entry{}}
+	if err := iglock.VerifyImplicit(lf, []string{"hl7.fhir.us.core#9.0.0"}, &w); err != nil {
+		t.Fatalf("old lock file must not fail: %v", err)
+	}
+	if !strings.Contains(w.String(), "--lock") {
+		t.Errorf("warning = %q", w.String())
+	}
+}
+
+// Once recorded, a new implicit package fails the run and names the fix; a
+// recorded one passes, and one recorded but not loaded this time is fine.
+func TestVerifyImplicit_RecordedSection(t *testing.T) {
+	dir := t.TempDir()
+	fakePackage(t, dir, "hl7.fhir.us.core", "9.0.0", `{"name":"hl7.fhir.us.core","version":"9.0.0"}`)
+	setFakeHome(t, dir)
+
+	lf := &iglock.LockFile{Packages: map[string]iglock.Entry{}}
+	if _, err := iglock.UpdateImplicit(lf, []string{"hl7.fhir.us.core#9.0.0"}); err != nil {
+		t.Fatal(err)
+	}
+	var w strings.Builder
+	if err := iglock.VerifyImplicit(lf, []string{"hl7.fhir.us.core#9.0.0"}, &w); err != nil {
+		t.Errorf("recorded package failed: %v", err)
+	}
+	if err := iglock.VerifyImplicit(lf, nil, &w); err != nil {
+		t.Errorf("no implicit loads failed: %v", err)
+	}
+	err := iglock.VerifyImplicit(lf, []string{"hl7.fhir.us.core#9.0.0", "hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1"}, &w)
+	if err == nil || !strings.Contains(err.Error(), "hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1") || !strings.Contains(err.Error(), "--ig") {
+		t.Errorf("unrecorded package: err = %v", err)
+	}
+
+	// The package changed in the cache under the same version.
+	fakePackage(t, dir, "hl7.fhir.us.core", "9.0.0", `{"name":"hl7.fhir.us.core","version":"9.0.0","x":1}`)
+	if err := iglock.VerifyImplicit(lf, []string{"hl7.fhir.us.core#9.0.0"}, &w); err == nil {
+		t.Error("changed package content passed")
+	}
+}
+
+// --lock writes the section even when nothing was loaded implicitly, so the
+// next new package fails rather than warns.
+func TestUpdateImplicit_OptsIn(t *testing.T) {
+	lf := &iglock.LockFile{Packages: map[string]iglock.Entry{}}
+	if _, err := iglock.UpdateImplicit(lf, nil); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "fhirlint.lock")
+	if err := iglock.Write(path, lf); err != nil {
+		t.Fatal(err)
+	}
+	back, err := iglock.Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.Implicit == nil {
+		t.Error("empty implicit section did not survive a round trip")
+	}
+}
+
+func TestWrite_NoImplicitSectionStaysAbsent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fhirlint.lock")
+	if err := iglock.Write(path, &iglock.LockFile{Packages: map[string]iglock.Entry{}}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path) //nolint:gosec // test reads its own temp file
+	if strings.Contains(string(data), "implicit") {
+		t.Errorf("lock file = %s", data)
+	}
+}

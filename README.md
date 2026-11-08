@@ -1746,6 +1746,19 @@ fhirlint validate ./fhir/
 
 Commit `fhirlint.lock` to version control. This prevents silent package changes from affecting CI results.
 
+#### Packages the validator loads on its own
+
+The validator also loads packages nobody asked for. When the input names a canonical, such as a US Core profile in `meta.profile`, it loads the package that defines it, in the **newest version, pre-releases included**. One US Core Patient validated without `--ig` makes 6.10.3 and 7.0.3 load 15 more packages, among them `hl7.fhir.us.core#9.0.0` and the pre-release `hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1`. When a new version is published, the same run can report different findings.
+
+fhirlint names them once per run on stderr, and in the JSON report as `meta.implicitPackages`:
+
+```
+note: the validator loaded 15 package(s) that no --ig, fhirlint.yml or fhirlint.lock named, and the findings depend on them: hl7.fhir.r4.examples#4.0.1, hl7.fhir.us.core#9.0.0, …
+warn: 2 of them are pre-releases: hl7.fhir.uv.extensions#5.1.0-snapshot1, hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1 — pin the version you mean with --ig <id>#<version>
+```
+
+It also warns when one of them has the id of a requested package in another version. The notes do not affect the exit code. The lock file is what turns a change into a failure: `--lock` records these packages in an `implicit` section, and from then on a package outside that section, or with changed content, fails the run. The message names the fix: pin the version with `--ig <id>#<version>`, or accept it with `--lock`. A lock file written before this section existed only gets a warning. [Server mode](docs/daemon.md) does not report implicit packages.
+
 Pinning keeps a run reproducible, but it does not tell you whether the pins are still the right ones. [`fhirlint audit`](#auditing-the-toolchain) reads the lock file and reports which packages have moved on upstream.
 
 ### Pinning the validator
