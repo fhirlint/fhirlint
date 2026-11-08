@@ -505,6 +505,29 @@ fhirlint validate prescription.json \
 
 `--codesystem` and `--valueset` bundle the given files into a minimal temporary IG package so the validator can resolve codes without requiring a published `.tgz`.
 
+### Choosing profiles by content
+
+`profile-map:` in `fhirlint.yml` adds profiles to files by resource type or filename glob. An entry can also carry a FHIRPath condition under `when`, so that only matching resources get the profile. For example, only an Observation whose code is a LOINC vital sign gets the vital-signs profile:
+
+```yaml
+profile-map:
+  Observation:
+    - profile: http://hl7.org/fhir/StructureDefinition/vitalsigns
+      when: "code.coding.where(system='http://loinc.org' and (code='8867-4' or code='8310-5')).exists()"
+    - https://example.org/StructureDefinition/my-observation   # always, as before
+  Patient: https://example.org/StructureDefinition/my-patient
+```
+
+Every entry whose condition holds applies. The condition uses the same [FHIRPath subset](docs/rules.md#supported-fhirpath-subset) as custom lint rules, which has no union (`|`), so write `(code='a' or code='b')` rather than `code in ('a' | 'b')`. A condition that does not compile is a config error, from `validate` and `config check` alike. One that fails while being evaluated, for example because it does not return a boolean, does not apply and prints a warning.
+
+Conditions need JSON input. For an XML file the conditional entries are skipped with a warning, and the unconditional ones still apply. `--format json` lists what was added and why, per file:
+
+```json
+"appliedProfiles": [
+  { "profile": "http://hl7.org/fhir/StructureDefinition/vitalsigns", "reason": "profile-map: Observation when code.coding.where(…).exists()" }
+]
+```
+
 ---
 
 ## Output formats

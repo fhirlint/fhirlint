@@ -281,6 +281,59 @@
       ]
     },
     "profile-map": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "when": {
+                    "description": "FHIRPath condition evaluated against the resource (JSON input only)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "profile": {
+                      "type": "string"
+                    },
+                    "when": {
+                      "description": "FHIRPath condition evaluated against the resource (JSON input only)",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "profile"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "array"
+          }
+        ]
+      },
       "type": [
         "object",
         "null"

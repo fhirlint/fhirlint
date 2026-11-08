@@ -524,7 +524,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	excludePatterns = append(excludePatterns, txRecordingExcludes(flagTxDir)...)
 
-	profileMap := loadProfileMap()
+	profileMap, perr := loadProfileMap()
+	if perr != nil {
+		return perr
+	}
+	profileMapApplied.reset()
 	overrides, oerr := loadOverrides()
 	if oerr != nil {
 		return oerr
@@ -930,6 +934,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// the cache stage, so a cached result gets the hint the cache holds today
 	// rather than the one of the run that filled it.
 	pkgindex.Annotate(results)
+
+	// Say which profile-map entries applied to which file (#524).
+	profileMapApplied.attach(results)
 
 	// Re-level findings before anything reads their severity: suppression, the
 	// severity filter, baseline, --fail-on and the exit code all have to agree
@@ -1348,32 +1355,9 @@ func matchesExclude(relPath, pattern string) bool {
 	return false
 }
 
-// loadProfileMap parses the profile-map config key into a map[resourceTypeOrGlob][]profileURL.
-func loadProfileMap() map[string][]string {
-	raw := viper.Get("profile-map")
-	if raw == nil {
-		return nil
-	}
-	m, ok := raw.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	result := make(map[string][]string, len(m))
-	for k, v := range m {
-		switch tv := v.(type) {
-		case string:
-			result[k] = []string{tv}
-		case []interface{}:
-			ps := make([]string, 0, len(tv))
-			for _, p := range tv {
-				if s, ok := p.(string); ok {
-					ps = append(ps, s)
-				}
-			}
-			result[k] = ps
-		}
-	}
-	return result
+// loadProfileMap parses the profile-map config key.
+func loadProfileMap() (profileMapping, error) {
+	return parseProfileMap(viper.Get("profile-map"))
 }
 
 // loadOverrides parses the overrides: config key into a slice of configOverride.
@@ -1918,34 +1902,18 @@ func filterFHIRPaths(paths []string) []string {
 
 // resolveProfilesForPath returns the extra profiles that should be applied to
 // filePath based on the profile-map. Keys are matched as FHIR resource type
-// names first, then as filename globs.
-func resolveProfilesForPath(filePath string, profileMap map[string][]string) []string {
-	if len(profileMap) == 0 {
-		return nil
-	}
-	relSlash := filepath.ToSlash(filePath)
+// names first, then as filename globs; conditional entries apply when their
+// FHIRPath condition holds (#524).
+func resolveProfilesForPath(filePath string, profileMap profileMapping) []string {
 	var extra []string
-	// Resource type match (non-glob keys).
-	rt := peekResourceType(filePath)
-	if rt != "" {
-		if ps, ok := profileMap[rt]; ok {
-			extra = append(extra, ps...)
-		}
-	}
-	// Filename glob match.
-	for pattern, ps := range profileMap {
-		if !isFilenameGlob(pattern) {
-			continue
-		}
-		if matchesExclude(relSlash, pattern) {
-			extra = append(extra, ps...)
-		}
+	for _, a := range resolveProfileEntries(filePath, profileMap) {
+		extra = append(extra, a.Profile)
 	}
 	return extra
 }
 
 // optsWithProfileMap returns opts with extra profiles from profileMap appended.
-func optsWithProfileMap(opts validator.Options, filePath string, profileMap map[string][]string) validator.Options {
+func optsWithProfileMap(opts validator.Options, filePath string, profileMap profileMapping) validator.Options {
 	extra := resolveProfilesForPath(filePath, profileMap)
 	if len(extra) == 0 {
 		return opts
@@ -2487,7 +2455,7 @@ func preprocessedXMLInput(origPath string, data []byte) (*input.Input, error) {
 // validateEntryInputs validates a set of bundle entry temp files, applying
 // profile-map per resource type and overrides via the bundle's source path.
 // Results get the entry label and bundlePath as Filename.
-func validateEntryInputs(ins []*input.Input, bundlePath string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+func validateEntryInputs(ins []*input.Input, bundlePath string, opts validator.Options, profileMap profileMapping, overrides []configOverride) ([]*validator.Result, error) {
 	type group struct {
 		paths  []string
 		labels []string
@@ -2529,7 +2497,7 @@ func validateEntryInputs(ins []*input.Input, bundlePath string, opts validator.O
 
 // validateNDJSON splits an NDJSON file into per-line temp files, optionally
 // applies --extract / --ignore preprocessing, and validates them in a single JVM invocation.
-func validateNDJSON(path string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+func validateNDJSON(path string, opts validator.Options, profileMap profileMapping, overrides []configOverride) ([]*validator.Result, error) {
 	ins, err := ndjson.Split(path)
 	if err != nil {
 		return nil, err
@@ -2574,7 +2542,7 @@ func validateNDJSON(path string, opts validator.Options, profileMap map[string][
 // Files are grouped by their merged validator options (profile-map + overrides)
 // and validated in one JVM invocation per group.
 // NDJSON files are expanded into per-line resources before grouping.
-func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+func validateDir(dir string, opts validator.Options, excludePatterns []string, profileMap profileMapping, overrides []configOverride) ([]*validator.Result, error) {
 	paths, err := collectFHIRPaths(&input.Input{Source: input.SourceDir, Path: dir}, excludePatterns)
 	if err != nil {
 		return nil, err
@@ -2585,7 +2553,7 @@ func validateDir(dir string, opts validator.Options, excludePatterns []string, p
 // validatePaths validates an already-collected set of FHIR file paths, grouping
 // them into as few JVM invocations as possible. It is shared by directory input
 // and by multiple positional file arguments.
-func validatePaths(paths []string, opts validator.Options, profileMap map[string][]string, overrides []configOverride) ([]*validator.Result, error) {
+func validatePaths(paths []string, opts validator.Options, profileMap profileMapping, overrides []configOverride) ([]*validator.Result, error) {
 	paths = filterSincePaths(filterFHIRPaths(paths))
 	if len(paths) == 0 {
 		return nil, nil

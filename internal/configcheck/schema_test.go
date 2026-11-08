@@ -68,7 +68,7 @@ func TestSchemaCoversEveryKey(t *testing.T) {
 func TestSchemaCoversEveryKind(t *testing.T) {
 	kinds := []valueKind{
 		kindString, kindBool, kindInt, kindEnum, kindStringList, kindEnumList,
-		kindSuppressList, kindOverrideList, kindRuleList, kindLintMap, kindMap,
+		kindSuppressList, kindOverrideList, kindRuleList, kindLintMap, kindProfileMap,
 	}
 	for _, k := range kinds {
 		got := schemaForKind(keySpec{kind: k, values: []string{"a", "b"}})
@@ -76,10 +76,10 @@ func TestSchemaCoversEveryKind(t *testing.T) {
 			t.Errorf("valueKind %d has no case in schemaForKind", k)
 		}
 	}
-	// Guard the guard: the list above must cover every kind that exists. kindMap
+	// Guard the guard: the list above must cover every kind that exists. kindProfileMap
 	// is the highest constant, so anything added after it is caught here.
-	if unhandled := schemaForKind(keySpec{kind: kindMap + 1}); len(unhandled) != 0 {
-		t.Error("a new valueKind was added past kindMap — add it to schemaForKind and to this test")
+	if unhandled := schemaForKind(keySpec{kind: kindProfileMap + 1}); len(unhandled) != 0 {
+		t.Error("a new valueKind was added past kindProfileMap — add it to schemaForKind and to this test")
 	}
 }
 

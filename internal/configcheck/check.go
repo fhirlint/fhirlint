@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/lint"
+	"github.com/fhirlint/fhirlint/internal/rules/fhirpath"
 	"github.com/fhirlint/fhirlint/internal/suppress"
 	"github.com/fhirlint/fhirlint/internal/validator"
 	"go.yaml.in/yaml/v3"
@@ -43,7 +44,7 @@ const (
 	kindOverrideList
 	kindRuleList
 	kindLintMap
-	kindMap
+	kindProfileMap
 )
 
 type keySpec struct {
@@ -57,7 +58,7 @@ var topLevelKeys = map[string]keySpec{
 	"max-warnings":                {kind: kindInt},
 	"fhir-version":                {kind: kindEnum, values: validator.FHIRVersionIDs()},
 	"profile":                     {kind: kindStringList},
-	"profile-map":                 {kind: kindMap},
+	"profile-map":                 {kind: kindProfileMap},
 	"ig":                          {kind: kindStringList},
 	"codesystem":                  {kind: kindStringList},
 	"valueset":                    {kind: kindStringList},
@@ -247,8 +248,8 @@ func validateValue(key string, line int, node *yaml.Node, spec keySpec) []Issue 
 	case kindLintMap:
 		return checkLintMap(key, line, node)
 
-	case kindMap:
-		// No structural validation for maps
+	case kindProfileMap:
+		return checkProfileMap(key, line, node)
 	}
 	return nil
 }
@@ -612,4 +613,65 @@ func contains(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// checkProfileMap checks profile-map: each key takes a profile URL, a
+// {profile, when} entry, or a list of either, and every condition must
+// compile (#524). A condition that does not compile would otherwise only be
+// found when validate refuses to start.
+func checkProfileMap(key string, line int, node *yaml.Node) []Issue {
+	if node.Kind == yaml.ScalarNode && (node.Tag == "!!null" || node.Value == "") {
+		return nil
+	}
+	if node.Kind != yaml.MappingNode {
+		return []Issue{{Line: line, Key: key, Message: fmt.Sprintf("%q must map resource types or filename globs to profiles", key)}}
+	}
+	var issues []Issue
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		name, val := node.Content[i].Value, node.Content[i+1]
+		items := []*yaml.Node{val}
+		if val.Kind == yaml.SequenceNode {
+			items = val.Content
+		}
+		for _, item := range items {
+			issues = append(issues, checkProfileMapEntry(key, name, item)...)
+		}
+	}
+	return issues
+}
+
+func checkProfileMapEntry(key, name string, item *yaml.Node) []Issue {
+	at := func(msg string) []Issue {
+		return []Issue{{Line: item.Line, Key: key, Message: fmt.Sprintf("%s %q: %s", key, name, msg)}}
+	}
+	switch item.Kind {
+	case yaml.ScalarNode:
+		return nil
+	case yaml.MappingNode:
+	default:
+		return at("an entry must be a profile URL or a {profile, when} map")
+	}
+	var profile, when *yaml.Node
+	for i := 0; i+1 < len(item.Content); i += 2 {
+		switch k, v := item.Content[i].Value, item.Content[i+1]; k {
+		case "profile":
+			profile = v
+		case "when":
+			when = v
+		default:
+			return at(fmt.Sprintf("unknown key %q (allowed: profile, when)", k))
+		}
+	}
+	if profile == nil || profile.Kind != yaml.ScalarNode || profile.Value == "" {
+		return at(`an entry with keys needs a "profile"`)
+	}
+	if when != nil {
+		if when.Kind != yaml.ScalarNode || when.Value == "" {
+			return at(`"when" must be a FHIRPath expression`)
+		}
+		if _, err := fhirpath.Compile(when.Value); err != nil {
+			return at(fmt.Sprintf("\"when\" %q does not compile: %v", when.Value, err))
+		}
+	}
+	return nil
 }
