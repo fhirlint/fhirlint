@@ -49,6 +49,9 @@ func redactIssues(issues []validator.Issue) {
 	for i := range issues {
 		issues[i].Message = Placeholder
 		issues[i].Cause = ""
+		// The canonical is quoted from the message, and for a canonical
+		// element it is a value from the resource.
+		issues[i].Hint = nil
 		issues[i].Redacted = true
 	}
 }

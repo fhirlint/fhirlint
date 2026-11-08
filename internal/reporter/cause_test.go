@@ -58,11 +58,32 @@ func TestCause_TerminalEscapesIt(t *testing.T) {
 	}
 }
 
-func TestMessageWithCause(t *testing.T) {
-	if got := MessageWithCause(validator.Issue{Message: "m"}); got != "m" {
+func TestMessageWithNotes(t *testing.T) {
+	if got := MessageWithNotes(validator.Issue{Message: "m"}); got != "m" {
 		t.Errorf("no cause: %q", got)
 	}
-	if got := MessageWithCause(validator.Issue{Message: "m", Cause: "c"}); got != "m\nCause: c" {
+	if got := MessageWithNotes(validator.Issue{Message: "m", Cause: "c"}); got != "m\nCause: c" {
 		t.Errorf("with cause: %q", got)
+	}
+}
+
+func TestHintText(t *testing.T) {
+	found := &validator.PackageHint{Canonical: "u", Package: "kbv.basis#1.10.0", Packages: []string{"kbv.basis#1.10.0", "kbv.basis#1.9.0"}, Alias: "kbv-basis"}
+	if got, want := HintText(found), "defined in kbv.basis#1.10.0 (also kbv.basis#1.9.0): add --ig kbv.basis#1.10.0, or the built-in alias --profile kbv-basis"; got != want {
+		t.Errorf("HintText = %q", got)
+	}
+	if got := HintText(&validator.PackageHint{Canonical: "http://x"}); !strings.Contains(got, "http://x is not in the local package cache") {
+		t.Errorf("not found = %q", got)
+	}
+	if HintText(nil) != "" {
+		t.Error("nil hint rendered")
+	}
+	iss := validator.Issue{Message: "m", Hint: found}
+	out := captureStdout(t, func() { Terminal(&validator.Result{Label: "p", Issues: []validator.Issue{{Severity: "warning", Message: "m", Hint: found}}}, "information", false, false, false) })
+	if !strings.Contains(out, "↳ defined in kbv.basis#1.10.0") {
+		t.Errorf("terminal:\n%s", out)
+	}
+	if !strings.HasSuffix(MessageWithNotes(iss), "\nHint: "+HintText(found)) {
+		t.Errorf("MessageWithNotes = %q", MessageWithNotes(iss))
 	}
 }

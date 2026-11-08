@@ -101,7 +101,7 @@ func HTML(results []*validator.Result, minSeverity string, info RunInfo, dest st
 		ValidCount:  validCount,
 	}
 
-	tmpl, err := template.New("report").Funcs(template.FuncMap{"clip": termsafe.Clip, "withCause": MessageWithCause}).Parse(htmlTmpl)
+	tmpl, err := template.New("report").Funcs(template.FuncMap{"clip": termsafe.Clip, "withCause": MessageWithNotes}).Parse(htmlTmpl)
 	if err != nil {
 		return err
 	}

@@ -137,3 +137,12 @@ func TestApplyRemovesCause(t *testing.T) {
 		t.Errorf("cause = %q, want it removed", results[0].Issues[0].Cause)
 	}
 }
+
+func TestApplyRemovesHint(t *testing.T) {
+	results := sampleResults()
+	results[0].Issues[0].Hint = &validator.PackageHint{Canonical: phi}
+	redact.Apply(results)
+	if results[0].Issues[0].Hint != nil {
+		t.Error("hint survived --redact")
+	}
+}

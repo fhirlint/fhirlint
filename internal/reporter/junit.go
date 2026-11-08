@@ -76,7 +76,7 @@ func buildJUnitReport(results []*validator.Result, minSeverity string, info RunI
 			Classname: "fhirlint",
 		}
 		for _, iss := range issues {
-			msg := termsafe.Clip(MessageWithCause(iss))
+			msg := termsafe.Clip(MessageWithNotes(iss))
 			body := msg
 			if iss.Location != "" {
 				body += " @ " + iss.Location

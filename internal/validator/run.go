@@ -48,6 +48,25 @@ type Issue struct {
 	// stdout only: the exception behind "has no snapshot" (#521). Empty for
 	// almost every issue.
 	Cause string `json:"cause,omitempty"`
+
+	// Hint names the installed package that defines a canonical the validator
+	// could not find (#523). nil for every other issue.
+	Hint *PackageHint `json:"hint,omitempty"`
+}
+
+// PackageHint says where a canonical the validator could not find is defined
+// in the local FHIR package cache.
+type PackageHint struct {
+	// Canonical is the URL the message named.
+	Canonical string `json:"canonical"`
+	// Package is the suggested package, "id#version": the highest final
+	// release that defines it. Empty when no installed package does.
+	Package string `json:"package,omitempty"`
+	// Packages are all installed packages that define it, best first, so a
+	// version is never picked silently.
+	Packages []string `json:"packages,omitempty"`
+	// Alias is a built-in fhirlint alias for the same package, if there is one.
+	Alias string `json:"alias,omitempty"`
 }
 
 // Result holds the outcome for one validated resource.

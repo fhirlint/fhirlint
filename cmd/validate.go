@@ -25,6 +25,7 @@ import (
 	"github.com/fhirlint/fhirlint/internal/lint"
 	"github.com/fhirlint/fhirlint/internal/localig"
 	"github.com/fhirlint/fhirlint/internal/ndjson"
+	"github.com/fhirlint/fhirlint/internal/pkgindex"
 	"github.com/fhirlint/fhirlint/internal/profiles"
 	"github.com/fhirlint/fhirlint/internal/redact"
 	"github.com/fhirlint/fhirlint/internal/refcheck"
@@ -924,6 +925,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if flagCheckReferences {
 		applyReferenceCheck(results, sinceExcluded)
 	}
+
+	// Name the installed package behind each "could not be found" (#523). After
+	// the cache stage, so a cached result gets the hint the cache holds today
+	// rather than the one of the run that filled it.
+	pkgindex.Annotate(results)
 
 	// Re-level findings before anything reads their severity: suppression, the
 	// severity filter, baseline, --fail-on and the exit code all have to agree
