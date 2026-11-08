@@ -508,6 +508,7 @@ func TestKeyedOptions_EveryFieldHasBeenConsidered(t *testing.T) {
 		"IGs":                      "keyed (sorted: order is not meaning)",
 		"NoTerminologyServer":      "keyed",
 		"TerminologyServer":        "keyed",
+		"Ecosystem":                "keyed: which registry routes the requests changes the answers (#465)",
 		"BestPractice":             "keyed",
 		"TxCache":                  "keyed",
 		"Locale":                   "keyed",

@@ -675,9 +675,20 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		txPlayer = txreplay.NewPlayer(store)
+		manifest := store.ReadManifest()
+		routed := replaysRegistry(manifest)
+		if routed {
+			txPlayer.WithRegistry("")
+		}
 		baseURL, perr := txPlayer.Start()
 		if perr != nil {
 			return perr
+		}
+		if routed {
+			// The recording holds the registry's answers too: replay them, so
+			// the routing is the recorded one (#465). Needs 7.0.4+, which the
+			// option check enforces.
+			opts.Ecosystem = baseURL + "/tx-reg"
 		}
 		defer func() { _ = txPlayer.Stop() }()
 		// Validator 6.10.0+ refuses plain-HTTP destinations. Exempt only our own
@@ -689,7 +700,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 		defer cleanupSettings()
 		opts.FHIRSettings = settingsPath
-		opts.TerminologyServer = baseURL
+		opts.TerminologyServer = baseURL + replayTxPath(manifest)
 		// Loopback HTTP to our own process; the insecure-transport warning is
 		// about sending data unencrypted to a remote server.
 		opts.AllowInsecureTx = true
@@ -698,7 +709,6 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		// incomplete recording — green here, failing on a clean CI runner.
 		opts.TxCache = "n/a"
 		fmt.Fprintf(os.Stderr, "Replaying %d recorded terminology interaction(s) from %s/\n", store.Len(), dir)
-		manifest := store.ReadManifest()
 		warnValidatorVersionDrift(os.Stderr, manifest, validator.VersionFor(viper.GetString("jar"), viper.GetString("validator-version")))
 		if err := warnExpansionParametersDrift(os.Stderr, manifest, flagExpansionParameters); err != nil {
 			return err

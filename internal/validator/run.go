@@ -147,11 +147,16 @@ type extItem struct {
 }
 
 type Options struct {
-	FHIRVersion              string
-	Profiles                 []string
-	IGs                      []string
-	NoTerminologyServer      bool
-	TerminologyServer        string
+	FHIRVersion         string
+	Profiles            []string
+	IGs                 []string
+	NoTerminologyServer bool
+	TerminologyServer   string
+	// Ecosystem is the tx registry (-ecosystem) the validator asks which
+	// terminology server is authoritative for a code system. Only fhirlint's
+	// own recorder and player set it, so that a recording keeps the routing a
+	// live run has (#465). Validator 7.0.4 and later.
+	Ecosystem                string
 	BestPractice             string        // ignore | hint | warning | error (empty = JAR default)
 	TxCache                  string        // path to terminology cache dir, or "n/a" to disable
 	Locale                   string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
@@ -268,6 +273,11 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 		args = append(args, "-tx", "n/a")
 	case opts.TerminologyServer != "":
 		args = append(args, "-tx", opts.TerminologyServer)
+		// With -tx alone the validator turns the registry off; with both, it
+		// routes and uses -tx in place of tx.fhir.org in the registry's answers.
+		if opts.Ecosystem != "" {
+			args = append(args, "-ecosystem", opts.Ecosystem)
+		}
 	}
 	if opts.BestPractice != "" {
 		args = append(args, "-best-practice", opts.BestPractice)
@@ -451,6 +461,18 @@ func requireCachedJAR(offline bool, jarPath string) error {
 // -codesystem-validation-size-limit.
 const minCodeSystemSizeLimitVersion = "6.10.2"
 
+// MinEcosystemVersion is the first validator release with -ecosystem, which
+// separates the tx registry from the terminology server (core f98718128).
+// Checked against the source: ValidationEngineOptionsConvertor has no
+// "ecosystem" at 7.0.3 and handles it at 7.0.4 and 7.0.5.
+const MinEcosystemVersion = "7.0.4"
+
+// HasEcosystem reports whether a validator release understands -ecosystem.
+func HasEcosystem(version string) bool {
+	cmp, ok := igaudit.CompareVersions(version, MinEcosystemVersion)
+	return ok && cmp >= 0
+}
+
 // minNoHTTPAccessVersion is the first validator release that understands
 // -no-http-access (added with the managed-web-access options in 6.10.0).
 const minNoHTTPAccessVersion = "6.10.0"
@@ -483,6 +505,11 @@ func checkOptionsSupported(opts Options, jarVersion string) error {
 	}
 	if opts.CodeSystemSizeLimit != nil {
 		if err := requireVersion(jarVersion, minCodeSystemSizeLimitVersion, "--codesystem-size-limit"); err != nil {
+			return err
+		}
+	}
+	if opts.Ecosystem != "" {
+		if err := requireVersion(jarVersion, MinEcosystemVersion, "a terminology recording with registry routing"); err != nil {
 			return err
 		}
 	}

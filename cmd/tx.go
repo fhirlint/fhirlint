@@ -46,10 +46,14 @@ and independent of the terminology server's availability.
 Record the same inputs, profiles and IGs you validate with — a request that was
 never recorded is an error at replay time, not a silent fallback to the network.
 
-A recording is a single-server run: every request goes to one terminology
-server. The validator, run live without --terminology-server, sends some
-requests to other servers named by the tx registry (tx.fhir.de for the German
-SNOMED CT edition, for example), so its live findings can differ from a replay.`,
+Run live without --terminology-server, the validator sends some requests to
+other servers the tx registry names (tx.fhir.de for the German SNOMED CT
+edition, for example). With validator 7.0.4 or later and no
+--terminology-server, the recording keeps that routing: registry answers and
+routed requests are recorded too, and a replay matches the live run. With an
+older validator, or with --terminology-server, the recording is single-server:
+every request goes to one terminology server, and live findings can differ
+from a replay. manifest.json says which ("routing").`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runTxWarm,
 }
@@ -100,7 +104,26 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	if upstream == "" {
 		upstream = validator.DefaultTerminologyEndpoint(flagTxWarmFHIRVersion)
 	}
-	rec := txreplay.NewRecorder(store, upstream, nil)
+	validatorVersion := validator.VersionFor(viper.GetString("jar"), viper.GetString("validator-version"))
+	// Keep the routing a live run has (#465). Only without an explicit
+	// server: a live run with --terminology-server is single-server too, so
+	// recording it that way is what it does.
+	routing := txreplay.RoutingSingleServer
+	if flagTxWarmServer == "" && validator.HasEcosystem(validatorVersion) {
+		routing = txreplay.RoutingRegistry
+	}
+	// In a registry answer the validator replaces only the host of
+	// tx.fhir.org with its -tx, keeping the path (/r4). So with routing, -tx is
+	// the recorder plus that path, and the recorder forwards to the origin;
+	// otherwise a substituted request would arrive as /r4/r4/….
+	recUpstream, txPath := upstream, ""
+	if routing == txreplay.RoutingRegistry {
+		recUpstream, txPath = txreplay.SplitUpstream(upstream)
+	}
+	rec := txreplay.NewRecorder(store, recUpstream, nil)
+	if routing == txreplay.RoutingRegistry {
+		rec.WithRegistry(txreplay.DefaultEcosystem)
+	}
 	// Recording is the one path where fhirlint calls the terminology server
 	// itself, so credentials go on the recorder's own requests rather than
 	// through the validator's settings file. Only an explicitly named server:
@@ -144,7 +167,7 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		FHIRVersion:       flagTxWarmFHIRVersion,
 		Profiles:          resolvedProfiles,
 		IGs:               resolveIGs(flagTxWarmIG),
-		TerminologyServer: baseURL,
+		TerminologyServer: baseURL + txPath,
 		// Disable the JAR's own terminology cache while recording. Otherwise it
 		// answers from ~/.fhir and those requests never reach the recorder, so
 		// the recording would be complete only on the machine that made it.
@@ -162,8 +185,12 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 		Proxy:            validator.ProxyConfig{Proxy: viper.GetString("proxy"), HTTPSProxy: viper.GetString("https-proxy")},
 	}
 
-	validatorVersion := validator.RunValidatorVersion(opts)
-	warnRoutingBypass(os.Stderr, validatorVersion, upstream)
+	if routing == txreplay.RoutingRegistry {
+		opts.Ecosystem = baseURL + "/tx-reg"
+		fmt.Fprintf(os.Stderr, "Recording with the tx registry (%s), as a live run routes\n", txreplay.DefaultEcosystem)
+	} else {
+		warnRoutingBypass(os.Stderr, validatorVersion, upstream)
+	}
 
 	if _, err := validator.RunMultiple(paths, opts); err != nil {
 		return fmt.Errorf("recording run failed: %w", err)
@@ -175,7 +202,9 @@ func runTxWarm(_ *cobra.Command, args []string) error {
 	}
 	if err := store.WriteManifest(txreplay.Manifest{
 		Upstream:            upstream,
-		Routing:             txreplay.RoutingSingleServer,
+		Routing:             routing,
+		Ecosystem:           ecosystemFor(routing),
+		Routed:              rec.RoutedHosts(),
 		FHIRVersion:         flagTxWarmFHIRVersion,
 		ValidatorVersion:    validatorVersion,
 		ExpansionParameters: expansionFingerprint,
@@ -203,8 +232,9 @@ func warnRoutingBypass(w io.Writer, validatorVersion, upstream string) {
 	_, _ = fmt.Fprintf(w, "warn: without --terminology-server, validator %s sends some terminology requests to servers\n"+
 		"  other than %s (e.g. tx.fhir.de for German SNOMED CT). While recording, all of them go to\n"+
 		"  %s, so replaying this recording can report different terminology findings than a\n"+
-		"  live run without --terminology-server.\n",
-		validatorVersion, upstream, upstream)
+		"  live run without --terminology-server. Validator %s and later record with the routing\n"+
+		"  intact when no --terminology-server is given.\n",
+		validatorVersion, upstream, upstream, validator.MinEcosystemVersion)
 }
 
 // txRecordingExcludes keeps a terminology recording out of the input set.
@@ -230,4 +260,29 @@ func txRecordingDir(flagValue string) string {
 		return v
 	}
 	return txreplay.DefaultDir
+}
+
+// ecosystemFor is the registry a recording with routing used, for its manifest.
+func ecosystemFor(routing string) string {
+	if routing == txreplay.RoutingRegistry {
+		return txreplay.DefaultEcosystem
+	}
+	return ""
+}
+
+// replaysRegistry reports whether a recording was made with the tx registry
+// in use, so that its replay must serve the registry too (#465).
+func replaysRegistry(m *txreplay.Manifest) bool {
+	return m != nil && m.Routing == txreplay.RoutingRegistry
+}
+
+// replayTxPath is the path a registry recording's requests carry (/r4), so
+// that a replay asks under the same keys the recorder stored. Empty for a
+// single-server recording, whose requests were keyed without it.
+func replayTxPath(m *txreplay.Manifest) string {
+	if !replaysRegistry(m) {
+		return ""
+	}
+	_, path := txreplay.SplitUpstream(m.Upstream)
+	return path
 }

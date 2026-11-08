@@ -775,3 +775,35 @@ func TestStableBuildLine(t *testing.T) {
 		}
 	}
 }
+
+// #465: the recorder keeps registry routing with -tx plus -ecosystem.
+func TestBuildArgs_Ecosystem(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{
+		FHIRVersion:       "4.0.1",
+		TerminologyServer: "http://127.0.0.1:5000/r4",
+		Ecosystem:         "http://127.0.0.1:5000/tx-reg",
+	})
+	mustContainPair(t, args, "-tx", "http://127.0.0.1:5000/r4")
+	mustContainPair(t, args, "-ecosystem", "http://127.0.0.1:5000/tx-reg")
+
+	// Without a terminology server, there is nothing to route through.
+	args = buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1", NoTerminologyServer: true, Ecosystem: "x"})
+	for _, a := range args {
+		if a == "-ecosystem" {
+			t.Error("-ecosystem passed with -tx n/a")
+		}
+	}
+}
+
+func TestCheckOptionsSupported_Ecosystem(t *testing.T) {
+	opts := Options{TerminologyServer: "http://127.0.0.1:1/r4", Ecosystem: "http://127.0.0.1:1/tx-reg"}
+	if err := checkOptionsSupported(opts, "7.0.3"); err == nil {
+		t.Error("7.0.3 accepted -ecosystem")
+	}
+	if err := checkOptionsSupported(opts, "7.0.4"); err != nil {
+		t.Errorf("7.0.4: %v", err)
+	}
+	if HasEcosystem("6.10.3") || !HasEcosystem("7.0.5") {
+		t.Error("HasEcosystem gate wrong")
+	}
+}

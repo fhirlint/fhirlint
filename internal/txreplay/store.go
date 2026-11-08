@@ -57,19 +57,23 @@ type Interaction struct {
 // set of questions. The content is fingerprinted rather than the path, because
 // the path says nothing once the recording is committed and checked out
 // somewhere else.
-// Routing says how the requests reached Upstream. Always RoutingSingleServer
-// for now: the recorder is the validator's only -tx, so every request went to
-// Upstream, including those a live validator sends to another server the
-// tx registry names (#465). Upstream is then not "the server this run used"
-// but the one that answered instead of the routed ones.
+// Routing says how the requests reached Upstream (#465). RoutingRegistry: the
+// tx registry was in use, as in a live run without --terminology-server, and
+// Routed lists the other servers its answers sent requests to.
+// RoutingSingleServer: every request went to Upstream, including those a live
+// validator sends to another server the registry names; Upstream is then not
+// "the server this run used" but the one that answered instead of the routed
+// ones. A validator before 7.0.4 can only record that way.
 type Manifest struct {
-	Upstream            string `json:"upstream"`
-	Routing             string `json:"routing,omitempty"`
-	FHIRVersion         string `json:"fhirVersion,omitempty"`
-	ValidatorVersion    string `json:"validatorVersion,omitempty"`
-	ExpansionParameters string `json:"expansionParameters,omitempty"`
-	Recorded            string `json:"recorded"`
-	Entries             int    `json:"entries"`
+	Upstream            string   `json:"upstream"`
+	Routing             string   `json:"routing,omitempty"`
+	Ecosystem           string   `json:"ecosystem,omitempty"`
+	Routed              []string `json:"routed,omitempty"`
+	FHIRVersion         string   `json:"fhirVersion,omitempty"`
+	ValidatorVersion    string   `json:"validatorVersion,omitempty"`
+	ExpansionParameters string   `json:"expansionParameters,omitempty"`
+	Recorded            string   `json:"recorded"`
+	Entries             int      `json:"entries"`
 }
 
 // RoutingSingleServer is Manifest.Routing for a recording in which every
@@ -216,7 +220,7 @@ func (s *Store) Put(in *Interaction, body []byte) error {
 	if err != nil {
 		return fmt.Errorf("encoding terminology interaction: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(s.dir, key+".json"), data, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(s.dir, key+".json"), data, 0o600); err != nil { //nolint:gosec // G703: key is a hex SHA-256 prefix, never a path
 		return fmt.Errorf("writing terminology recording: %w", err)
 	}
 	s.entries[key] = in

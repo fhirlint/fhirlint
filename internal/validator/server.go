@@ -28,7 +28,9 @@ type ServerConfig struct {
 	Profiles            []string // pre-loaded at startup so requests can select them
 	NoTerminologyServer bool
 	TerminologyServer   string
-	TxCache             string
+	// Ecosystem is the tx registry for a replay with registry routing (#465).
+	Ecosystem string
+	TxCache   string
 	FHIRSettings        string // path to a fhir-settings.json for the JAR (-fhir-settings)
 	JARPath             string
 	Proxy               ProxyConfig
@@ -59,6 +61,9 @@ func serverArgs(jarPath string, cfg ServerConfig) []string {
 		args = append(args, "-tx", "n/a")
 	case cfg.TerminologyServer != "":
 		args = append(args, "-tx", cfg.TerminologyServer)
+		if cfg.Ecosystem != "" {
+			args = append(args, "-ecosystem", cfg.Ecosystem)
+		}
 	}
 	if cfg.TxCache != "" {
 		args = append(args, "-txCache", cfg.TxCache)
@@ -96,6 +101,11 @@ func StartServer(cfg ServerConfig, logW io.Writer, readyTimeout time.Duration) (
 	}
 	if blocksJARNetwork(cfg.Offline, cfg.TerminologyServer) {
 		if err := requireVersion(jarVersion(jarPath), minNoHTTPAccessVersion, "--offline"); err != nil {
+			return nil, err
+		}
+	}
+	if cfg.Ecosystem != "" {
+		if err := requireVersion(jarVersion(jarPath), MinEcosystemVersion, "a terminology recording with registry routing"); err != nil {
 			return nil, err
 		}
 	}
