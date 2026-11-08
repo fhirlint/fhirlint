@@ -476,3 +476,29 @@ func TestCheck_SeverityOverride_Rejects(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckProfileMap(t *testing.T) {
+	ok := "profile-map:\n  Patient: http://x/p\n  Observation:\n    - {profile: http://x/v, when: \"status = 'final'\"}\n    - http://x/o\n"
+	if issues := checkYAML(t, ok); len(issues) != 0 {
+		t.Errorf("valid profile-map: %v", issues)
+	}
+	for name, src := range map[string]string{
+		"union":       "profile-map:\n  Observation:\n    - {profile: http://x/v, when: \"code in ('a' | 'b')\"}\n",
+		"unknown key": "profile-map:\n  Observation: {profile: http://x/v, iff: x}\n",
+		"no profile":  "profile-map:\n  Observation: {when: \"true\"}\n",
+		"not a map":   "profile-map: [a, b]\n",
+	} {
+		if issues := checkYAML(t, src); len(issues) == 0 {
+			t.Errorf("%s: no issue", name)
+		}
+	}
+}
+
+func checkYAML(t *testing.T, src string) []configcheck.Issue {
+	t.Helper()
+	issues, err := configcheck.Check(writeConfig(t, src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return issues
+}

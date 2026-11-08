@@ -89,6 +89,10 @@ type Result struct {
 	// cached, because a replayed result loaded nothing.
 	ImplicitPackages []PackageRef `json:"-"`
 
+	// AppliedProfiles are the profiles profile-map added to this file, with
+	// the entry that matched (#524). Empty when profile-map added none.
+	AppliedProfiles []AppliedProfile `json:"appliedProfiles,omitempty"`
+
 	// ValidatorBuild is the validator's own description of itself, taken from
 	// the validator-version extension it adds to each OperationOutcome from
 	// 7.0.0 on — version, Git SHA and build date in one line, without the
@@ -106,6 +110,14 @@ type Result struct {
 	// remapped back to the user's file for display. Anything resolving those
 	// coordinates against a file must use this, not Filename.
 	SourcePath string `json:"-"`
+}
+
+// AppliedProfile is a profile that profile-map added to a file, and why.
+type AppliedProfile struct {
+	Profile string `json:"profile"`
+	// Reason names the profile-map key and, for a conditional entry, its
+	// condition: "profile-map: Observation when code.coding.exists()".
+	Reason string `json:"reason"`
 }
 
 // operationOutcome mirrors the FHIR OperationOutcome resource the validator emits.

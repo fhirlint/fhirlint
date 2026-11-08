@@ -88,8 +88,28 @@ func schemaForKind(spec keySpec) map[string]any {
 		}
 	case kindLintMap:
 		return map[string]any{"type": "object"}
-	case kindMap:
-		return map[string]any{"type": []string{"object", "null"}}
+	case kindProfileMap:
+		// A profile URL, a {profile, when} entry (#524), or a list of either.
+		entry := map[string]any{
+			"anyOf": []any{
+				map[string]any{"type": "string"},
+				map[string]any{
+					"type":                 "object",
+					"required":             []string{"profile"},
+					"additionalProperties": false,
+					"properties": map[string]any{
+						"profile": map[string]any{"type": "string"},
+						"when":    map[string]any{"type": "string", "description": "FHIRPath condition evaluated against the resource (JSON input only)"},
+					},
+				},
+			},
+		}
+		return map[string]any{
+			"type": []string{"object", "null"},
+			"additionalProperties": map[string]any{
+				"anyOf": []any{entry, map[string]any{"type": "array", "items": entry}},
+			},
+		}
 	default:
 		// New kinds must be handled explicitly; an unconstrained value is the
 		// safe fallback, and TestSchemaCoversEveryKind fails so it gets one.

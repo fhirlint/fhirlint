@@ -133,8 +133,8 @@ func TestResolveProfilesForPath_ResourceType(t *testing.T) {
 	_, _ = f.WriteString(`{"resourceType":"Patient"}`)
 	_ = f.Close()
 
-	pm := map[string][]string{
-		"Patient": {"http://example.com/patient-profile"},
+	pm := profileMapping{
+		"Patient": {{Profile: "http://example.com/patient-profile"}},
 	}
 	got := resolveProfilesForPath(f.Name(), pm)
 	if len(got) != 1 || got[0] != "http://example.com/patient-profile" {
@@ -151,8 +151,8 @@ func TestResolveProfilesForPath_NoMatch_ReturnsNil(t *testing.T) {
 	_, _ = f.WriteString(`{"resourceType":"Observation"}`)
 	_ = f.Close()
 
-	pm := map[string][]string{
-		"Patient": {"http://example.com/patient-profile"},
+	pm := profileMapping{
+		"Patient": {{Profile: "http://example.com/patient-profile"}},
 	}
 	if got := resolveProfilesForPath(f.Name(), pm); len(got) != 0 {
 		t.Errorf("expected no profiles, got: %v", got)
