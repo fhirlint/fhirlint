@@ -1812,6 +1812,44 @@ Error: lock file expects validator 6.9.12, running 6.9.13 — pin it with
 --validator-version 6.9.12, or run with --lock to accept 6.9.13
 ```
 
+#### Before you bump the pin
+
+`fhirlint upgrade-check` shows what a new validator changes on your data. It validates the same input with the validator you use now and with `--to`, then compares the findings:
+
+```bash
+fhirlint upgrade-check --to 7.0.3 ./fhir/ --ig kbv.basis#1.10.0
+```
+
+The output looks like this (an illustration built from the changes seen between 6.10.3 and 7.0.3, not one recorded run):
+
+```
+Validator upgrade check
+  from: 6.10.3
+  to:   FHIR Validation tool Version 7.0.3 (Git# 28e9fac6d79d). Built 2026-10-21T16:46:58.228Z
+
+Per file:
+  fhir/Patient-1.json  +1 new  -0 resolved  ~1 renamed
+
+New (1):
+  warning fhir/Patient-1.json  UNKNOWN_CODESYSTEM_VERSION @ Patient.identifier[0].type
+          A definition for CodeSystem … version '2026' could not be found …
+
+Renamed ids (1):
+  MSG_DRAFT → MSG_DRAFT_SRC_STATUS  fhir/Patient-1.json @ Patient.meta.profile[0]
+
+Per message id (changed counts only):
+  MSG_DRAFT                                             1 → 0
+  MSG_DRAFT_SRC_STATUS                                  0 → 1
+  UNKNOWN_CODESYSTEM_VERSION                            0 → 1
+```
+
+- **Arguments:** everything after `--to` (and an optional `--from <version>`) goes to `validate` unchanged, `fhirlint.yml` included, so both runs use the same options.
+- **The comparison JAR** is downloaded and verified into its own directory in the cache. It does not replace the default JAR or your pin.
+- **Matching** uses the same key as `fhirlint diff`, inferred message ids included. A resolved and a new finding at the same place with similar text are reported as a rename.
+- **`--json`** gives the same as JSON. The exit code is 1 when the new validator reports new errors, so the command can run as a scheduled CI job.
+- **Cost:** two full validation runs.
+- **Terminology:** against a live server, the two runs can get different answers. Record them with `fhirlint tx warm` and pass `--tx-offline` for an exact comparison; otherwise the command warns.
+
 Lock files written before this existed carry no validator version; those runs warn instead of failing, so nothing breaks on upgrade. `--jar` takes precedence over a pin — you are pointing at a specific file — and warns if that file is a different version than the pin.
 
 ### Bounding a run
