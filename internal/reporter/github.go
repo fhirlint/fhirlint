@@ -60,7 +60,7 @@ func gitHubCommand(filename string, iss validator.Issue) string {
 		b.WriteString(strings.Join(params, ","))
 	}
 	b.WriteString("::")
-	b.WriteString(escapeGitHubMessage(MessageWithCause(iss)))
+	b.WriteString(escapeGitHubMessage(MessageWithNotes(iss)))
 	return b.String()
 }
 

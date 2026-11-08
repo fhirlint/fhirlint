@@ -84,7 +84,7 @@ func buildCodeClimateReport(results []*validator.Result, minSeverity string) []c
 // ccDescription prefixes the message with its HL7 message ID when present,
 // e.g. "dom-6: A resource should have narrative for robust management".
 func ccDescription(iss validator.Issue) string {
-	msg := termsafe.Clip(MessageWithCause(iss))
+	msg := termsafe.Clip(MessageWithNotes(iss))
 	if iss.MessageID != "" {
 		return iss.MessageID + ": " + msg
 	}

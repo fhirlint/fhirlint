@@ -1835,6 +1835,18 @@ warn: the validator crashed on in/BodyStructure-0c5948ba-….json; re-running th
 
 Each re-run costs a JVM start. After three crashes in one run, or when `--timeout` runs out during a re-run, the files still waiting are reported as `fatal` with `fhirlint-not-validated` rather than counted as valid. Neither kind of result goes into the `--cache`. If fhirlint cannot tell which file the validator was on, for example because it failed while loading packages, the run fails with `validator produced no result` as before.
 
+### When a profile cannot be found
+
+"Profile reference … has not been checked because it could not be found" almost always means that the package defining the profile was not loaded. fhirlint looks the canonical up in the `.index.json` files of your local package cache (`~/.fhir/packages`) and names the package:
+
+```
+  ⚠ WARN   Profile reference 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Patient|1.10.0' has not been checked because it could not be found, …
+           @ Patient (line 1, col 2)
+           ↳ defined in kbv.basis#1.10.0 (also kbv.basis#1.9.0): add --ig kbv.basis#1.10.0, or the built-in alias --profile kbv-basis
+```
+
+It suggests the highest final release, lists every installed version, and never picks one silently. When no installed package defines the canonical, the hint says so and points to the [package registry](https://registry.fhir.org). The same applies to extensions and value sets that could not be found. JSON carries the hint as `"hint": {"canonical", "package", "packages", "alias"}`, the other reports add a `Hint:` line, and the language server shows it on the diagnostic. The index is read only when a run has such a finding. `--redact` removes it.
+
 ### When a profile has no snapshot
 
 When the validator cannot generate a profile's snapshot, its report says only that the profile "has no snapshot". The reason is printed on the validator's console. fhirlint reads it from there and attaches it to the finding:

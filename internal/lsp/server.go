@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/fhirlint/fhirlint/internal/explain"
+	"github.com/fhirlint/fhirlint/internal/pkgindex"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -52,6 +53,10 @@ type Server struct {
 	suppressor Suppressor
 	logW       io.Writer
 	version    string
+
+	// hints names the package behind "profile could not be found" (#523),
+	// with the package index built once per session.
+	hints pkgindex.Annotator
 
 	mu   sync.Mutex
 	docs map[string]*document
@@ -372,6 +377,7 @@ func (s *Server) validate(uri string) {
 		// hiccup would look like the file just became clean.
 		return
 	}
+	s.hints.Annotate([]*validator.Result{res})
 	diags := toDiagnostics(res, text)
 
 	s.mu.Lock()
