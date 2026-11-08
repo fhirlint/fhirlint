@@ -43,11 +43,17 @@ jobs:
           - { pkg: ./internal/stats, target: FuzzParse }
           - { pkg: ./internal/validator, target: FuzzMessageCatalog }
           - { pkg: ./internal/validator, target: FuzzParseOutput }
+          - { pkg: ./internal/validator, target: FuzzSnapshotFailures }
+          - { pkg: ./internal/validator, target: FuzzFileDurations }
+          - { pkg: ./internal/validator, target: FuzzImplicitPackages }
           - { pkg: ./internal/reporter, target: FuzzSourceSnippet }
           - { pkg: ./internal/reporter, target: FuzzTruncateAround }
           - { pkg: ./internal/termsafe, target: FuzzLine }
+          - { pkg: ./internal/termsafe, target: FuzzClip }
           - { pkg: ./internal/txreplay, target: FuzzKey }
           - { pkg: ./internal/txreplay, target: FuzzCanonicalQuery }
+          - { pkg: ./internal/txreplay, target: FuzzRewriteRegistryAnswer }
+          - { pkg: ./internal/pkgindex, target: FuzzParseIndex }
           - { pkg: ./internal/lsp, target: FuzzRead }
           - { pkg: ./internal/rules/fhirpath, target: FuzzEval }
           - { pkg: ./cmd, target: FuzzXMLPreprocess }
