@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -83,10 +84,11 @@ func buildCodeClimateReport(results []*validator.Result, minSeverity string) []c
 // ccDescription prefixes the message with its HL7 message ID when present,
 // e.g. "dom-6: A resource should have narrative for robust management".
 func ccDescription(iss validator.Issue) string {
+	msg := termsafe.Clip(iss.Message)
 	if iss.MessageID != "" {
-		return iss.MessageID + ": " + iss.Message
+		return iss.MessageID + ": " + msg
 	}
-	return iss.Message
+	return msg
 }
 
 // ccSeverity maps FHIR issue severities onto the CodeClimate severity scale.

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -135,7 +136,7 @@ func buildSARIFReport(results []*validator.Result, minSeverity string, info RunI
 			sr := sarifResult{
 				RuleID:  ruleID,
 				Level:   sarifLevel(iss.Severity),
-				Message: sarifMessage{Text: iss.Message},
+				Message: sarifMessage{Text: termsafe.Clip(iss.Message)},
 			}
 
 			if iss.OriginalSeverity != "" {

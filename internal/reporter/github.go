@@ -60,7 +60,7 @@ func gitHubCommand(filename string, iss validator.Issue) string {
 		b.WriteString(strings.Join(params, ","))
 	}
 	b.WriteString("::")
-	b.WriteString(escapeGitHubData(iss.Message))
+	b.WriteString(escapeGitHubMessage(iss.Message))
 	return b.String()
 }
 
@@ -96,7 +96,16 @@ func gitHubLevel(severity string) string {
 // echoes the command into the job log, which renders ANSI, so other control
 // characters from the input file are made visible first (#496).
 func escapeGitHubData(s string) string {
-	s = termsafe.Text(s)
+	return escapeGitHubPercent(termsafe.Text(s))
+}
+
+// escapeGitHubMessage is escapeGitHubData for an issue message, which is also
+// capped in length: one annotation per issue, each quoting the value (#519).
+func escapeGitHubMessage(s string) string {
+	return escapeGitHubPercent(termsafe.MessageText(s))
+}
+
+func escapeGitHubPercent(s string) string {
 	s = strings.ReplaceAll(s, "%", "%25")
 	s = strings.ReplaceAll(s, "\r", "%0D")
 	s = strings.ReplaceAll(s, "\n", "%0A")

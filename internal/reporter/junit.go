@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -75,13 +76,14 @@ func buildJUnitReport(results []*validator.Result, minSeverity string, info RunI
 			Classname: "fhirlint",
 		}
 		for _, iss := range issues {
-			body := iss.Message
+			msg := termsafe.Clip(iss.Message)
+			body := msg
 			if iss.Location != "" {
 				body += " @ " + iss.Location
 			}
 			tc.Failures = append(tc.Failures, junitFailure{
 				Type:    iss.Severity,
-				Message: iss.Message,
+				Message: msg,
 				Body:    body,
 			})
 			totalFailures++

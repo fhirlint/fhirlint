@@ -607,6 +607,16 @@ Two things worth knowing about the caret:
 
 Long lines — minified resources are often one enormous line — are truncated around the column, marked with `…`. Where the line cannot be shown faithfully (input read from a stream, a line past the end of the file), no snippet is printed rather than a wrong one.
 
+### Very long messages
+
+The validator quotes the offending value into its message, sometimes several times: a 300,000-character `gender` code gives a 900,000-character message. Every report except `json` cuts a message longer than 2,000 characters in the middle, keeping the start (what is wrong) and the end (where), and marks the cut:
+
+```
+The value provided ('xxxx … [898,442 characters omitted; full text with --format json] … xxxx') was not found …
+```
+
+This applies to the terminal, `github`, `markdown`, `junit`, `html`, `sarif`, `codeclimate` and the language server. `json` keeps the exact text. Suppression `pattern:` rules and baselines still match against the full message.
+
 ### PHI-safe reports
 
 Findings carry more of the resource than is obvious. The validator quotes the offending value into its message text, and `--show-source` renders the offending line verbatim. On real patient data both are PHI — and several output paths outlive the run:
