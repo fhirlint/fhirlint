@@ -600,7 +600,7 @@ Slowest files (time the validator logged per file):
      0.590 s  fhir/Patient-b.json
 ```
 
-The time is per file. It does not count the packages loaded at startup, but it does count packages the validator loads lazily while on the file, so the first file that needs such a package can look slow. A cached result (`--cache`) took no validation time in the run, so it has no `durationMs` and is not listed. The same goes for a file the validator crashed on.
+The time is per file, and it does not include package loading: neither the packages loaded at startup nor those the validator loads lazily while on a file. Measured with 6.10.3, a US Core Patient logged 0.8 s while the 15 packages loaded for it took over 20 s. So a run can be slow while every file looks fast; the run's total is in the validator's `Done. Times:` line. A cached result (`--cache`) took no validation time in the run, so it has no `durationMs` and is not listed. The same goes for a file the validator crashed on.
 
 ### Showing the offending line
 

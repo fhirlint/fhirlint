@@ -10,9 +10,9 @@ import (
 // " 00:00.476". It returns the milliseconds per index into paths.
 //
 // A file without its time line, such as the one a crash interrupted, has no
-// entry: fhirlint never invents a duration. The time excludes packages loaded
-// before the run, but includes those the validator loads lazily while on the
-// file (#520), which can dominate the first file that needs them.
+// entry: fhirlint never invents a duration. The time excludes package loading,
+// lazy loads during the file included (#520): measured with 6.10.3, a US Core
+// Patient logged 00:00.815 after 15 loads that took over 20 s.
 func fileDurations(stdout string, paths []string) map[int]int64 {
 	out := map[int]int64{}
 	current := -1
