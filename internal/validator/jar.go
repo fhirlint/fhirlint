@@ -317,6 +317,13 @@ func downloadJAR(dest, pinned string) error {
 // downloadJARFrom fetches the JAR at url into dest. pinned is the release the
 // caller asked for, empty when tracking latest.
 func downloadJARFrom(url, dest, pinned string) error {
+	return fetchJAR(url, dest, pinned, true)
+}
+
+// fetchJAR downloads and verifies the JAR at url into dest. install records
+// it as the cached default (version file and verification status); a side JAR
+// for `fhirlint upgrade-check` is verified the same way but recorded nowhere.
+func fetchJAR(url, dest, pinned string, install bool) error {
 	// GitHub redirects /releases/latest/download/ → /releases/download/VERSION/ → CDN.
 	// The final URL is a CDN URL without the version; capture it from the intermediate redirect.
 	//
@@ -383,10 +390,12 @@ func downloadJARFrom(url, dest, pinned string) error {
 	}
 	// Recorded only now: a version file written ahead of a failed download would
 	// label the still-cached older JAR as the version that never arrived.
-	if version != "" {
+	if install && version != "" {
 		_ = saveValidatorVersion(version)
 	}
-	_ = saveVerifyStatus(result.method)
+	if install {
+		_ = saveVerifyStatus(result.method)
+	}
 	if !result.ok() {
 		// Not fatal — releases before 6.6.0 carry neither a signature nor a
 		// digest — but never silent: an attacker able to tamper with the
@@ -539,4 +548,35 @@ func JARRejection(version string) (reason string, when time.Time, ok bool) {
 		return "", time.Time{}, false
 	}
 	return r.Reason, r.When, true
+}
+
+// exactRelease is the shape of a validator release tag, e.g. "7.0.3". A side
+// JAR's version becomes a directory name, so nothing else is accepted.
+var exactRelease = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// EnsureSideJAR returns a verified JAR of the given release without making it
+// the default (#525): it lives in validators/<version>/ under the cache, and
+// the cached default JAR, its version file and its verification status stay
+// as they are. A side JAR already there is reused.
+func EnsureSideJAR(version string) (string, error) {
+	if !exactRelease.MatchString(version) {
+		return "", fmt.Errorf("%q is not a validator release: give an exact version such as 7.0.3", version)
+	}
+	dir, err := cache.Dir()
+	if err != nil {
+		return "", err
+	}
+	jarDir := filepath.Join(dir, "validators", version)
+	jarPath := filepath.Join(jarDir, "validator_cli.jar")
+	if valid, err := isValidJAR(jarPath); err == nil && valid {
+		return jarPath, nil
+	}
+	if err := os.MkdirAll(jarDir, 0750); err != nil {
+		return "", err
+	}
+	fmt.Fprintf(os.Stderr, "Downloading FHIR validator JAR %s for the comparison (~250 MB, kept in %s)...\n", version, jarDir)
+	if err := fetchJAR(jarURLForVersion(version), jarPath, version, false); err != nil {
+		return "", err
+	}
+	return jarPath, nil
 }

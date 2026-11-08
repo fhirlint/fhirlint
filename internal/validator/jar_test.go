@@ -531,3 +531,12 @@ func TestRoutesTerminology(t *testing.T) {
 		}
 	}
 }
+
+// A side JAR's version becomes a directory name (#525).
+func TestEnsureSideJAR_RejectsNonReleases(t *testing.T) {
+	for _, v := range []string{"", "latest", "7.0", "../../etc", "7.0.3-SNAPSHOT", "7.0.3/x"} {
+		if _, err := EnsureSideJAR(v); err == nil {
+			t.Errorf("EnsureSideJAR(%q) accepted", v)
+		}
+	}
+}
