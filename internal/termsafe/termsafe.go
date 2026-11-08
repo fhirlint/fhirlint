@@ -8,8 +8,12 @@
 // Control characters are made visible rather than dropped. The messages quote
 // the user's value, and '20\x1b[31m01' says what is in the file where
 // '20[31m01' would mislead. Only the terminal-facing sinks use this; the JSON,
-// SARIF, JUnit and HTML reporters keep the exact text, which their encoders
-// escape on their own.
+// SARIF, JUnit and HTML reporters keep the exact characters, which their
+// encoders escape on their own.
+//
+// Message, MessageText and Clip also cap the length of an issue message, for
+// every human-facing report except JSON (#519). Escaping and the cap live in
+// one place so that a sink cannot apply one and forget the other.
 package termsafe
 
 import (

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/fhirlint/fhirlint/internal/reporter"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -29,7 +30,7 @@ func toDiagnostics(res *validator.Result, text string) []diagnostic {
 			Severity: severityFor(iss.Severity),
 			Code:     iss.MessageID,
 			Source:   diagnosticSource,
-			Message:  iss.Message,
+			Message:  termsafe.Clip(iss.Message),
 			Data:     diagnosticData{MessageID: iss.MessageID, Expression: expr},
 		})
 	}

@@ -67,7 +67,7 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string, info R
 			fmt.Fprintf(&b, "| %s | %s | %s |\n",
 				severityCell(iss),
 				mdEscape(iss.Location),
-				mdEscape(iss.Message),
+				mdMessage(iss.Message),
 			)
 		}
 		b.WriteString("\n")
@@ -82,7 +82,7 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string, info R
 					mdEscape(label(r)),
 					severityLabel(iss.Severity),
 					mdEscape(iss.Location),
-					mdEscape(iss.Message),
+					mdMessage(iss.Message),
 					mdEscape(iss.SuppressReason),
 				)
 			}
@@ -137,9 +137,21 @@ func severityLabel(severity string) string {
 // Other control characters are made visible: a report written to stdout lands
 // in a terminal (#496).
 func mdEscape(s string) string {
-	s = strings.ReplaceAll(s, "|", "\\|")
+	return mdCell(s, termsafe.Line)
+}
+
+// mdMessage is mdEscape for an issue message, which is also capped in length
+// (#519). The cut comes before the pipes are escaped, so it cannot separate a
+// backslash from its pipe.
+func mdMessage(s string) string {
+	return mdCell(s, termsafe.Message)
+}
+
+func mdCell(s string, render func(string) string) string {
 	s = strings.ReplaceAll(s, "\r\n", " ")
 	s = strings.ReplaceAll(s, "\n", " ")
 	s = strings.ReplaceAll(s, "\r", " ")
-	return strings.TrimSpace(termsafe.Line(s))
+	s = render(s)
+	s = strings.ReplaceAll(s, "|", "\\|")
+	return strings.TrimSpace(s)
 }

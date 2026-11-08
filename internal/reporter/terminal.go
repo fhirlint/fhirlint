@@ -34,12 +34,13 @@ var (
 // fhirlint can explain, so it cannot be relied on to surface the ID.
 //
 // The message quotes values from the input file, so it goes through termsafe,
-// like every other text in this report that fhirlint did not write (#496).
+// like every other text in this report that fhirlint did not write (#496), and
+// is capped in length: a quoted value can run to hundreds of KB (#519).
 func issueHeadline(issue validator.Issue) string {
 	if issue.Redacted && issue.MessageID != "" {
-		return termsafe.Line(issue.Message + " " + issue.MessageID)
+		return termsafe.Message(issue.Message) + " " + termsafe.Line(issue.MessageID)
 	}
-	return termsafe.Line(issue.Message)
+	return termsafe.Message(issue.Message)
 }
 
 func Terminal(result *validator.Result, minSeverity string, showSuppressed, quiet, showSource bool) {

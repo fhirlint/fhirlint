@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fhirlint/fhirlint/internal/explain"
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -30,7 +31,7 @@ type groupKey struct {
 // findingGroup is one distinct finding and everywhere it occurred.
 type findingGroup struct {
 	groupKey
-	displayMessage string   // the message as first seen, before normalisation
+	displayMessage string   // the message as first seen, escaped and capped for the terminal
 	occurrences    int      // total findings in the group, matching the summary counts
 	files          int      // distinct files, which is the number a reader acts on
 	examples       []string // up to maxGroupExamples of "path" or "path:line"
@@ -95,7 +96,7 @@ func groupFindings(results []*validator.Result, pick func(*validator.Result) []v
 			}
 			g, ok := index[key]
 			if !ok {
-				g = &findingGroup{groupKey: key, displayMessage: strings.TrimSpace(issue.Message)}
+				g = &findingGroup{groupKey: key, displayMessage: termsafe.Message(strings.TrimSpace(issue.Message))}
 				index[key] = g
 				order = append(order, key)
 			}
@@ -151,7 +152,7 @@ func printGroup(g findingGroup, showSource bool) {
 		}
 	}
 	if g.messageID != "" && explain.Known(g.messageID) {
-		fmt.Println(dimStyle.Render("           ↳ Run: fhirlint explain " + g.messageID))
+		fmt.Println(dimStyle.Render("           ↳ Run: fhirlint explain " + termsafe.Line(g.messageID)))
 	}
 	fmt.Println()
 }
@@ -169,9 +170,9 @@ func (g findingGroup) headline() string {
 		return g.displayMessage
 	}
 	if _, fragment, found := strings.Cut(g.messageID, "#"); found && fragment != "" {
-		return fragment
+		return termsafe.Line(fragment)
 	}
-	return g.messageID
+	return termsafe.Line(g.messageID)
 }
 
 // countLabel reports occurrences and files separately when they differ: one
@@ -206,6 +207,7 @@ func exampleLocation(r *validator.Result, issue validator.Issue) string {
 	if label == "" {
 		label = r.Filename
 	}
+	label = termsafe.Line(label)
 	if _, line, _ := parseLocationString(issue.Location); line > 0 {
 		return fmt.Sprintf("%s:%d", label, line)
 	}

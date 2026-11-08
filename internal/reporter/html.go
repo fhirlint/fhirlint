@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/fhirlint/fhirlint/internal/termsafe"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
 
@@ -58,7 +59,7 @@ const htmlTmpl = `<!DOCTYPE html>
   {{ else }}
   {{ range .Issues }}
   <div class="issue">
-    <span class="badge badge-{{ .Severity }}">{{ .Severity }}</span>{{ .Message }}
+    <span class="badge badge-{{ .Severity }}">{{ .Severity }}</span>{{ clip .Message }}
     {{ if .OriginalSeverity }}<div class="location">↕ reported as {{ .OriginalSeverity }}</div>{{ end }}
     {{ if .Location }}<div class="location">@ {{ .Location }}</div>{{ end }}
   </div>
@@ -100,7 +101,7 @@ func HTML(results []*validator.Result, minSeverity string, info RunInfo, dest st
 		ValidCount:  validCount,
 	}
 
-	tmpl, err := template.New("report").Parse(htmlTmpl)
+	tmpl, err := template.New("report").Funcs(template.FuncMap{"clip": termsafe.Clip}).Parse(htmlTmpl)
 	if err != nil {
 		return err
 	}
