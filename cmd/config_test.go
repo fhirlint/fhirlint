@@ -860,3 +860,28 @@ func TestConfigFile_PackageBaselineFromConfig(t *testing.T) {
 		t.Error("package-baseline = false, want true")
 	}
 }
+
+func TestConfigFile_SlowestFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "slowest: 7\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetInt("slowest"); got != 7 {
+		t.Errorf("slowest = %d, want 7 from config", got)
+	}
+}
+
+// A cached result took no validation time in this run (#522).
+func TestWithoutDuration(t *testing.T) {
+	r := validator.Result{Label: "a", DurationMs: 900}
+	if got := withoutDuration(r); got.DurationMs != 0 || got.Label != "a" {
+		t.Errorf("withoutDuration = %+v", got)
+	}
+	if r.DurationMs != 900 {
+		t.Error("withoutDuration changed its argument")
+	}
+}

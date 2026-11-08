@@ -587,6 +587,21 @@ It is opt-in rather than automatic above some threshold, so nothing scraping ter
 
 With `--show-source`, one snippet is printed per group, from the first occurrence. With `--show-suppressed`, suppressed findings are grouped the same way. `--quiet` has no additional effect: grouped output never lists clean files in the first place.
 
+### Finding slow files
+
+The validator logs how long it took on each file. fhirlint keeps that time as `durationMs` on each file in `--format json`, and `--slowest N` lists the slowest files after the terminal summary:
+
+```
+fhirlint validate ./fhir/ --slowest 5
+```
+```
+Slowest files (time the validator logged per file):
+     4.302 s  fhir/Patient-a.json
+     0.590 s  fhir/Patient-b.json
+```
+
+The time is per file. It does not count the packages loaded at startup, but it does count packages the validator loads lazily while on the file, so the first file that needs such a package can look slow. A cached result (`--cache`) took no validation time in the run, so it has no `durationMs` and is not listed. The same goes for a file the validator crashed on.
+
 ### Showing the offending line
 
 `--show-source` prints the source line under each finding, with a caret at the reported column:
@@ -2022,6 +2037,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--lock` | `false` | Write/update `fhirlint.lock` with IG package SHA256 hashes |
 | `--quiet`, `-q` | `false` | Suppress per-file output for valid files (terminal format only) |
 | `--group` | `false` | Group repeated findings into one block each with a count (terminal format only) |
+| `--slowest` | `0` | After the summary, list the N files the validator took longest on (terminal format only) |
 | `--redact` | `false` | Remove message text and source lines from all reports (see [PHI-safe reports](#phi-safe-reports)) |
 | `--no-color` | `false` | Disable ANSI color output |
 | `--watch` | — | Watch mode: `single` (changed files only) or `all` (all files on any change) |
@@ -2078,6 +2094,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `cache-dir` | string | `--cache-dir` |
 | `quiet` | bool | `--quiet` |
 | `group` | bool | `--group` |
+| `slowest` | int | `--slowest` |
 | `redact` | bool | `--redact` |
 | `no-color` | bool | `--no-color` |
 | `watch` | string | `--watch` |

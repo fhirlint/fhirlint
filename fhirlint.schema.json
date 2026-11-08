@@ -364,6 +364,9 @@
     "skip-non-fhir": {
       "type": "boolean"
     },
+    "slowest": {
+      "type": "integer"
+    },
     "suppress": {
       "items": {
         "additionalProperties": false,

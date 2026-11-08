@@ -114,6 +114,7 @@ var (
 	flagShowSource               bool
 	flagRedact                   bool
 	flagGroup                    bool
+	flagSlowest                  int
 	flagQuiet                    bool
 	flagNoColor                  bool
 	flagRulesFile                string
@@ -269,6 +270,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&flagGroup, "group", false,
 		"Group repeated findings into one block each with a count (terminal output only)")
 	_ = viper.BindPFlag("group", validateCmd.Flags().Lookup("group"))
+	validateCmd.Flags().IntVar(&flagSlowest, "slowest", 0,
+		"After the summary, list the N files the validator took longest on (terminal output only)")
+	_ = viper.BindPFlag("slowest", validateCmd.Flags().Lookup("slowest"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
 	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
@@ -481,6 +485,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if !cmd.Flags().Changed("group") && viper.IsSet("group") {
 		flagGroup = viper.GetBool("group")
 	}
+	if !cmd.Flags().Changed("slowest") && viper.IsSet("slowest") {
+		flagSlowest = viper.GetInt("slowest")
+	}
 	if !cmd.Flags().Changed("check-references") && viper.IsSet("check-references") {
 		flagCheckReferences = viper.GetBool("check-references")
 	}
@@ -551,6 +558,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if flagMaxMessages < 0 {
 		return fmt.Errorf("--max-messages must be zero or positive, got %d", flagMaxMessages)
+	}
+	if flagSlowest < 0 {
+		return fmt.Errorf("--slowest must be zero or positive, got %d", flagSlowest)
 	}
 	if flagOffline && cmd.Flags().Changed("terminology-server") {
 		return fmt.Errorf("--offline forbids network access, so it cannot be combined with --terminology-server — " +
@@ -1022,6 +1032,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 				}
 			}
 			reporter.TerminalSummary(results, flagSeverity)
+			reporter.Slowest(os.Stdout, results, flagSlowest)
 			printPackageBaseline(os.Stdout, pkgBaseline, flagPackageBaseline)
 		case "json":
 			outFile := outputFile("json")
@@ -2233,6 +2244,9 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 		if err == nil {
 			r := entry.Result
 			r.Cached = true
+			// The time of the run that filled the entry, not of this one:
+			// --slowest would rank files by work this run did not do.
+			r.DurationMs = 0
 			cachedResults[i] = &r
 		} else {
 			// A missing entry is the normal case and says nothing. Anything else
@@ -2260,7 +2274,7 @@ func runWithCache(paths []string, opts validator.Options) ([]*validator.Result, 
 				if err := resultcache.Put(cacheDir, keys[i], resultcache.Entry{
 					CachedAt:        timeNow(),
 					FhirlintVersion: keyOpts.FhirlintVersion,
-					Result:          *r,
+					Result:          withoutDuration(*r),
 				}); err != nil {
 					warn.warn("warn: --cache is set but results could not be written to %s (%v) — the next run will revalidate\n",
 						cacheDir, err)
@@ -3561,4 +3575,11 @@ func applyInsecureTxExemption(opts *validator.Options, validatorArgs []string, w
 		"Exempting %s from the validator's SSRF protection (--allow-insecure-tx).\n",
 		opts.TerminologyServer)
 	return cleanup, nil
+}
+
+// withoutDuration is r as the result cache stores it: a replayed result says it
+// took no validation time rather than repeating the time of an earlier run.
+func withoutDuration(r validator.Result) validator.Result {
+	r.DurationMs = 0
+	return r
 }

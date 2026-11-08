@@ -85,6 +85,7 @@ var topLevelKeys = map[string]keySpec{
 	"severity-override":           {kind: kindSeverityOverrideList},
 	"show-suppressed":             {kind: kindBool},
 	"group":                       {kind: kindBool},
+	"slowest":                     {kind: kindInt},
 	"cache":                       {kind: kindBool},
 	"cache-dir":                   {kind: kindString},
 	"timeout":                     {kind: kindString},
