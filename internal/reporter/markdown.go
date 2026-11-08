@@ -67,7 +67,7 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string, info R
 			fmt.Fprintf(&b, "| %s | %s | %s |\n",
 				severityCell(iss),
 				mdEscape(iss.Location),
-				mdMessage(iss.Message),
+				mdMessage(MessageWithCause(iss)),
 			)
 		}
 		b.WriteString("\n")
@@ -82,7 +82,7 @@ func buildMarkdownReport(results []*validator.Result, minSeverity string, info R
 					mdEscape(label(r)),
 					severityLabel(iss.Severity),
 					mdEscape(iss.Location),
-					mdMessage(iss.Message),
+					mdMessage(MessageWithCause(iss)),
 					mdEscape(iss.SuppressReason),
 				)
 			}

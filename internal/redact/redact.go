@@ -48,6 +48,7 @@ func Apply(results []*validator.Result) {
 func redactIssues(issues []validator.Issue) {
 	for i := range issues {
 		issues[i].Message = Placeholder
+		issues[i].Cause = ""
 		issues[i].Redacted = true
 	}
 }

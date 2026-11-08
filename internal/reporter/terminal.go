@@ -77,6 +77,9 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 		if issue.Location != "" {
 			fmt.Println(dimStyle.Render("           @ " + termsafe.Line(issue.Location)))
 		}
+		if issue.Cause != "" {
+			fmt.Println("           ↳ cause: " + termsafe.Message(issue.Cause))
+		}
 		if showSource {
 			// Resolved against SourcePath, not Filename: for preprocessed input
 			// the coordinates belong to the temp copy that was validated.

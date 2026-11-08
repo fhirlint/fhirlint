@@ -271,3 +271,10 @@ func TestToPublicResult_MessageIDInferred(t *testing.T) {
 		t.Error("a stated id must not be marked inferred")
 	}
 }
+
+func TestToPublicResult_CarriesCause(t *testing.T) {
+	r := &validator.Result{Issues: []validator.Issue{{Severity: "error", Message: "has no snapshot", Cause: "why"}}}
+	if got := toPublicResult(r).Issues[0].Cause; got != "why" {
+		t.Errorf("Cause = %q", got)
+	}
+}

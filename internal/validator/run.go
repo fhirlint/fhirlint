@@ -43,6 +43,11 @@ type Issue struct {
 	// is carried into every report so that a stripped finding can never be read
 	// as one the validator described that tersely.
 	Redacted bool `json:"redacted,omitempty"`
+
+	// Cause is why the validator reported this issue, when it logged that on
+	// stdout only: the exception behind "has no snapshot" (#521). Empty for
+	// almost every issue.
+	Cause string `json:"cause,omitempty"`
 }
 
 // Result holds the outcome for one validated resource.
@@ -710,6 +715,7 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 			if err != nil {
 				return nil, err
 			}
+			attachSnapshotFailures(rs, snapshotFailures(out.stdout, paths))
 			if crashes == 0 {
 				return rs, nil
 			}

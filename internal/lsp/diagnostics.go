@@ -30,7 +30,7 @@ func toDiagnostics(res *validator.Result, text string) []diagnostic {
 			Severity: severityFor(iss.Severity),
 			Code:     iss.MessageID,
 			Source:   diagnosticSource,
-			Message:  termsafe.Clip(iss.Message),
+			Message:  termsafe.Clip(reporter.MessageWithCause(iss)),
 			Data:     diagnosticData{MessageID: iss.MessageID, Expression: expr},
 		})
 	}
