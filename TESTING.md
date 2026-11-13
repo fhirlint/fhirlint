@@ -57,6 +57,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | Coverage (#545): statement floors on the total and on `pkg/fhirlint` and `internal/validator`, and coverage of the lines a pull request changes (`internal/tools/patchcoverage`); the integration profile is shown, not gated | code no test exercises, also while the total stays high | every pull request (Linux leg of the unit tests) |
 | Unreachable code: [deadcode](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) from every main package, against the allowlist [`.github/deadcode-allow.txt`](.github/deadcode-allow.txt) (golangci-lint's `unused` covers unexported code) (#547) | exported functions nothing calls any more, such as a wrapper only tests use after a refactor, so the tests check a path production doesn't take; allowlist entries that went stale | every pull request |
 | Workflow and script lint (#546): [actionlint](https://github.com/rhysd/actionlint) on every workflow, including the shell in their `run:` blocks, and [ShellCheck](https://www.shellcheck.net/) on `hooks/*.sh`, `.github/scripts/*.sh` and the shell inside `action.yml` and the GitLab templates (`internal/tools/extractshell`), both pinned | invalid workflow syntax or expressions, shell bugs in fhirlint's CI, in the plugin hook users run, and in the Action and GitLab component that run in users' pipelines | every pull request |
+| Workflow consistency (`internal/workflows`, #551): every job has `timeout-minutes`, every workflow a duration budget | a hung job running for GitHub's default 6 hours and blocking the pull requests behind it; a workflow the duration watch doesn't see | every pull request |
 
 ### Supply chain and repository security
 
@@ -104,6 +105,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | `jar-monitor.yml`: signing key expiry, advisories | Monday | opens an issue |
 | Docker image scan, govulncheck, zizmor | Monday | red run |
 | Fuzzing, 10 minutes per target | Sunday | red run, crash input as artifact |
+| `duration-watch.yml`: median and p90 of each workflow's runs against `.github/workflow-budgets.txt` (#551) | Monday | opens an issue |
 
 ## Keeping this page current
 

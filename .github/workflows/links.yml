@@ -23,6 +23,7 @@ jobs:
   check:
     name: Check links
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # max 17s in 4 runs; lychee retries slow hosts with a 30s timeout
     permissions:
       contents: read
       issues: write # the weekly run reports dead links as an issue

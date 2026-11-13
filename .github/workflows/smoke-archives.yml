@@ -33,6 +33,7 @@ jobs:
           - { os: macos-latest, platform: darwin_arm64, ext: tar.gz, mode: "" }
           - { os: windows-latest, platform: windows_amd64, ext: zip, mode: "" }
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15 # max 48s (linux, with a validation) in 3 runs; a JAR cache miss downloads ~250 MB
     permissions:
       contents: read
     defaults:

@@ -25,6 +25,7 @@ jobs:
     name: Build and push Docker image
     needs: require-green-ci
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # max 156s in 12 runs
     permissions:
       contents: read
       packages: write

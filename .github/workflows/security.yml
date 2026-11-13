@@ -14,6 +14,7 @@ jobs:
   govulncheck:
     name: govulncheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 34s in 12 runs
     permissions:
       contents: read
     steps:
@@ -45,6 +46,7 @@ jobs:
   cfgaudit:
     name: cfgaudit
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 13s in 12 runs
     permissions:
       contents: read
     steps:
@@ -80,6 +82,7 @@ jobs:
   glsec:
     name: glsec
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 24s in 12 runs
     permissions:
       contents: read
     steps:
@@ -105,6 +108,7 @@ jobs:
   osv-scanner:
     name: OSV-Scanner
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 21s in 3 runs
     permissions:
       contents: read
     steps:
@@ -126,6 +130,7 @@ jobs:
     name: Dependency review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 12s in 2 runs
     permissions:
       contents: read
     steps:
@@ -148,6 +153,7 @@ jobs:
   pinact:
     name: pinact
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 39s in 1 run; builds pinact with Go 1.27
     permissions:
       contents: read
     steps:

@@ -1,0 +1,54 @@
+name: Duration watch
+
+# Weekly: the median and 90th percentile wall time of each workflow's
+# successful runs in the last 7 days, against its budget in
+# .github/workflow-budgets.txt. Opens an issue (or comments on the open one)
+# when a workflow's p90 is over budget, so a suite that slowly grows shows up
+# before it hits its job timeouts (#551).
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # 08:00 UTC every Monday, after the other weekly runs
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  watch:
+    name: Workflow durations against their budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # about 15 API queries
+    permissions:
+      contents: read
+      actions: read # list the workflow runs
+      issues: write # report a budget overrun
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Measure and report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          code=0
+          .github/scripts/duration-watch.sh "$REPO" .github/workflow-budgets.txt 7 > report.md || code=$?
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" = 0 ]; then
+            echo "All workflows within budget."
+            exit 0
+          fi
+          if [ "$code" != 1 ]; then
+            echo "::error::the duration watch failed (exit $code)"
+            exit "$code"
+          fi
+          title="Workflow duration over budget"
+          body=$(printf '%s\n\n%s\n' "The 90th percentile of last week's successful runs is over its budget in \`.github/workflow-budgets.txt\` for at least one workflow. Find what made it slower, or raise the budget on purpose (#551)." "$(cat report.md)")
+          existing=$(gh issue list --repo "$REPO" --state open --search "\"$title\" in:title" --json number --jq '.[0].number // ""')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --label github_actions --body "$body"
+          fi

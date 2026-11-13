@@ -17,6 +17,7 @@ jobs:
   hadolint:
     name: hadolint (Dockerfile)
     runs-on: ubuntu-latest
+    timeout-minutes: 5 # max 9s in 12 runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -28,6 +29,7 @@ jobs:
   image:
     name: Image scan (Trivy + dockle)
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # max 4.5m in 12 runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
