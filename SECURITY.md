@@ -136,6 +136,19 @@ What is covered:
 | Archive SBOMs (`*.sbom.json`) | yes | n/a | n/a |
 | Container image | yes, plus a cosign signature | yes | yes (from the release after v1.5.0) |
 
+### Rebuilding a release
+
+The release archives are reproducible from the release after v1.17.0 on (#549): the binaries are built with `-trimpath`, without a build ID and with the commit time, and the archive entries carry a fixed owner and the commit time. Two builds of the same tag give the same bytes, which `.github/workflows/reproducible-build.yml` checks on every push to `main`. To check a release yourself, with the Go version from its `go.mod` and the GoReleaser version pinned in `.github/workflows/release.yml`:
+
+```bash
+git checkout vX.Y.Z
+HOMEBREW_TAP_GITHUB_TOKEN=unused goreleaser release --clean --skip=publish,sbom
+diff <(grep -E '\.(tar\.gz|zip)$' dist/checksums.txt) \
+     <(gh release download vX.Y.Z --repo fhirlint/fhirlint -p checksums.txt -O - | grep -E '\.(tar\.gz|zip)$')
+```
+
+Before a release is published, each archive is unpacked and run on its platform (Linux amd64/arm64, macOS arm64, Windows amd64): it must report the tag as its version and run `explain` and `config check`, and on Linux validate a fixture with a known error. The release job then checks that the archives it published are the ones that were tested.
+
 ### Why the archive SBOMs are not SBOM-attested
 
 An SBOM attestation binds one SBOM to one subject artifact. With five release archives, each with its own SBOM, that is five separate attestations produced at release time, which needs the artifacts carried into a matrix job purely to make the claim.

@@ -68,7 +68,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | Release gate (`require-green-ci.yml`) | a release or image built from a commit CI didn't pass | every tag push, before Release and Docker build anything |
 | HL7 JAR signature check with a pinned key; key expiry and advisory watch ([`jar-monitor.yml`](.github/workflows/jar-monitor.yml)) | running a validator JAR that HL7 didn't sign, a signing key that expires unnoticed, a known advisory against the JAR | every download; weekly watch |
 | *Planned:* OSV-Scanner, dependency review, pinact (#550) | unreachable vulnerabilities and non-Go manifests, a PR that adds a vulnerable dependency, an action whose version comment lies | every pull request |
-| *Planned:* reproducible build (#549) | a release binary that differs from what the source builds | pull requests that change the build, pushes to `main` |
+| Reproducible build ([`reproducible-build.yml`](.github/workflows/reproducible-build.yml), #549): the release archives built twice in different directories must be byte-identical | a release binary that differs from what the source builds; a build path, build time or runner user leaking into an archive | pull requests that change `.goreleaser.yml`, `go.mod`, `go.sum`, `main.go` or `cmd/` (tests excluded); every push to `main` |
 
 ### Packages
 
@@ -76,7 +76,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 |---|---|---|
 | Container image: hadolint, Trivy, dockle, runs as non-root, reports its version, validates `testdata` | Dockerfile mistakes, a fixable HIGH or CRITICAL vulnerability, an image that runs as root or doesn't start | every pull request, push to `main`, weekly |
 | Composite Action smoke test ([`action-test.yml`](.github/workflows/action-test.yml)) | an Action that doesn't install or run | pull requests and pushes that change `action.yml` |
-| *Planned:* release archive smoke test (#549) | an archive with a wrong binary or version, noticed only by users and `self-update` | before each release is published |
+| Release archive smoke test ([`smoke-archives.yml`](.github/workflows/smoke-archives.yml), [`smoke-test.sh`](.github/scripts/smoke-test.sh), #549): each archive unpacked and run on its platform, version checked, `explain` and `config check` run, a fixture validated on Linux | an archive with a wrong binary, a missing version (`dev`) or a broken zip, noticed only by users and `self-update` | with the reproducible build; on every tag before anything is published, and the published archives must equal the tested ones |
 
 ### Documentation
 
