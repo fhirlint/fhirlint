@@ -16,9 +16,10 @@ import (
 func fileDurations(stdout string, paths []string) map[int]int64 {
 	out := map[int]int64{}
 	current := -1
+	ix := newPathIndex(paths)
 	for _, l := range strings.Split(stripANSI(stdout), "\n") {
 		if m := validateLine.FindStringSubmatch(l); m != nil {
-			current = indexOfPath(m[1], paths)
+			current = ix.lookup(m[1])
 			continue
 		}
 		if current < 0 || !fileTimeLine.MatchString(l) {

@@ -37,9 +37,10 @@ func snapshotFailures(stdout string, paths []string) []snapshotFailure {
 	var out []snapshotFailure
 	seen := map[string]bool{}
 	file := -1
+	ix := newPathIndex(paths)
 	for _, l := range strings.Split(stripANSI(stdout), "\n") {
 		if m := validateLine.FindStringSubmatch(l); m != nil {
-			file = indexOfPath(m[1], paths)
+			file = ix.lookup(m[1])
 			continue
 		}
 		m := snapshotExceptionLine.FindStringSubmatch(strings.TrimSpace(plainText(l)))

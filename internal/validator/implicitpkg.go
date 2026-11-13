@@ -43,10 +43,11 @@ func implicitPackages(stdout string, paths []string) map[int][]PackageRef {
 	seen := map[string]bool{}
 	current := -1
 	validating := false
+	ix := newPathIndex(paths)
 	for _, l := range strings.Split(stripANSI(stdout), "\n") {
 		if m := validateLine.FindStringSubmatch(l); m != nil {
 			validating = true
-			current = indexOfPath(m[1], paths)
+			current = ix.lookup(m[1])
 			continue
 		}
 		if !validating {

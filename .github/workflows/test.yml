@@ -53,6 +53,12 @@ jobs:
       - name: Run unit tests
         run: go test -short -race -count=1 -coverprofile=coverage.out ./...
 
+      # The scaling tests skip under -race, which distorts timings; run them
+      # once without it (#552).
+      - name: Linear scaling
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -count=1 -run 'TestPipelineScalesLinearly|TestParsersScaleLinearly' -v ./internal/scaling ./internal/validator
+
       - name: Show coverage summary
         run: go tool cover -func=coverage.out | tail -1
 

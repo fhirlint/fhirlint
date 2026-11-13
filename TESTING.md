@@ -46,7 +46,8 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | [Fuzzing](CONTRIBUTING.md#running-tests) of every parser of input fhirlint didn't write, 24 targets listed in [`fuzz.yml`](.github/workflows/fuzz.yml) | crashes and hangs on hostile or broken resources, validator output, tx recordings and the LSP stream | 45 s per target on pull requests and pushes to `main`, 10 minutes weekly |
 | Race detector | data races in the server, watch and LSP modes | every pull request, all three OSes |
 | Hardening tests: control characters and clipping (`internal/termsafe`), symbolic links (`internal/input`, `internal/coverage`, `cmd`), cache entry trust (`internal/resultcache`), `--redact`, long messages | input that makes fhirlint read outside its directory, inject terminal escapes, trust a planted cache entry, or print data the user asked to redact | every pull request, as part of the unit tests |
-| *Planned:* linear scaling test and benchmarks for the Go-side pipeline (#552) | a quadratic step that only shows on a whole IG | every pull request |
+| Linear scaling (#552): the output parsers (`internal/validator`) and every stage after them — suppression, baseline, package hints, `--group`, every report format, `--slowest` (`internal/scaling`) — on 8× the input must stay under 12× the allocations and 20× the time | a quadratic step that only shows on a whole IG (it found one: the stdout parsers matched each `Validate` line against every path) | every pull request, Linux, without `-race` |
+| Benchmarks `BenchmarkParsers`, `BenchmarkPipeline` (#552), 400 files × 40 issues | — (measurement, not a gate) | by hand: `go test -run '^$' -bench . ./internal/scaling ./internal/validator` |
 
 ### Code health
 
