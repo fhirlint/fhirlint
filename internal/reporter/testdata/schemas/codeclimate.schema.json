@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitLab Code Quality report",
+  "description": "GitLab publishes no schema for the Code Quality (Code Climate) report. This one encodes the required fields from https://docs.gitlab.com/ci/testing/code_quality/#code-quality-report-format (#542).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["description", "check_name", "fingerprint", "severity", "location"],
+    "properties": {
+      "description": { "type": "string", "minLength": 1 },
+      "check_name": { "type": "string", "minLength": 1 },
+      "fingerprint": { "type": "string", "minLength": 1 },
+      "severity": { "enum": ["info", "minor", "major", "critical", "blocker"] },
+      "location": {
+        "type": "object",
+        "required": ["path", "lines"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "lines": {
+            "type": "object",
+            "required": ["begin"],
+            "properties": {
+              "begin": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

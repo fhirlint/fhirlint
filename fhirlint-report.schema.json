@@ -1,0 +1,122 @@
+{
+  "$id": "https://raw.githubusercontent.com/fhirlint/fhirlint/main/fhirlint-report.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "fhirlint JSON report",
+  "description": "The report fhirlint writes with --format json. Fields are only ever added; a new field is added here in the same change, and CI checks the golden report in internal/reporter/testdata/golden against this schema (#542).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["valid", "files", "summary"],
+  "properties": {
+    "valid": {
+      "type": "boolean",
+      "description": "false when any file is invalid."
+    },
+    "meta": {
+      "$ref": "#/definitions/runInfo"
+    },
+    "files": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/result" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "errors", "warnings", "info"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0, "description": "fatal and error" },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "definitions": {
+    "severity": {
+      "enum": ["fatal", "error", "warning", "information"]
+    },
+    "packageRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "preRelease": { "type": "boolean" }
+      }
+    },
+    "runInfo": {
+      "type": "object",
+      "description": "What produced the report (#428).",
+      "additionalProperties": false,
+      "properties": {
+        "fhirlint": { "type": "string" },
+        "validator": { "type": "string" },
+        "validatorBuild": { "type": "string" },
+        "fhirVersion": { "type": "string" },
+        "implicitPackages": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/packageRef" }
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "message", "location", "messageId"],
+      "properties": {
+        "severity": { "$ref": "#/definitions/severity" },
+        "message": { "type": "string" },
+        "location": { "type": "string", "description": "FHIRPath, optionally followed by \" (line N, col M)\"" },
+        "messageId": { "type": "string" },
+        "suppressReason": { "type": "string" },
+        "messageIdInferred": { "type": "boolean" },
+        "originalSeverity": { "$ref": "#/definitions/severity" },
+        "redacted": { "type": "boolean" },
+        "cause": { "type": "string" },
+        "hint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canonical"],
+          "properties": {
+            "canonical": { "type": "string" },
+            "package": { "type": "string" },
+            "packages": { "type": "array", "items": { "type": "string" } },
+            "alias": { "type": "string" }
+          }
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filename", "label", "valid", "issues"],
+      "properties": {
+        "filename": { "type": "string" },
+        "label": { "type": "string" },
+        "valid": { "type": "boolean" },
+        "issues": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/issue" }
+        },
+        "suppressed": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/issue" }
+        },
+        "cached": { "type": "boolean" },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "appliedProfiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile", "reason"],
+            "properties": {
+              "profile": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

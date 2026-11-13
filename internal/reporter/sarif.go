@@ -3,6 +3,7 @@ package reporter
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -175,7 +176,10 @@ func buildSARIFLocation(filename, location string) *sarifLocation {
 		return nil
 	}
 
-	uri := filepath.ToSlash(filename)
+	// artifactLocation.uri is a URI reference: a space or a non-ASCII
+	// character in a path is percent-encoded, or a strict SARIF reader
+	// rejects the report (#542). GitHub code scanning decodes it again.
+	uri := (&url.URL{Path: filepath.ToSlash(filename)}).EscapedPath()
 
 	expression, line, col := parseLocationString(location)
 

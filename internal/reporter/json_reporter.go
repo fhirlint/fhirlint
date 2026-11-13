@@ -56,6 +56,10 @@ func buildJSONReport(results []*validator.Result, minSeverity string) JSONReport
 
 	for _, r := range results {
 		issues := filterIssues(r.Issues, minSeverity)
+		if issues == nil {
+			// [] rather than null, so a script can always iterate .issues (#542).
+			issues = []validator.Issue{}
+		}
 		copy := *r
 		copy.Issues = issues
 		filtered = append(filtered, &copy)

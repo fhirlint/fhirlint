@@ -14,6 +14,7 @@ type junitTestSuites struct {
 	Name     string           `xml:"name,attr"`
 	Tests    int              `xml:"tests,attr"`
 	Failures int              `xml:"failures,attr"`
+	Errors   int              `xml:"errors,attr"`
 	Suites   []junitTestSuite `xml:"testsuite"`
 }
 
@@ -21,6 +22,10 @@ type junitTestSuite struct {
 	Name     string `xml:"name,attr"`
 	Tests    int    `xml:"tests,attr"`
 	Failures int    `xml:"failures,attr"`
+	// Errors is always 0: every finding is a failure. The attribute is
+	// required by the common JUnit schema (Jenkins' junit-10.xsd), which
+	// strict readers enforce (#542).
+	Errors int `xml:"errors,attr"`
 	// Properties is where JUnit XML puts what the run knew that no test case
 	// is about. It hangs off testsuite, not testsuites: that is where the
 	// common schema (Ant, Jenkins, GitLab) allows it, and a properties element

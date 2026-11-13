@@ -1,0 +1,132 @@
+{
+  "valid": false,
+  "meta": {
+    "fhirlint": "1.2.3",
+    "validator": "6.10.4",
+    "validatorBuild": "FHIR Validation tool Version 6.10.4 (Git# 0123456789ab). Built 2026-10-01T00:00:00.000Z",
+    "fhirVersion": "4.0.1",
+    "implicitPackages": [
+      {
+        "id": "hl7.terminology.r4",
+        "version": "6.2.0"
+      }
+    ]
+  },
+  "files": [
+    {
+      "filename": "examples/Patient-ok.json",
+      "label": "examples/Patient-ok.json",
+      "valid": true,
+      "issues": [],
+      "cached": true
+    },
+    {
+      "filename": "examples/Observation-bad.json",
+      "label": "examples/Observation-bad.json",
+      "valid": false,
+      "issues": [
+        {
+          "severity": "fatal",
+          "message": "Unable to parse JSON",
+          "location": "Observation (line 1, col 1)",
+          "messageId": "Validation_VAL_Unknown"
+        },
+        {
+          "severity": "error",
+          "message": "Observation.status: minimum required = 1, but only found 0",
+          "location": "Observation (line 3, col 4)",
+          "messageId": "Validation_VAL_Profile_Minimum"
+        },
+        {
+          "severity": "warning",
+          "message": "Best practice: dom-6",
+          "location": "Observation",
+          "messageId": "BP_DOM_6"
+        },
+        {
+          "severity": "information",
+          "message": "Code 'xyz' not found in value set",
+          "location": "Observation.code.coding[0] (line 12, col 8)",
+          "messageId": "Terminology_TX_NoValid_1_CC",
+          "messageIdInferred": true
+        },
+        {
+          "severity": "warning",
+          "message": "Severity lowered by config",
+          "location": "Observation.subject (line 20, col 6)",
+          "messageId": "Reference_REF_CantResolve",
+          "originalSeverity": "error"
+        },
+        {
+          "severity": "error",
+          "message": "Long message start xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx end",
+          "location": "Observation.note[0].text (line 30, col 10)",
+          "messageId": "Type_Specific_Checks_DT_String_Length"
+        }
+      ],
+      "suppressed": [
+        {
+          "severity": "warning",
+          "message": "A suppressed finding",
+          "location": "Observation.meta",
+          "messageId": "MSG_DRAFT",
+          "suppressReason": "draft profiles are fine here"
+        }
+      ],
+      "durationMs": 1234,
+      "appliedProfiles": [
+        {
+          "profile": "http://example.org/StructureDefinition/obs",
+          "reason": "profile-map: Observation when code.coding.exists()"
+        }
+      ]
+    },
+    {
+      "filename": "examples/Ärzte Liste/Practitioner 1.json",
+      "label": "examples/Ärzte Liste/Practitioner 1.json",
+      "valid": false,
+      "issues": [
+        {
+          "severity": "error",
+          "message": "Profile http://example.org/StructureDefinition/p has no snapshot",
+          "location": "Practitioner (line 2, col 2)",
+          "messageId": "VALIDATION_VAL_PROFILE_NOSNAPSHOT",
+          "cause": "Unable to generate snapshot: base not found"
+        },
+        {
+          "severity": "error",
+          "message": "Unable to resolve profile https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Practitioner",
+          "location": "Practitioner.meta.profile[0] (line 5, col 9)",
+          "messageId": "VALIDATION_VAL_PROFILE_UNKNOWN",
+          "hint": {
+            "canonical": "https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Practitioner",
+            "package": "kbv.basis#1.7.0",
+            "packages": [
+              "kbv.basis#1.7.0"
+            ],
+            "alias": "kbv-basis"
+          }
+        }
+      ]
+    },
+    {
+      "filename": "examples/crash.xml",
+      "label": "examples/crash.xml",
+      "valid": false,
+      "issues": [
+        {
+          "severity": "fatal",
+          "message": "the validator crashed on this file: java.lang.NullPointerException",
+          "location": "",
+          "messageId": "fhirlint-validator-crash"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "errors": 6,
+    "warnings": 2,
+    "info": 1
+  }
+}
