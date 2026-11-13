@@ -98,3 +98,75 @@ jobs:
           go install github.com/glsec/glsec/cmd/glsec@v1.23.0
           glsec --no-repo-config --strict .gitlab-ci.yml
           glsec --no-repo-config --strict templates/fhirlint.yml
+
+  # govulncheck reports only what fhirlint's code can reach in Go modules.
+  # OSV-Scanner also reports unreachable ones, the Python tools CI installs
+  # (.github/requirements), and the OpenSSF malicious-packages feed (#550).
+  osv-scanner:
+    name: OSV-Scanner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: google/osv-scanner-action/osv-scanner-action@32d3cd482bdadfb38b186c0ad1b031902d55d932 # v2.7.1
+        with:
+          scan-args: |-
+            --recursive
+            --lockfile=requirements.txt:./.github/requirements/check-jsonschema.txt
+            ./
+
+  # Blocks a pull request that adds a dependency with a known vulnerability or
+  # a license outside the list, before it reaches main; Dependabot only reacts
+  # afterwards (#550).
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, PSF-2.0, Unlicense, 0BSD
+          # typing-extensions is PSF-2.0 (its LICENSE file), but GitHub's
+          # detection reports a mix that includes GPL-1.0-or-later from the
+          # history section of the Python license text. It comes in through
+          # check-jsonschema, which only runs in CI; nothing ships with fhirlint.
+          allow-dependencies-licenses: pkg:pypi/typing-extensions
+
+  # zizmor and cfgaudit check that every action is pinned to a SHA; pinact also
+  # checks that the version comment next to it is true, so a pin can't claim a
+  # version it isn't and mislead reviewers and Dependabot (#550). Not limited
+  # to pull requests that touch workflows, so it can be a required check.
+  # pinact v5.0.2 needs Go 1.27.3 or later, newer than go.mod; setup-go sets
+  # GOTOOLCHAIN=local, so the job asks for that Go itself.
+  pinact:
+    name: pinact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.4"
+          cache: false
+
+      - run: go install github.com/suzuki-shunsuke/pinact/v5/cmd/pinact@v5.0.2
+
+      - name: Verify action pins and their version comments
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # aquasecurity/* is excluded here, not in a config a pull request could
+        # edit: the org has a GitHub IP allow list, so a runner can't read its
+        # tags through the API (403), whatever the token. trivy-action stays
+        # SHA-pinned, and zizmor and cfgaudit still enforce that.
+        run: pinact run --check --verify-comment --exclude 'aquasecurity/.*'

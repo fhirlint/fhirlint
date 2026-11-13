@@ -44,7 +44,9 @@ jobs:
       # The Go tests check that the schema covers the right keys; this checks
       # the schema is valid JSON Schema and that the shipped example actually
       # validates against it, which needs a real validator.
-      - run: pip install check-jsonschema
+      # Version and hashes pinned in .github/requirements/check-jsonschema.txt,
+      # where OSV-Scanner and Dependabot see them (#550).
+      - run: pip install --require-hashes --no-deps -r .github/requirements/check-jsonschema.txt
       - name: Validate the example config against the schema
         run: check-jsonschema --force-filetype yaml --schemafile fhirlint.schema.json fhirlint.yml.example
 
@@ -73,7 +75,7 @@ jobs:
 
       - name: Install the validators
         run: |
-          pip install check-jsonschema==0.37.2
+          pip install --require-hashes --no-deps -r .github/requirements/check-jsonschema.txt
           sudo apt-get install -y --no-install-recommends libxml2-utils
 
       - name: Fetch the pinned schemas
