@@ -1,0 +1,106 @@
+name: Reproducible build
+
+# Builds the release archives twice, from two checkouts in different
+# directories, and fails if the checksums differ (#549). Anything that leaks
+# the build path, the build time or the runner's user into a binary or an
+# archive shows up here before it reaches a release. The archives of the first
+# build are then smoke-tested on their platforms.
+#
+# To rebuild a release yourself and compare it with the published checksums:
+#   git checkout vX.Y.Z
+#   goreleaser release --clean --skip=publish,sbom   # the version pinned below
+#   diff dist/checksums.txt <(gh release download vX.Y.Z -p checksums.txt -O -)
+
+on:
+  pull_request:
+    paths:
+      - .goreleaser.yml
+      - go.mod
+      - go.sum
+      - main.go
+      - cmd/**
+      # Tests don't change the binary.
+      - "!cmd/**/*_test.go"
+      - .github/scripts/smoke-test.sh
+      - .github/workflows/reproducible-build.yml
+      - .github/workflows/smoke-archives.yml
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  # Same as release.yml: a different GoReleaser can build different bytes.
+  GORELEASER_VERSION: v2.20.2
+  TAG: v0.0.0-repro
+
+jobs:
+  rebuild:
+    name: Build twice and compare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: first
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: second/elsewhere
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: first/go.mod
+          cache: false
+
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: ${{ env.GORELEASER_VERSION }}
+          install-only: true
+
+      # A throwaway local tag makes this a real release build (version string,
+      # archive names) rather than a snapshot; nothing is pushed or published.
+      # The cask template needs its token variable set, never used here.
+      - name: Build both checkouts
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: unused
+        run: |
+          set -euo pipefail
+          for dir in first second/elsewhere; do
+            (cd "$dir" && git tag "$TAG" && goreleaser release --clean --skip=publish,sbom)
+          done
+
+      - name: Compare checksums
+        run: |
+          set -euo pipefail
+          if ! diff -u first/dist/checksums.txt second/elsewhere/dist/checksums.txt; then
+            echo "::error::two builds of the same commit produced different archives"
+            exit 1
+          fi
+          echo "identical:"
+          cat first/dist/checksums.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: repro-archives
+          path: |
+            first/dist/*.tar.gz
+            first/dist/*.zip
+            first/dist/checksums.txt
+          if-no-files-found: error
+          retention-days: 3
+
+  smoke:
+    needs: rebuild
+    uses: $/.github/workflows/smoke-archives.yml
+    with:
+      artifact: repro-archives
+      tag: v0.0.0-repro
+    permissions:
+      contents: read

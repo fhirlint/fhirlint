@@ -17,8 +17,14 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
+    # Reproducible builds (#549): no build paths, no build ID, and the commit
+    # time instead of the build time, so rebuilding a tag gives the same
+    # checksums. .github/workflows/reproducible-build.yml checks it.
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
-      - -s -w -X github.com/fhirlint/fhirlint/cmd.version={{ .Tag }}
+      - -s -w -buildid= -X github.com/fhirlint/fhirlint/cmd.version={{ .Tag }}
 
 archives:
   - formats:
@@ -28,6 +34,26 @@ archives:
         formats:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Fixed owner and the commit time for every archive entry, instead of the
+    # runner's user and the checkout time (#549). The files are the ones
+    # GoReleaser added by default before.
+    builds_info:
+      owner: root
+      group: root
+      mtime: "{{ .CommitDate }}"
+    files:
+      - src: LICENSE
+        info:
+          owner: root
+          group: root
+          mode: 0644
+          mtime: "{{ .CommitDate }}"
+      - src: README.md
+        info:
+          owner: root
+          group: root
+          mode: 0644
+          mtime: "{{ .CommitDate }}"
 
 homebrew_casks:
   - name: fhirlint

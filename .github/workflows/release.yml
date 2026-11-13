@@ -9,6 +9,12 @@ on:
 # inherit the publishing job's write and signing scopes.
 permissions: {}
 
+env:
+  # Exact, not a range: the smoke-tested build and the published one must come
+  # from the same GoReleaser to be the same bytes (#549). Same pin as
+  # reproducible-build.yml.
+  GORELEASER_VERSION: v2.20.2
+
 jobs:
   # A tag push does not itself run the test/lint/security workflows, so this
   # checks the runs from when the commit landed on main. Nothing is published
@@ -21,9 +27,56 @@ jobs:
       contents: read
       actions: read
 
+  # Builds the archives exactly as the release job will (reproducible, #549)
+  # and smoke-tests each on its platform. Nothing is published unless that
+  # passes.
+  smoke-build:
+    name: Build the archives for the smoke test
+    needs: require-green-ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: ${{ env.GORELEASER_VERSION }}
+          args: release --clean --skip=publish,sbom
+        env:
+          # The cask template needs it set; nothing is published here.
+          HOMEBREW_TAP_GITHUB_TOKEN: unused
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-archives
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke:
+    needs: smoke-build
+    uses: $/.github/workflows/smoke-archives.yml
+    with:
+      artifact: release-archives
+      tag: ${{ github.ref_name }}
+    permissions:
+      contents: read
+
   release:
     name: GoReleaser
-    needs: require-green-ci
+    needs: [require-green-ci, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -50,7 +103,7 @@ jobs:
 
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
-          version: '~> v2'
+          version: ${{ env.GORELEASER_VERSION }}
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,3 +119,21 @@ jobs:
             dist/*.zip
             dist/checksums.txt
             dist/*.sbom.json
+
+      # The archives just published must be the ones the smoke test ran. The
+      # build is reproducible, so a difference means something changed
+      # between the two builds; investigate before announcing the release.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-archives
+          path: smoke-tested
+
+      - name: Published archives equal the smoke-tested ones
+        run: |
+          # Archives only: the release job's checksums.txt also lists the
+          # SBOMs, which the smoke build skips.
+          archives() { grep -E '\.(tar\.gz|zip)$' "$1" | sort; }
+          if ! diff -u <(archives smoke-tested/checksums.txt) <(archives dist/checksums.txt); then
+            echo "::error::the published archives differ from the smoke-tested build"
+            exit 1
+          fi

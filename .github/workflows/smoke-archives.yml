@@ -1,0 +1,84 @@
+name: Smoke-test release archives
+
+# Unpacks each release archive on its own platform and runs it (#549):
+# `fhirlint version` must report the tag, `explain` and `config check` must
+# work without a JAR, and on Linux a real validation must find the known
+# error. Called by reproducible-build.yml (pull requests, main) and by
+# release.yml, where nothing is published unless this passes.
+# darwin_amd64 has no hosted runner left to run it on.
+
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        description: Name of the uploaded artifact that holds the archives
+        required: true
+        type: string
+      tag:
+        description: The tag the archives were built for, e.g. v1.18.0
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  smoke:
+    name: Smoke-test the ${{ matrix.platform }} archive
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, platform: linux_amd64, ext: tar.gz, mode: validate }
+          - { os: ubuntu-24.04-arm, platform: linux_arm64, ext: tar.gz, mode: "" }
+          - { os: macos-latest, platform: darwin_arm64, ext: tar.gz, mode: "" }
+          - { os: windows-latest, platform: windows_amd64, ext: zip, mode: "" }
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      # The pin of integration-test.yml, so its JAR cache can be restored.
+      FHIRLINT_VALIDATOR_VERSION: '6.10.4'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.artifact }}
+          path: archives
+
+      - if: matrix.mode == 'validate'
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - if: matrix.mode == 'validate'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.fhirlint
+          key: fhirlint-jar-${{ runner.os }}-${{ env.FHIRLINT_VALIDATOR_VERSION }}
+
+      - name: Unpack and run
+        env:
+          TAG: ${{ inputs.tag }}
+          PLATFORM: ${{ matrix.platform }}
+          EXT: ${{ matrix.ext }}
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          archive="archives/fhirlint_${TAG#v}_${PLATFORM}.${EXT}"
+          mkdir unpacked
+          if [ "$EXT" = zip ]; then
+            # Git Bash's tar can't read zip files.
+            pwsh -NoProfile -Command "Expand-Archive -Path '$archive' -DestinationPath unpacked"
+          else
+            tar -xzf "$archive" -C unpacked
+          fi
+          bin=unpacked/fhirlint
+          [ -f "$bin" ] || bin=unpacked/fhirlint.exe
+          .github/scripts/smoke-test.sh "$TAG" "$bin" ${MODE:+"$MODE"}
