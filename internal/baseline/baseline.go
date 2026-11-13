@@ -122,16 +122,10 @@ func Write(path string, bf *BaselineFile) error {
 	return os.WriteFile(path, data, 0600) //nolint:gosec // baseline file in project dir
 }
 
-// Apply suppresses issues that match baseline entries by moving them into
-// r.Suppressed with SuppressReason "baseline". Results are mutated in-place.
-// Returns the total number of stale occurrences (baseline entries that were not
-// matched by any active issue — these are issues that have already been fixed).
-func Apply(results []*validator.Result, bf *BaselineFile) int {
-	stale, _ := ApplyReport(results, bf)
-	return stale
-}
-
-// ApplyReport is Apply, and also counts the active issues that probably only
+// ApplyReport suppresses issues that match baseline entries by moving them
+// into r.Suppressed with SuppressReason "baseline". Results are mutated
+// in-place. It returns the number of stale occurrences (baseline entries no
+// active issue matched: issues already fixed), and also counts the active issues that probably only
 // missed the baseline because their message id changed: an issue without a
 // validator-stated id, at a file and location where a baseline entry went
 // unmatched. Under validator 7.0.x, terminology issues answered by tx.fhir.de

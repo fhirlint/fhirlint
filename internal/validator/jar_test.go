@@ -266,12 +266,6 @@ func TestEnsureJAR_Override_MissingFile_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestJARSourceRepo_NotEmpty(t *testing.T) {
-	if JARSourceRepo() == "" {
-		t.Error("JARSourceRepo() should not be empty")
-	}
-}
-
 func TestJARReleasesURL_ContainsReleases(t *testing.T) {
 	url := JARReleasesURL()
 	if url == "" {

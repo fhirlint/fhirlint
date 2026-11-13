@@ -141,9 +141,6 @@ func NewEngine(cfg Config) (*Engine, error) {
 	return e, nil
 }
 
-// Len reports how many rules the engine holds.
-func (e *Engine) Len() int { return len(e.rules) }
-
 // Evaluate runs every enabled rule against one resource and returns findings as
 // issues with message ID "lint:<rule>".
 func (e *Engine) Evaluate(resourceJSON []byte) []validator.Issue {

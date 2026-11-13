@@ -83,16 +83,10 @@ func (ix *Index) Add(resourceJSON []byte) {
 	}
 }
 
-// Check returns findings for every unresolved or external reference in the
-// resource. Contained (#id) references are resolved within the resource. The
-// result is sorted by location for deterministic output.
-func Check(resourceJSON []byte, ix *Index) []validator.Issue {
-	issues, _ := CheckWithRefs(resourceJSON, ix)
-	return issues
-}
-
-// CheckWithRefs is Check, and additionally returns the reference values it
-// reported as unresolved.
+// CheckWithRefs returns findings for every unresolved or external reference
+// in the resource, and the reference values it reported as unresolved.
+// Contained (#id) references are resolved within the resource. The findings
+// are sorted by location for deterministic output.
 //
 // The validator reports some of the same references itself, and a caller that
 // shows both ends up printing one dangling reference twice under two severities

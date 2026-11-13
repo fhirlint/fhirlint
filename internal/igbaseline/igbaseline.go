@@ -74,14 +74,6 @@ func Load(pkgDir string) (*Baseline, error) {
 	return &Baseline{PackageID: filepath.Base(pkgDir), entries: entries}, nil
 }
 
-// Len reports how many resources the baseline covers.
-func (b *Baseline) Len() int {
-	if b == nil {
-		return 0
-	}
-	return len(b.entries)
-}
-
 // Lookup returns what the publisher recorded for a resource key, and whether
 // the baseline mentions it at all.
 //

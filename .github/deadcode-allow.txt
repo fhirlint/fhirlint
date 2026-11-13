@@ -1,0 +1,20 @@
+# Functions deadcode may report as unreachable from a main package (lint.yml,
+# "Unreachable functions", #547). One package-qualified name per line, then why
+# it stays. A function that becomes reachable again must leave this list; CI
+# fails on stale entries too.
+
+# The public library API: no main calls it, its users' programs do.
+github.com/fhirlint/fhirlint/pkg/fhirlint.Validate          # public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.ValidateDir       # public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.ValidateFile      # public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.ValidateURL       # public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.applyRedaction    # called by the public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.toInternalOpts    # called by the public API
+github.com/fhirlint/fhirlint/pkg/fhirlint.toPublicResult    # called by the public API
+github.com/fhirlint/fhirlint/internal/validator.Run         # the single-file run behind pkg/fhirlint; the CLI batches files
+github.com/fhirlint/fhirlint/internal/validator.parseOutput # reached only through validator.Run
+github.com/fhirlint/fhirlint/internal/validator.toResult    # reached only through validator.Run
+
+# Used by tests in another package, which can only see exported names.
+github.com/fhirlint/fhirlint/internal/configcheck.KnownKeys  # cmd/configcheck_consistency_test.go
+github.com/fhirlint/fhirlint/internal/igaudit.Report.Errors  # internal/profiles/registry_test.go (-tags registry)

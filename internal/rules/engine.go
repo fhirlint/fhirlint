@@ -58,9 +58,6 @@ func NewEngine(ruleset []Rule, ev Evaluator) (*Engine, error) {
 	return e, nil
 }
 
-// Len reports how many rules the engine holds.
-func (e *Engine) Len() int { return len(e.rules) }
-
 // Evaluate runs every applicable rule against one resource and returns the
 // findings as issues. A rule whose resourceType filter does not match the
 // resource is skipped. An assertion that fails to evaluate is reported as an

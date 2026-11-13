@@ -127,7 +127,7 @@ func TestApply_SuppressesMatchingIssues(t *testing.T) {
 		},
 	}
 
-	stale := baseline.Apply(results, bf)
+	stale := applyStale(results, bf)
 	if stale != 0 {
 		t.Errorf("expected 0 stale entries, got %d", stale)
 	}
@@ -152,7 +152,7 @@ func TestApply_ReturnsStaleCount(t *testing.T) {
 		},
 	}
 
-	stale := baseline.Apply(results, bf)
+	stale := applyStale(results, bf)
 	if stale != 2 {
 		t.Errorf("expected stale=2, got %d", stale)
 	}
@@ -170,7 +170,7 @@ func TestApply_NewIssuesNotSuppressed(t *testing.T) {
 		},
 	}
 
-	baseline.Apply(results, bf)
+	applyStale(results, bf)
 	if len(results[0].Issues) != 1 || results[0].Issues[0].MessageID != "new-issue" {
 		t.Errorf("new issue should not be suppressed")
 	}
@@ -190,7 +190,7 @@ func TestApply_CountRespected(t *testing.T) {
 		},
 	}
 
-	stale := baseline.Apply(results, bf)
+	stale := applyStale(results, bf)
 	if stale != 0 {
 		t.Errorf("expected 0 stale, got %d", stale)
 	}
@@ -214,7 +214,7 @@ func TestApply_NormalizesLocationOnMatch(t *testing.T) {
 		},
 	}
 
-	stale := baseline.Apply(results, bf)
+	stale := applyStale(results, bf)
 	if stale != 0 {
 		t.Errorf("expected 0 stale, got %d", stale)
 	}
@@ -228,7 +228,7 @@ func TestApply_EmptyBaseline(t *testing.T) {
 		makeResult("p.json", issue("error", "dom-6", "Patient")),
 	}
 	bf := &baseline.BaselineFile{}
-	stale := baseline.Apply(results, bf)
+	stale := applyStale(results, bf)
 	if stale != 0 {
 		t.Errorf("expected 0 stale for empty baseline, got %d", stale)
 	}
@@ -265,7 +265,7 @@ func TestApply_StatedIDDoesNotMatchEmptyIDEntry(t *testing.T) {
 	}}
 	results := []*validator.Result{makeResult("m.json", issue("warning", "dom-6", "Medication.code"))}
 
-	baseline.Apply(results, bf)
+	applyStale(results, bf)
 	if len(results[0].Issues) != 1 {
 		t.Errorf("stated id matched an empty-id entry: %v", results[0].Suppressed)
 	}
@@ -310,4 +310,10 @@ func TestApplyReport_StatedIDIsNotDrift(t *testing.T) {
 	if _, drifted := baseline.ApplyReport(results, bf); drifted != 0 {
 		t.Errorf("drifted = %d, want 0", drifted)
 	}
+}
+
+// applyStale is ApplyReport's stale count, which most tests check alone.
+func applyStale(results []*validator.Result, bf *baseline.BaselineFile) int {
+	stale, _ := baseline.ApplyReport(results, bf)
+	return stale
 }

@@ -649,7 +649,7 @@ func TestSkippedCheckClassification(t *testing.T) {
 		"UNKNOWN_CODESYSTEM_CODING_NOT_CHECKED": false,
 		"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE":   false,
 	} {
-		if !IsSkippedCheck(id) {
+		if !isSkippedCheck(id) {
 			t.Errorf("%s: must count as a skipped check", id)
 		}
 		if got := IsBudgetSkippedCheck(id); got != wantBudget {
@@ -683,8 +683,14 @@ func TestUnresolvedCodeSystem_CoversEveryValidatorWording(t *testing.T) {
 
 func TestSkippedCheck_IgnoresUnrelatedIDs(t *testing.T) {
 	for _, id := range []string{"", "dom-6", "UNKNOWN_CODE_IN_VERSION", "Type_Specific_Checks_DT_Code"} {
-		if IsSkippedCheck(id) {
+		if isSkippedCheck(id) {
 			t.Errorf("%q must not count as a skipped check", id)
 		}
 	}
+}
+
+// isSkippedCheck reports whether a message id is a budget-skipped check or an
+// unresolved code system.
+func isSkippedCheck(messageID string) bool {
+	return IsBudgetSkippedCheck(messageID) || IsUnresolvedCodeSystem(messageID)
 }

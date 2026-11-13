@@ -146,3 +146,42 @@ jobs:
         run: |
           go run ./internal/tools/extractshell -o "$RUNNER_TEMP/extracted" action.yml templates/fhirlint.yml .gitlab-ci.yml
           shellcheck "$RUNNER_TEMP"/extracted/*.sh
+
+  # golangci-lint's unused only sees unexported code. deadcode follows the
+  # calls from every main package and reports exported functions nothing
+  # reaches, such as a wrapper only tests still call after a refactor (#547).
+  # Intentional cases are in .github/deadcode-allow.txt with a reason; an entry
+  # that is reachable again fails as stale. Built with the toolchain setup-go
+  # installs, or it can't load the standard library.
+  deadcode:
+    name: Unreachable functions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: go install golang.org/x/tools/cmd/deadcode@v0.52.0
+
+      - name: Unreachable functions
+        run: |
+          deadcode -f '{{range .Funcs}}{{$.Path}}.{{.Name}}{{"\n"}}{{end}}' ./... | sort -u > "$RUNNER_TEMP/dead.txt"
+          sed 's/#.*//; s/[[:space:]]*$//; /^$/d' .github/deadcode-allow.txt | sort -u > "$RUNNER_TEMP/allow.txt"
+          unexpected=$(comm -23 "$RUNNER_TEMP/dead.txt" "$RUNNER_TEMP/allow.txt")
+          stale=$(comm -13 "$RUNNER_TEMP/dead.txt" "$RUNNER_TEMP/allow.txt")
+          if [ -n "$unexpected" ]; then
+            echo "::error::unreachable from main: remove them, or call them from production code; only list one in .github/deadcode-allow.txt with a reason"
+            echo "$unexpected"
+          fi
+          if [ -n "$stale" ]; then
+            echo "::error::listed in .github/deadcode-allow.txt but reachable or gone: remove the entry"
+            echo "$stale"
+          fi
+          [ -z "$unexpected" ] && [ -z "$stale" ]

@@ -87,6 +87,14 @@ shellcheck /tmp/extracted/*.sh
 
 A disabled diagnostic (`# shellcheck disable=SCxxxx`, or an ignore in `.github/actionlint.yaml`) is as narrow as possible and says why.
 
+### Unreachable code
+
+CI runs `deadcode` (`golang.org/x/tools/cmd/deadcode`) and fails on an exported function no main package reaches (#547). Delete it, or, when a test is its only caller, move it into a `_test.go` file. Only the public API in `pkg/fhirlint`, and what a test in another package or behind a build tag needs, goes in `.github/deadcode-allow.txt`, with a reason. Locally:
+
+```bash
+go run golang.org/x/tools/cmd/deadcode@v0.52.0 ./...
+```
+
 ## Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
