@@ -92,8 +92,9 @@ jobs:
       - name: Run CLI integration tests
         env:
           FHIRLINT_VALIDATOR_VERSION: ${{ matrix.validator }}
-        # No download here — the step above populated the cache.
-        run: go test -v -tags integration -count=1 -timeout 10m -coverprofile=coverage-cmd.out ./cmd/...
+        # No download here — the step above populated the cache. 20m, not 10m:
+        # the route-equivalence test (#544) starts about 15 JVMs.
+        run: go test -v -tags integration -count=1 -timeout 20m -coverprofile=coverage-cmd.out ./cmd/...
 
       # What the JAR paths add over the unit tests (#545). Shown, not gated:
       # the floor in test.yml counts the unit profile only, because this job
@@ -144,8 +145,9 @@ jobs:
 
       - name: Run CLI integration tests against the latest validator
         # Sequential for the same reason as the pinned job, and free of the
-        # download because the step above just did it.
-        run: go test -v -tags integration -count=1 -timeout 10m ./cmd/...
+        # download because the step above just did it. 20m for the route test
+        # (#544), as in the pinned job.
+        run: go test -v -tags integration -count=1 -timeout 20m ./cmd/...
 
       - name: Report the validator version
         if: always()
