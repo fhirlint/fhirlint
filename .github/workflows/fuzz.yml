@@ -68,19 +68,21 @@ jobs:
 
       # Not go.mod's toolchain: go1.26.x reports a -fuzztime deadline that fires
       # mid-shutdown as "context deadline exceeded", failing a run that found
-      # nothing (golang/go#75804, #513). The fix is in every go1.27.x and is due
-      # in go1.26.11. Go back to go-version-file: go.mod once go.mod is there;
-      # the next step warns when it is.
+      # nothing (golang/go#75804, #513). The fix is in every go1.27.x, but not in
+      # go1.26.11 (#556: its src/internal/fuzz/fuzz.go still lacks
+      # `err == ctx.Err() ||`). Go back to go-version-file: go.mod once go.mod is
+      # on a go1.26.x that has it; the next step warns from 1.26.12 on, so check
+      # the source of that release before switching.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.27.3"
+          go-version: "1.27.4"
           cache: true
 
       - name: Check the toolchain pin is still needed
         run: |
           want=$(go mod edit -json | jq -r .Go)
-          if [ "$(printf '%s\n' 1.26.11 "$want" | sort -V | head -1)" = 1.26.11 ]; then
-            echo "::warning file=.github/workflows/fuzz.yml::go.mod is at go $want, which has the golang/go#75804 fix: switch setup-go back to go-version-file: go.mod (#513)"
+          if [ "$(printf '%s\n' 1.26.12 "$want" | sort -V | head -1)" = 1.26.12 ]; then
+            echo "::warning file=.github/workflows/fuzz.yml::go.mod is at go $want: check whether it has the golang/go#75804 fix (not in 1.26.11, #556) and, if so, switch setup-go back to go-version-file: go.mod (#513)"
           fi
 
       - name: Verify module cache integrity
