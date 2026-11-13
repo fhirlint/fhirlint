@@ -19,6 +19,8 @@ go test ./...
 
 ## Running tests
 
+What each test layer protects against and when CI runs it is in [TESTING.md](TESTING.md).
+
 ```bash
 # Unit tests (no Java required)
 go test ./...
@@ -43,8 +45,9 @@ The fuzz targets cover the Go code that reads input fhirlint did not write: reso
 
 The integration tests live in `internal/validator/` (the JAR itself) and `cmd/` (the CLI end to end); both are behind the `integration` tag and skipped by default. CI runs the two packages as separate steps, because `go test` runs packages in parallel and on a cold cache both would download the same JAR at once.
 
-CI runs them twice over: pushes to `main` test against the version pinned in
-`.github/workflows/integration-test.yml`, and a weekly scheduled job tests
+CI runs them twice over: pull requests that change `internal/validator`,
+`internal/localig`, `cmd/validate.go`, `go.mod` or `go.sum`, and pushes to `main`,
+test against the version pinned in `.github/workflows/integration-test.yml`, and a weekly scheduled job tests
 against the latest upstream release with no JAR cache, so an upstream
 regression surfaces within a week. Bump the pin once that canary has been green
 on the newer release.
