@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Observation xmlns="http://hl7.org/fhir">
+  <id value="routes-xml"/>
+  <status value="not-a-status"/>
+  <code>
+    <text value="Body weight"/>
+  </code>
+  <valueQuantity>
+    <value value="abc"/>
+  </valueQuantity>
+</Observation>

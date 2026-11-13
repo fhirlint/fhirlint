@@ -1,0 +1,23 @@
+{
+  "resourceType": "Bundle",
+  "id": "routes-bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:7f3c1c1e-9b0a-4d55-a1f2-0d6a5b0c1e01",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "p1",
+        "gender": "nope"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:7f3c1c1e-9b0a-4d55-a1f2-0d6a5b0c1e02",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "o1",
+        "code": { "text": "x" }
+      }
+    }
+  ]
+}

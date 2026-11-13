@@ -25,7 +25,7 @@ Whether fhirlint reports the validator's findings, all of them and only those.
 | Integration tests with the real JAR (`-tags integration`), pinned validator in [`integration-test.yml`](.github/workflows/integration-test.yml) | a broken JAR invocation, download, Java detection or temp IG bundling (`internal/localig`), none of which the unit tests touch | pull requests that change `internal/validator`, `internal/localig`, `cmd/validate.go`, `go.mod` or `go.sum`; every push to `main`; Linux and macOS |
 | Canary: the integration tests against the latest validator, with no JAR cache | an upstream release that breaks fhirlint, noticed within a week instead of at the next pin bump | weekly |
 | Registry tests (`-tags registry`): the built-in profile aliases, the FHIR version table and the R6 sentinel against packages.fhir.org and tx.fhir.org | an alias pointing at a package or version that doesn't exist, a wrong terminology path | weekly via [`alias-monitor.yml`](.github/workflows/alias-monitor.yml), which opens an issue on failure |
-| *Planned:* equivalent routes (file, stdin, server, cache, replay, …) give the same findings (#544) | a route that drops or changes a finding while the others don't | integration |
+| Equivalent routes (`cmd/routes_integration_test.go`, #544): each fixture in `testdata/routes` (JSON, XML, Bundle, a MedicationRequest) through a directory run, stdin, `--cache` cold and warm, `--server` and `pkg/fhirlint` gives the same findings as the one-shot file run | a route that drops or changes a finding, a location, a message ID or a severity while the others don't | with the integration tests |
 
 ### Reports and consistency
 
