@@ -23,3 +23,12 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
+
+  # The Python tools CI installs, pinned with hashes (#550).
+  - package-ecosystem: pip
+    directory: /.github/requirements
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7

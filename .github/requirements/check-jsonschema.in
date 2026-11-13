@@ -1,0 +1,4 @@
+# check-jsonschema for the "fhirlint.yml JSON Schema" and "Report schemas" jobs
+# in lint.yml (#550).
+# Regenerate the hashed .txt with the pip-compile command in its header.
+check-jsonschema==0.39.0
