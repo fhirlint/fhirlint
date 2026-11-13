@@ -115,6 +115,7 @@ func TestFilter(t *testing.T) {
 		".gitignore",
 		".golangci.yml",
 		".github/dependabot.yml",
+		".github/actionlint.yaml",
 		"CODEOWNERS",
 		".github/CODEOWNERS",
 		"docs/CODEOWNERS",

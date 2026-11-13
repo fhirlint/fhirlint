@@ -1,0 +1,9 @@
+# actionlint configuration (#546).
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+      # actionlint 1.7.12 doesn't know GitHub's $/ self-repository syntax,
+      # which release.yml, docker.yml (require-green-ci.yml) and
+      # action-test.yml (the root action) use.
+      - 'reusable workflow call "\$/\.github/workflows/'
+      - 'specifying action "\$/'

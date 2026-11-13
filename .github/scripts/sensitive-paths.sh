@@ -35,7 +35,7 @@ filter() {
     -e '(^|/)(CLAUDE|CLAUDE\.local|AGENTS|AGENT|GEMINI)\.md$' \
     -e '^(\.claude|\.agents|\.cursor|\.vscode|\.devcontainer)/' \
     -e '^(\.mcp\.json|\.envrc|\.cursorrules|\.claudeignore|\.github/copilot-instructions\.md)$' \
-    -e '^(\.gitignore|\.golangci\.yml|\.github/dependabot\.yml|(\.github/|docs/)?CODEOWNERS)$' \
+    -e '^(\.gitignore|\.golangci\.yml|\.github/dependabot\.yml|\.github/actionlint\.ya?ml|(\.github/|docs/)?CODEOWNERS)$' \
     | sort -u || true
 }
 

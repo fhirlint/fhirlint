@@ -74,6 +74,19 @@ golangci-lint run
 - All linter warnings must be resolved before a PR is merged
 - `//nolint` comments require a reason (e.g. `//nolint:gosec // intentional: ...`)
 
+### Workflows and shell scripts
+
+CI runs [actionlint](https://github.com/rhysd/actionlint) on every workflow (with ShellCheck on their `run:` blocks) and [ShellCheck](https://www.shellcheck.net/) on `hooks/*.sh`, `.github/scripts/*.sh` and the shell inside `action.yml` and the GitLab templates (#546). Locally, with both on your `PATH`:
+
+```bash
+actionlint
+shellcheck hooks/*.sh .github/scripts/*.sh
+go run ./internal/tools/extractshell -o /tmp/extracted action.yml templates/fhirlint.yml .gitlab-ci.yml
+shellcheck /tmp/extracted/*.sh
+```
+
+A disabled diagnostic (`# shellcheck disable=SCxxxx`, or an ignore in `.github/actionlint.yaml`) is as narrow as possible and says why.
+
 ## Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
