@@ -411,11 +411,6 @@ var SkippedCheckMessageIDs = []string{
 	"UNKNOWN_CODESYSTEM_VERSION_EXP_NONE",
 }
 
-// IsSkippedCheck reports whether a message id is one of the above.
-func IsSkippedCheck(messageID string) bool {
-	return IsBudgetSkippedCheck(messageID) || IsUnresolvedCodeSystem(messageID)
-}
-
 // IsBudgetSkippedCheck reports a check skipped because the code set was larger
 // than -codesystem-validation-size-limit allows.
 func IsBudgetSkippedCheck(messageID string) bool {

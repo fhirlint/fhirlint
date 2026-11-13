@@ -201,9 +201,6 @@ func Open(dir string) (*Store, error) {
 // Len reports how many interactions the store holds.
 func (s *Store) Len() int { return len(s.entries) }
 
-// Dir reports the directory the store was opened from.
-func (s *Store) Dir() string { return s.dir }
-
 // Lookup finds a recorded response, or reports false when nothing matches.
 func (s *Store) Lookup(method, path, rawQuery string, body []byte) (*Interaction, bool) {
 	in, ok := s.entries[Key(method, path, rawQuery, body)]

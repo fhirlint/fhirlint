@@ -467,11 +467,6 @@ func saveValidatorVersion(version string) error {
 	return os.WriteFile(versionPath, []byte(version), 0600)
 }
 
-// JARSourceRepo returns the upstream repository URL for the validator JAR.
-func JARSourceRepo() string {
-	return jarSourceRepo
-}
-
 // JARReleasesURL returns the releases page for the validator JAR.
 func JARReleasesURL() string {
 	return filepath.ToSlash(jarSourceRepo + "/releases")

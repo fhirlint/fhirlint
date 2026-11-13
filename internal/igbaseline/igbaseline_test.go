@@ -331,3 +331,11 @@ func TestCompareIn_UsesSourcePathButKeysByFilename(t *testing.T) {
 		t.Errorf("status = %v, want StatusExpected keyed by Filename", got)
 	}
 }
+
+// Len reports, for the tests, how many resources the baseline covers.
+func (b *Baseline) Len() int {
+	if b == nil {
+		return 0
+	}
+	return len(b.entries)
+}
