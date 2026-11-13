@@ -1,0 +1,316 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "fhirlint",
+          "version": "1.2.3",
+          "informationUri": "https://github.com/fhirlint/fhirlint",
+          "rules": [
+            {
+              "id": "Validation_VAL_Unknown",
+              "shortDescription": {
+                "text": "Validation_VAL_Unknown"
+              }
+            },
+            {
+              "id": "Validation_VAL_Profile_Minimum",
+              "shortDescription": {
+                "text": "Validation_VAL_Profile_Minimum"
+              }
+            },
+            {
+              "id": "BP_DOM_6",
+              "shortDescription": {
+                "text": "BP_DOM_6"
+              }
+            },
+            {
+              "id": "Terminology_TX_NoValid_1_CC",
+              "shortDescription": {
+                "text": "Terminology_TX_NoValid_1_CC"
+              }
+            },
+            {
+              "id": "Reference_REF_CantResolve",
+              "shortDescription": {
+                "text": "Reference_REF_CantResolve"
+              }
+            },
+            {
+              "id": "Type_Specific_Checks_DT_String_Length",
+              "shortDescription": {
+                "text": "Type_Specific_Checks_DT_String_Length"
+              }
+            },
+            {
+              "id": "VALIDATION_VAL_PROFILE_NOSNAPSHOT",
+              "shortDescription": {
+                "text": "VALIDATION_VAL_PROFILE_NOSNAPSHOT"
+              }
+            },
+            {
+              "id": "VALIDATION_VAL_PROFILE_UNKNOWN",
+              "shortDescription": {
+                "text": "VALIDATION_VAL_PROFILE_UNKNOWN"
+              }
+            },
+            {
+              "id": "fhirlint-validator-crash",
+              "shortDescription": {
+                "text": "fhirlint-validator-crash"
+              }
+            }
+          ]
+        },
+        "extensions": [
+          {
+            "name": "HL7 FHIR Validator",
+            "version": "6.10.4",
+            "informationUri": "https://github.com/hapifhir/org.hl7.fhir.core",
+            "properties": {
+              "build": "FHIR Validation tool Version 6.10.4 (Git# 0123456789ab). Built 2026-10-01T00:00:00.000Z",
+              "fhirVersion": "4.0.1"
+            }
+          }
+        ]
+      },
+      "results": [
+        {
+          "ruleId": "Validation_VAL_Unknown",
+          "level": "error",
+          "message": {
+            "text": "Unable to parse JSON"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "Validation_VAL_Profile_Minimum",
+          "level": "error",
+          "message": {
+            "text": "Observation.status: minimum required = 1, but only found 0"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 4
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "BP_DOM_6",
+          "level": "warning",
+          "message": {
+            "text": "Best practice: dom-6"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "Terminology_TX_NoValid_1_CC",
+          "level": "note",
+          "message": {
+            "text": "Code 'xyz' not found in value set"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 8
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation.code.coding[0]",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "Reference_REF_CantResolve",
+          "level": "warning",
+          "message": {
+            "text": "Severity lowered by config"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 6
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation.subject",
+                  "kind": "member"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "originalSeverity": "error"
+          }
+        },
+        {
+          "ruleId": "Type_Specific_Checks_DT_String_Length",
+          "level": "error",
+          "message": {
+            "text": "Long message start xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx … [123 characters omitted; full text with --format json] … xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx end"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/Observation-bad.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 10
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Observation.note[0].text",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "VALIDATION_VAL_PROFILE_NOSNAPSHOT",
+          "level": "error",
+          "message": {
+            "text": "Profile http://example.org/StructureDefinition/p has no snapshot\nCause: Unable to generate snapshot: base not found"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/%C3%84rzte%20Liste/Practitioner%201.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 2
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Practitioner",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "VALIDATION_VAL_PROFILE_UNKNOWN",
+          "level": "error",
+          "message": {
+            "text": "Unable to resolve profile https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Practitioner\nHint: defined in kbv.basis#1.7.0: add --ig kbv.basis#1.7.0, or the built-in alias --profile kbv-basis"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/%C3%84rzte%20Liste/Practitioner%201.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5,
+                  "startColumn": 9
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "Practitioner.meta.profile[0]",
+                  "kind": "member"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "fhirlint-validator-crash",
+          "level": "error",
+          "message": {
+            "text": "the validator crashed on this file: java.lang.NullPointerException"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/crash.xml",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

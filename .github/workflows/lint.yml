@@ -47,3 +47,53 @@ jobs:
       - run: pip install check-jsonschema
       - name: Validate the example config against the schema
         run: check-jsonschema --force-filetype yaml --schemafile fhirlint.schema.json fhirlint.yml.example
+
+  # The golden reports in internal/reporter/testdata/golden are what the
+  # reporters write (TestGoldenReports keeps them current); this checks them
+  # against each consumer's schema, so a report GitHub code scanning or GitLab
+  # would reject fails here first (#542). The third-party schemas are fetched
+  # and pinned by SHA-256; a changed upstream file fails the check until the
+  # pin is reviewed and moved.
+  report-schemas:
+    name: Report schemas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SARIF_SCHEMA_URL: https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json
+      SARIF_SCHEMA_SHA256: c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e
+      # Jenkins' junit-10.xsd, the schema Ant, Jenkins and GitLab readers follow.
+      JUNIT_XSD_URL: https://raw.githubusercontent.com/jenkinsci/xunit-plugin/0afa700702a6617f483cfd9407711976dc0bd74a/src/main/resources/org/jenkinsci/plugins/xunit/types/model/xsd/junit-10.xsd
+      JUNIT_XSD_SHA256: a1a816f58d1bf95ebabf371994df0b9246dee66ea9572fbec4f9296f1b2c0ff6
+      GOLDEN: internal/reporter/testdata/golden
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the validators
+        run: |
+          pip install check-jsonschema==0.37.2
+          sudo apt-get install -y --no-install-recommends libxml2-utils
+
+      - name: Fetch the pinned schemas
+        run: |
+          mkdir -p "$RUNNER_TEMP/schemas"
+          cd "$RUNNER_TEMP/schemas"
+          curl -fsSL -o sarif.json "$SARIF_SCHEMA_URL"
+          curl -fsSL -o junit.xsd "$JUNIT_XSD_URL"
+          printf '%s  %s\n' "$SARIF_SCHEMA_SHA256" sarif.json "$JUNIT_XSD_SHA256" junit.xsd | sha256sum -c -
+
+      - name: SARIF 2.1.0
+        run: check-jsonschema --schemafile "$RUNNER_TEMP/schemas/sarif.json" "$GOLDEN/report.sarif"
+
+      - name: GitLab Code Quality
+        run: check-jsonschema --schemafile internal/reporter/testdata/schemas/codeclimate.schema.json "$GOLDEN/report.codeclimate.json"
+
+      - name: JUnit XML
+        run: xmllint --noout --schema "$RUNNER_TEMP/schemas/junit.xsd" "$GOLDEN/report.junit.xml"
+
+      - name: fhirlint JSON report
+        run: |
+          check-jsonschema --check-metaschema fhirlint-report.schema.json internal/reporter/testdata/schemas/codeclimate.schema.json
+          check-jsonschema --schemafile fhirlint-report.schema.json "$GOLDEN/report.json"

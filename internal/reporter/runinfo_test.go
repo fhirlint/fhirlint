@@ -131,7 +131,7 @@ func TestJUnit_PropertiesOnTheTestsuite(t *testing.T) {
 		}
 	}
 	// On testsuite, where the common schema allows it — not on testsuites.
-	if !strings.Contains(s, `<testsuite name="FHIR Validation" tests="1" failures="0"><properties>`) {
+	if !strings.Contains(s, `<testsuite name="FHIR Validation" tests="1" failures="0" errors="0"><properties>`) {
 		t.Errorf("properties must be the first child of testsuite:\n%s", s)
 	}
 

@@ -574,6 +574,8 @@ fhirlint validate ./fhir/ --group
 fhirlint validate patient.json --no-color
 ```
 
+The JSON report has a schema, [`fhirlint-report.schema.json`](fhirlint-report.schema.json); fields are only ever added. CI checks the SARIF, Code Climate, JUnit and JSON reports against their consumers' schemas on every pull request.
+
 ### What produced the report
 
 A report is read long after the run, and the validator changes what it finds from release to release, so every archived format says what produced it — once, not per file:
