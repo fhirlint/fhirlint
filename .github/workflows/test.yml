@@ -55,6 +55,80 @@ jobs:
       - name: Show coverage summary
         run: go tool cover -func=coverage.out | tail -1
 
+      # Fail when the total or a guarded package drops below its floor (#545).
+      # Linux only: Windows skips a few tests and sits about 0.1 points lower.
+      # Raise a floor on purpose; never lower one to make a change pass.
+      #
+      # Excluded, with the reason, and nowhere else:
+      #   main.go           one line that calls cmd.Execute
+      #   internal/tools/   CI helper commands, run by the workflows that use them
+      # internal/jarsettings and the JAR paths in internal/validator stay in:
+      # the integration suite covers them, and the number should show that the
+      # unit tests don't.
+      - name: Coverage floor
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          COVERAGE_FLOOR: "69.0"
+          # package=floor, space-separated: the public API and the core.
+          PACKAGE_FLOORS: "pkg/fhirlint=32.0 internal/validator=70.0"
+          EXCLUDE: '^github[.]com/fhirlint/fhirlint/(main[.]go|internal/tools/)'
+        run: |
+          awk -v ex="$EXCLUDE" '
+            NR > 1 && $1 !~ ex {
+              split($1, loc, ":"); pkg = loc[1]
+              sub(/\/[^\/]*$/, "", pkg); sub(/^github\.com\/fhirlint\/fhirlint\/?/, "", pkg)
+              if (pkg == "") pkg = "."
+              stmts[$1] = $2; pkgof[$1] = pkg
+              if ($3 > 0) hit[$1] = 1
+            }
+            END {
+              for (k in stmts) {
+                p = pkgof[k]; total[p] += stmts[k]; all += stmts[k]
+                if (k in hit) { covered[p] += stmts[k]; allcov += stmts[k] }
+              }
+              for (p in total) printf "%s\t%.1f\n", p, 100 * covered[p] / total[p]
+              printf "TOTAL\t%.1f\n", 100 * allcov / all
+            }' coverage.out | sort > coverage.tsv
+
+          total=$(awk -F'\t' '$1 == "TOTAL" { print $2 }' coverage.tsv)
+          {
+            echo "### Test coverage: ${total}% (floor ${COVERAGE_FLOOR}%)"
+            echo
+            echo "| Package | Coverage |"
+            echo "|---|---|"
+            awk -F'\t' '$1 != "TOTAL" { printf "| `%s` | %s%% |\n", $1, $2 }' coverage.tsv
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          fail=0
+          below() { awk -v v="$1" -v f="$2" 'BEGIN { exit !(v + 0 < f + 0) }'; }
+          if below "$total" "$COVERAGE_FLOOR"; then
+            echo "::error::test coverage ${total}% is below the floor of ${COVERAGE_FLOOR}%"
+            fail=1
+          fi
+          for pf in $PACKAGE_FLOORS; do
+            pkg=${pf%=*} floor=${pf#*=}
+            got=$(awk -F'\t' -v p="$pkg" '$1 == p { print $2 }' coverage.tsv)
+            if [ -z "$got" ] || below "$got" "$floor"; then
+              echo "::error::$pkg coverage ${got:-missing}% is below its floor of ${floor}%"
+              fail=1
+            fi
+          done
+          echo "test coverage ${total}% (floor ${COVERAGE_FLOOR}%)"
+          exit "$fail"
+
+      # The lines a pull request adds or changes in non-test Go files must be
+      # covered too, so new code can't hide behind the total (#545). HEAD is
+      # the merge commit; its first parent is the target branch.
+      - name: Patch coverage
+        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=2 origin "$GITHUB_SHA"
+          git diff --unified=0 HEAD^1 HEAD -- '*.go' ':!*_test.go' ':!main.go' ':!internal/tools/**' > "$RUNNER_TEMP/change.diff"
+          # 60%, and up to 5 uncovered lines always pass: code on the JAR path
+          # is reached only by the integration suite, which this can't see.
+          go run ./internal/tools/patchcoverage -min 60 -grace 5 -diff "$RUNNER_TEMP/change.diff" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${PIPESTATUS[0]}"
+
   # Branch protection on main requires the check context "Unit tests" verbatim,
   # and a matrix appends the OS to the job name, so the required context would
   # never appear again and every PR would block. This job carries that name and

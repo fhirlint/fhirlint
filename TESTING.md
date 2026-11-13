@@ -54,7 +54,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 |---|---|---|
 | [golangci-lint](CONTRIBUTING.md#linting) with gosec | bugs and insecure patterns in fhirlint's own code | every pull request |
 | `go mod tidy -diff`, `go mod verify` | an untidy `go.mod`, a module that doesn't match its checksum | every pull request |
-| *Planned:* coverage floor and coverage of changed lines (#545) | code no test exercises, also while the total stays high | every pull request |
+| Coverage (#545): statement floors on the total and on `pkg/fhirlint` and `internal/validator`, and coverage of the lines a pull request changes (`internal/tools/patchcoverage`); the integration profile is shown, not gated | code no test exercises, also while the total stays high | every pull request (Linux leg of the unit tests) |
 | *Planned:* deadcode with an allowlist (#547) | exported functions nothing calls any more | every pull request |
 | *Planned:* actionlint and ShellCheck (#546) | invalid workflow expressions and shell bugs in workflows, the plugin hook and CI scripts | pull requests that change them |
 
