@@ -56,11 +56,14 @@ type sarifRule struct {
 }
 
 type sarifResult struct {
-	RuleID     string           `json:"ruleId,omitempty"`
-	Level      string           `json:"level"`
-	Message    sarifMessage     `json:"message"`
-	Locations  []sarifLocation  `json:"locations,omitempty"`
-	Properties *sarifProperties `json:"properties,omitempty"`
+	RuleID    string          `json:"ruleId,omitempty"`
+	Level     string          `json:"level"`
+	Message   sarifMessage    `json:"message"`
+	Locations []sarifLocation `json:"locations,omitempty"`
+	// PartialFingerprints lets code scanning track an alert across runs by
+	// the same identity the baseline and Code Climate use (#543).
+	PartialFingerprints map[string]string `json:"partialFingerprints,omitempty"`
+	Properties          *sarifProperties  `json:"properties,omitempty"`
 }
 
 // sarifProperties carries what SARIF has no field for. Level above is the
@@ -118,6 +121,7 @@ func buildSARIFReport(results []*validator.Result, minSeverity string, info RunI
 	sarifResults := make([]sarifResult, 0)
 	rulesSeen := map[string]bool{}
 	var rules []sarifRule
+	ids := newFindingHashes()
 
 	for _, r := range results {
 		issues := filterIssues(r.Issues, minSeverity)
@@ -138,6 +142,9 @@ func buildSARIFReport(results []*validator.Result, minSeverity string, info RunI
 				RuleID:  ruleID,
 				Level:   sarifLevel(iss.Severity),
 				Message: sarifMessage{Text: termsafe.Clip(MessageWithNotes(iss))},
+				PartialFingerprints: map[string]string{
+					sarifFingerprintKey: ids.next(r.Filename, iss),
+				},
 			}
 
 			if iss.OriginalSeverity != "" {

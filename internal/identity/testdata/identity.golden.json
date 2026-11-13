@@ -1,0 +1,118 @@
+{
+  "baseline": [
+    {
+      "file": "fhir/Observation-a.json",
+      "messageId": "",
+      "location": "Observation.code",
+      "count": 1
+    },
+    {
+      "file": "fhir/Observation-a.json",
+      "messageId": "Terminology_TX_NoValid_1_CC",
+      "location": "Observation.code.coding[0]",
+      "count": 1
+    },
+    {
+      "file": "fhir/Observation-a.json",
+      "messageId": "Type_Specific_Checks_DT_String_Length",
+      "location": "Observation.note[0].text",
+      "count": 1
+    },
+    {
+      "file": "fhir/Observation-a.json",
+      "messageId": "Validation_VAL_Profile_Minimum",
+      "location": "Observation",
+      "count": 2
+    },
+    {
+      "file": "fhir/Observation-a.json",
+      "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6",
+      "location": "Observation",
+      "count": 1
+    },
+    {
+      "file": "fhir/sub dir/Patient-ä.json",
+      "messageId": "fhirlint-validator-crash",
+      "location": "",
+      "count": 1
+    }
+  ],
+  "findings": [
+    {
+      "file": "Observation-a.json",
+      "messageId": "Validation_VAL_Profile_Minimum",
+      "location": "Observation (line 3, col 4)",
+      "codeClimateFingerprint": "c702476392035c5565aef5b6978e8dd2678ca5b8469cef1b02aab613af95d9d7",
+      "sarifRuleId": "Validation_VAL_Profile_Minimum",
+      "sarifPartialFingerprint": "c702476392035c5565aef5b6978e8dd2678ca5b8469cef1b02aab613af95d9d7",
+      "suppressMatches": [
+        "pattern:minimum required"
+      ]
+    },
+    {
+      "file": "Observation-a.json",
+      "messageId": "Validation_VAL_Profile_Minimum",
+      "location": "Observation (line 9, col 4)",
+      "codeClimateFingerprint": "11c810f1cedaeaeb7a8d128cb8da94dc50e08360b0ed2f5c815aab4f125d4b4d",
+      "sarifRuleId": "Validation_VAL_Profile_Minimum",
+      "sarifPartialFingerprint": "11c810f1cedaeaeb7a8d128cb8da94dc50e08360b0ed2f5c815aab4f125d4b4d",
+      "suppressMatches": [
+        "pattern:minimum required"
+      ]
+    },
+    {
+      "file": "Observation-a.json",
+      "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6",
+      "location": "Observation",
+      "codeClimateFingerprint": "2c59e9a481938d120a48e7bbc1fe4cf0f11f73dc07e16f4e9baa44f24b3269cf",
+      "sarifRuleId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6",
+      "sarifPartialFingerprint": "2c59e9a481938d120a48e7bbc1fe4cf0f11f73dc07e16f4e9baa44f24b3269cf",
+      "suppressMatches": [
+        "constraint:dom-6"
+      ]
+    },
+    {
+      "file": "Observation-a.json",
+      "messageId": "Terminology_TX_NoValid_1_CC",
+      "location": "Observation.code.coding[0] (line 12, col 8)",
+      "codeClimateFingerprint": "94c5fbf2d286726d2ba6b158c919a8e8cade3dc085e6db656fd96a5eb42aba41",
+      "sarifRuleId": "Terminology_TX_NoValid_1_CC",
+      "sarifPartialFingerprint": "94c5fbf2d286726d2ba6b158c919a8e8cade3dc085e6db656fd96a5eb42aba41",
+      "suppressMatches": [
+        "messageId:Terminology_TX_NoValid_1_CC",
+        "expression:Observation.code"
+      ]
+    },
+    {
+      "file": "Observation-a.json",
+      "messageId": "",
+      "location": "Observation.code",
+      "codeClimateFingerprint": "c0d3de72dc343a55853bce0c78dc9425bf63eaf17fc22f932b6c47b757f8c222",
+      "sarifRuleId": "fhir-validation",
+      "sarifPartialFingerprint": "c0d3de72dc343a55853bce0c78dc9425bf63eaf17fc22f932b6c47b757f8c222",
+      "suppressMatches": [
+        "expression:Observation.code"
+      ]
+    },
+    {
+      "file": "Observation-a.json",
+      "messageId": "Type_Specific_Checks_DT_String_Length",
+      "location": "Observation.note[0].text (line 30, col 10)",
+      "codeClimateFingerprint": "ebfe914c48d9e5d777d518c6458470264266051024a359257afdf49832ecff83",
+      "sarifRuleId": "Type_Specific_Checks_DT_String_Length",
+      "sarifPartialFingerprint": "ebfe914c48d9e5d777d518c6458470264266051024a359257afdf49832ecff83",
+      "suppressMatches": []
+    },
+    {
+      "file": "Patient-ä.json",
+      "messageId": "fhirlint-validator-crash",
+      "location": "",
+      "codeClimateFingerprint": "a39f0de611086a9579e40b3a09e689b9ea9e549b19813d92f47ff48f4910814a",
+      "sarifRuleId": "fhirlint-validator-crash",
+      "sarifPartialFingerprint": "a39f0de611086a9579e40b3a09e689b9ea9e549b19813d92f47ff48f4910814a",
+      "suppressMatches": [
+        "messageId:fhirlint-validator-crash"
+      ]
+    }
+  ]
+}
