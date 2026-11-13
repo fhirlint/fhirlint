@@ -116,6 +116,8 @@ func TestFilter(t *testing.T) {
 		".golangci.yml",
 		".github/dependabot.yml",
 		".github/actionlint.yaml",
+		".markdownlint-cli2.jsonc",
+		"lychee.toml",
 		"CODEOWNERS",
 		".github/CODEOWNERS",
 		"docs/CODEOWNERS",
@@ -130,6 +132,7 @@ func TestFilter(t *testing.T) {
 		".github/pull_request_template.md",
 		"testdata/templates/x.json",
 		"sub/action.yml",
+		"docs/lychee.toml",
 	}
 	in := strings.Join(append(append([]string{}, other...), sensitive...), "\n") + "\n"
 	got, code := runScript(t, "", in, "filter")

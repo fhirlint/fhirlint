@@ -13,7 +13,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [Combining profiles](#combining-profiles)
 - [Version pinning](#version-pinning)
 - [Using a specific profile URL](#using-a-specific-profile-url)
-- [fhirlint.yml for German projects](#fhirlintymll-for-german-projects)
+- [fhirlint.yml for German projects](#fhirlintyml-for-german-projects)
 
 ---
 
@@ -164,7 +164,7 @@ fhirlint validate patient.json \
 
 The German base profiles bind to code systems whose content nobody publishes freely. `de.basisprofil.r4` declares them with `content=not-present`:
 
-```
+```text
 http://fhir.de/CodeSystem/bfarm/alpha-id      content=not-present
 http://fhir.de/CodeSystem/bfarm/atc           content=not-present
 http://fhir.de/CodeSystem/bfarm/icd-10-gm     content=not-present

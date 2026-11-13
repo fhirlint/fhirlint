@@ -7,7 +7,7 @@ FHIR validation is strict by design — but real projects sometimes make deliber
 - [When to suppress vs. when to fix](#when-to-suppress-vs-when-to-fix)
 - [Selector types](#selector-types)
 - [CLI usage](#cli-usage)
-- [Committing rules to fhirlint.yml](#committing-rules-to-fhirlintymll)
+- [Committing rules to fhirlint.yml](#committing-rules-to-fhirlintyml)
 - [Re-levelling instead of suppressing](#re-levelling-instead-of-suppressing)
 - [--show-suppressed: making decisions visible](#--show-suppressed-making-decisions-visible)
 - [Stale rule warnings](#stale-rule-warnings)
@@ -182,7 +182,7 @@ The new level is the real one everywhere downstream: terminal output, `--severit
 
 Nothing is lost in the process. The terminal marks a re-levelled finding, and JSON and SARIF carry both levels:
 
-```
+```text
   ⚠ WARN   Rule bdl-1: A Bundle entry must have a fullUrl
            ↕ reported as error
 ```
@@ -205,7 +205,7 @@ By default, suppressed issues are completely hidden from terminal output. Use `-
 fhirlint validate patient.json --show-suppressed
 ```
 
-```
+```text
 ▶ patient.json
   ✗ ERROR  Patient.name: minimum required = 1, but only found 0
   ↷ SUPP   Best Practice Recommendation: In general, all observations should
@@ -217,6 +217,7 @@ Files: 1  Valid: 0  Errors: 1  Warnings: 0  Suppressed: 1
 ```
 
 This is useful for:
+
 - **PR reviews** — showing reviewers exactly what is being suppressed and why
 - **Audits** — a quick check that suppressions are still relevant
 - **Debugging** — confirming that a suppression rule is actually matching
@@ -233,11 +234,12 @@ show-suppressed: true
 
 When a suppression rule matches zero issues across all validated resources, fhirlint prints a warning to stderr:
 
-```
+```text
 warn: suppress rule "constraint:dom-6" matched 0 issues
 ```
 
 This happens when:
+
 - The underlying issue was fixed in the resource
 - The resource type changed and the path no longer exists
 - The message ID was renamed in a new validator version
@@ -292,7 +294,7 @@ An `expression` rule needs two entries because an advisor path matches only its 
 
 Every rule that is dropped is listed on stderr with the reason:
 
-```
+```text
 Exported 1 of 2 suppression rule(s) as 1 advisor entry.
 
 Not exported — no advisor equivalent:

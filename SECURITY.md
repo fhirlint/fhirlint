@@ -73,7 +73,7 @@ fhirlint audit
 
 `fhirlint version` additionally reports how the cached JAR was verified:
 
-```
+```text
 validator: 6.10.2 (verified: PGP signature)  (https://github.com/hapifhir/org.hl7.fhir.core/releases)
 ```
 
@@ -89,7 +89,7 @@ validator: 6.10.2 (verified: PGP signature)  (https://github.com/hapifhir/org.hl
 
 fhirlint embeds the HL7 release signing key rather than fetching it at verification time: a key fetched over the same channel as the JAR proves nothing about the JAR. Pinning also makes a key rotation a reviewable commit instead of a silent change.
 
-```
+```text
 85D1 C17C F115 2107 B272  386C 8FDF A682 8139 9B5D
 David Otasek <dotasek.dev@gmail.com>
 ```

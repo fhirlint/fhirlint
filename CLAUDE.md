@@ -4,7 +4,7 @@ fhirlint is a Go CLI that wraps the HL7 FHIR Validator JAR and adds developer-fr
 
 ## Architecture
 
-```
+```text
 cmd/           CLI commands (cobra + viper)
   validate.go  main validate command — flag parsing, orchestration
   audit.go     audit subcommand

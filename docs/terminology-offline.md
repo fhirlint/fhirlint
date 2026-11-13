@@ -78,7 +78,7 @@ The recording is served from disk; nothing leaves the machine. The JAR's own cac
 
 A request that was not recorded fails the run:
 
-```
+```text
 Error: 2 terminology request(s) were not in the recording in .fhirlint-tx/:
   POST /ValueSet/$validate-code (system http://loinc.org, code 8302-2)
   POST /CodeSystem/$validate-code (system http://snomed.info/sct, code 271649006)
@@ -93,7 +93,7 @@ Long lists are truncated to the first ten with a count of the rest.
 
 One pretty-printed JSON file per interaction, plus a `manifest.json` recording where and when it came from:
 
-```
+```text
 .fhirlint-tx/
   manifest.json
   0bee30eecb57e4406ff51283e623b1ee.json
@@ -102,7 +102,7 @@ One pretty-printed JSON file per interaction, plus a `manifest.json` recording w
 
 `manifest.json` also records the **validator version** the recording was made with. Which terminology requests get made is a property of the validator, not only of the resources — 6.10.0 changed how code systems are resolved — so replaying against a different version warns:
 
-```
+```text
 warn: recording was made with validator 6.10.1, this run uses 6.9.12 — re-record if requests come up missing
 ```
 
@@ -136,7 +136,7 @@ git add .fhirlint-tx && git commit -m "chore: refresh terminology recording"
 
 One difference: a long-lived server cannot fail a run on a miss, since the request has already been answered by then. Misses are reported at shutdown instead:
 
-```
+```text
 warn: 3 terminology request(s) were not in the recording:
   POST /ValueSet/$validate-code (system http://loinc.org, code 8302-2)
 Re-record with: fhirlint tx warm <path>

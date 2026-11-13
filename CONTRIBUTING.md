@@ -95,11 +95,22 @@ CI runs `deadcode` (`golang.org/x/tools/cmd/deadcode`) and fails on an exported 
 go run golang.org/x/tools/cmd/deadcode@v0.52.0 ./...
 ```
 
+### Documentation
+
+Markdown is linted for structure and rendering (`.markdownlint-cli2.jsonc`) and its links, anchors included, are checked with lychee (`lychee.toml`) on pull requests that change it; a weekly run opens an issue for links that died since (#548). Locally:
+
+```bash
+npx markdownlint-cli2 "**/*.md"
+docker run --rm -v "$PWD:/input:ro" -w /input lycheeverse/lychee:0.24.2 --config lychee.toml "**/*.md"
+```
+
+Code blocks name a language: `bash` for commands, `console` for a session with `$` prompts, `text` for output.
+
 ## Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 feat(#20): add --best-practice flag
 fix(#12): detect XML content from stdin
 docs: update README flag table

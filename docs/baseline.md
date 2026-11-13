@@ -59,7 +59,7 @@ The summary always shows the full counts, including suppressed issues.
 
 When you fix an issue that was in the baseline, the baseline entry for that issue no longer matches anything. fhirlint detects this and emits a warning:
 
-```
+```text
 warn: 3 baseline occurrence(s) no longer found — regenerate the baseline to remove stale entries
 ```
 
@@ -81,7 +81,7 @@ fhirlint recovers the ID by matching the message text against the validator's ow
 
 Recovery cannot undo every change. Where the other server words a finding differently, the recovered ID is that of its text. For example, tx.fhir.org reports `UNKNOWN_CODESYSTEM_VERSION_NONE` ("…No versions of this code system are known"), and tx.fhir.de reports `UNKNOWN_CODESYSTEM_VERSION` ("…Valid versions: []"). A baseline recorded under 6.10.x then misses such a finding at the same place where its old entry goes unmatched. fhirlint names this case instead of showing it only as a new finding plus a stale entry:
 
-```
+```text
 warn: 2 finding(s) missed the baseline at a location where a baseline entry went unmatched — the validator changed or dropped their message id …
 ```
 

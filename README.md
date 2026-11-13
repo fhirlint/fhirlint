@@ -47,7 +47,7 @@ The validator JAR is downloaded automatically on first use — no manual setup r
 - [Watch mode](#watch-mode)
 - [Server mode (warm validator)](#server-mode-warm-validator)
 - [Pipeline integration](#pipeline-integration)
-- [Configuration file](#configuration-file-fhirlintymll)
+- [Configuration file](#configuration-file-fhirlintyml)
 - [Validating the configuration file](#validating-the-configuration-file)
 - [Configuration reference](#configuration-reference)
 - [Built-in profile aliases](#built-in-profile-aliases)
@@ -140,7 +140,7 @@ The image includes a JRE — no separate Java installation required.
 
 The container runs as uid `65532`, not root. Reading mounted resources works as shown above, but **writing** into a mounted directory — a report via `--output`, or `--baseline` — fails unless the host directory is writable by that uid:
 
-```
+```text
 Error: html report: open /work/report.html: permission denied
 ```
 
@@ -305,7 +305,7 @@ Both pass the staged files to a single `fhirlint validate` invocation (one JVM s
 
 Validate FHIR resources from inside an agentic [Claude Code](https://claude.com/claude-code) session. The plugin is a thin wrapper around the `fhirlint` binary: Claude runs it, **interprets** the validator's findings, and fixes the offending resource in place.
 
-```
+```text
 /plugin marketplace add fhirlint/fhirlint
 /plugin install fhirlint@fhirlint
 ```
@@ -418,7 +418,7 @@ Anything else in a directory is ignored.
 
 The last column matters for the commands that read files themselves. `stats`, `coverage`, referential integrity, `--extract` and `--ignore` understand JSON and XML; a FHIR Mapping Language file is reported as skipped, with the reason, rather than counted as a broken resource. `--extract` and `--ignore` refuse it outright:
 
-```
+```text
 Error: --extract cannot be used with FHIR Mapping Language input (.fml):
 fhirlint passes it to the validator unchanged
 ```
@@ -427,7 +427,7 @@ fhirlint passes it to the validator unchanged
 
 CI runners sometimes have an unwritable home directory, and jobs export a writable `$HOME` instead. The JVM does not follow: on Linux it takes `user.home` from the OS passwd entry and ignores `$HOME`.
 
-```
+```console
 $ HOME=/tmp/writable java -XshowSettings:properties -version 2>&1 | grep user.home
     user.home = /var/www          # not /tmp/writable
 ```
@@ -440,7 +440,7 @@ If you set `user.home` yourself through `JAVA_TOOL_OPTIONS`, that wins; fhirlint
 
 Pointed at a whole repo, fhirlint reports every unrelated `.json` as a hard failure:
 
-```
+```text
 ▶ package.json
   ✗ FATAL  Unable to find resourceType property
 ```
@@ -470,7 +470,7 @@ This is deliberately unchecked: fhirlint does not know what these arguments mean
 
 Arguments that collide with what fhirlint manages itself are rejected up front, because the report parsing depends on them:
 
-```
+```console
 $ fhirlint validate patient.json --validator-arg=-output-style --validator-arg=text
 Error: --validator-arg "-output-style" is not allowed: fhirlint needs -output-style json to read the results
 ```
@@ -594,7 +594,7 @@ A report is read long after the run, and the validator changes what it finds fro
 
 Validating a directory prints every finding of every file, so one `dom-6` across 500 resources is 500 blocks of output. `--group` collapses identical findings into one block each:
 
-```
+```text
   ⚠ WARN   dom-6  ·  483 files
            A resource should have narrative for robust management
            fhir/Patient-001.json, fhir/Patient-002.json, fhir/Patient-003.json  … and 480 more
@@ -616,10 +616,11 @@ With `--show-source`, one snippet is printed per group, from the first occurrenc
 
 The validator logs how long it took on each file. fhirlint keeps that time as `durationMs` on each file in `--format json`, and `--slowest N` lists the slowest files after the terminal summary:
 
-```
+```bash
 fhirlint validate ./fhir/ --slowest 5
 ```
-```
+
+```text
 Slowest files (time the validator logged per file):
      4.302 s  fhir/Patient-a.json
      0.590 s  fhir/Patient-b.json
@@ -631,7 +632,7 @@ The time is per file, and it does not include package loading: neither the packa
 
 `--show-source` prints the source line under each finding, with a caret at the reported column:
 
-```
+```text
   ✗ ERROR  Not a valid date format: 'not-a-date'
            @ Patient.birthDate (line 5, col 28)
            5 │   "birthDate": "not-a-date"
@@ -651,7 +652,7 @@ Long lines — minified resources are often one enormous line — are truncated 
 
 The validator quotes the offending value into its message, sometimes several times: a 300,000-character `gender` code gives a 900,000-character message. Every report except `json` cuts a message longer than 2,000 characters in the middle, keeping the start (what is wrong) and the end (where), and marks the cut:
 
-```
+```text
 The value provided ('xxxx … [898,442 characters omitted; full text with --format json] … xxxx') was not found …
 ```
 
@@ -670,7 +671,7 @@ Findings carry more of the resource than is obvious. The validator quotes the of
 fhirlint validate ./patients/ --format sarif --redact
 ```
 
-```
+```text
   ✗ ERROR  [redacted] Type_Specific_Checks_DT_Date_Valid
            @ Patient.birthDate (line 5, col 28)
 ```
@@ -691,7 +692,6 @@ redact: true
 
 The same option exists in the Go library as `Options.Redact`, for callers forwarding findings to a log aggregator, an issue tracker or a third-party dashboard.
 
-
 ---
 
 ## Dataset statistics
@@ -702,7 +702,7 @@ The same option exists in the Go library as `Options.Redact`, for callers forwar
 fhirlint stats ./fhir/
 ```
 
-```
+```text
 Resource types
   Observation        34
   MedicationRequest  15
@@ -740,7 +740,7 @@ The validator cannot answer this. It sees one resource at a time and only checks
 fhirlint coverage ./examples/ --ig de.gematik.isik-basismodul#4.0.3 --profile ISiKPatient
 ```
 
-```
+```text
 ISiKPatient  (Patient)
   resources:      9  (1 matched by resource type, not by meta.profile)
   must-support:   52/64  (81%)
@@ -776,7 +776,7 @@ Slices are how German profiles carry most of their must-support elements — 54 
 
 Some slices cannot be decided this way. The common case is a slice identified only by a value set binding: deciding membership would mean expanding the value set, which is terminology work, and coverage runs entirely offline. Those elements are reported as **not measurable** and excluded from the denominator:
 
-```
+```text
   not measurable: 8 element(s)
       slice is identified by a value set binding (http://hl7.org/fhir/ValueSet/organization-type), which coverage does not expand
 ```
@@ -785,7 +785,7 @@ They count as neither covered nor uncovered. Counting them as misses would repor
 
 The other common cause is a slice that is perfectly well defined, just not in a package you have. German profiles delegate datatype constraints — a `HumanName` through `humanname-de-basis` — and the report names the profile that is missing so you can add it:
 
-```
+```text
   not measurable: 12 element(s)
       slice is defined in http://fhir.de/StructureDefinition/humanname-de-basis, which is not loaded — install the IG package that provides it
 ```
@@ -870,19 +870,19 @@ The date is **inclusive**: the rule suppresses throughout 2026-12-31 and lapses 
 
 Once it lapses the rule stops suppressing — the findings come back, and if they are errors the build fails again. That is the point of the feature, so fhirlint says exactly what happened rather than leaving a mysterious failure:
 
-```
+```text
 warn: suppress rule "constraint:dom-6" expired on 2026-12-31 and no longer suppresses anything
 ```
 
 For the 14 days before, it warns while still suppressing, so the lapse is not a surprise on the day:
 
-```
+```text
 warn: suppress rule "constraint:dom-6" expires on 2026-12-31
 ```
 
 An unparseable date is an error rather than a silently ignored field — a typo must not turn a temporary suppression into a permanent one:
 
-```
+```text
 Error: invalid suppress expires "31.12.2026": use YYYY-MM-DD
 ```
 
@@ -898,7 +898,7 @@ require-suppress-reason: true
 
 A rule without a reason then fails the run, naming the offenders:
 
-```
+```text
 Error: require-suppress-reason is set, but 1 suppress rule(s) have no reason: "constraint:dom-6"
 ```
 
@@ -907,6 +907,7 @@ It is opt-in, since turning it on by default would break every config with a bar
 The check covers **every** place a suppression can be written — `--suppress` on the command line, the global `suppress:` block, `suppress:` nested under `overrides:`, and the `severity-override:` rules described below. A policy that only covered one of them could be sidestepped by moving the rule somewhere else. Whitespace does not count as a reason.
 
 Suppressed issues are:
+
 - Excluded from the exit-code calculation (won't trigger `--fail-on error`)
 - Hidden from terminal output by default; shown with `↷ SUPP` when `--show-suppressed` is set
 - Included in a separate `suppressed` array in JSON/HTML output for auditability
@@ -947,7 +948,7 @@ The new level is the real one from that point on. It drives terminal output, `se
 
 Reports do not lose the original. Terminal output marks a re-levelled finding, and JSON and SARIF carry both levels, so a report cannot mislead a reader who does not have the config to hand:
 
-```
+```text
   ⚠ WARN   Rule bdl-1: A Bundle entry must have a fullUrl
            ↕ reported as error
 ```
@@ -1076,7 +1077,7 @@ Validation output references message IDs like `dom-6` or `ele-1` without saying 
 fhirlint explain dom-6
 ```
 
-```
+```text
 dom-6 — A resource should have narrative for robust management
 Defined in: FHIR R4 Core (best-practice invariant on DomainResource)
 
@@ -1093,7 +1094,7 @@ Suppress if intentional:
 
 When a message ID has a built-in explanation, terminal output appends a hint so you know help is one command away:
 
-```
+```text
   ⚠ WARN   A resource should have narrative for robust management
            @ Patient
            ↳ Run: fhirlint explain dom-6
@@ -1129,7 +1130,7 @@ fhirlint fhirpath "identifier.where(system='http://fhir.de/sid/gkv/kvid-10')" pa
 
 A single value is printed plainly, multiple items are indexed, and an empty result set is shown as `(empty)` so "no match" is distinguishable from an error:
 
-```
+```text
 [0] Erika
 [1] Maria
 ```
@@ -1196,7 +1197,7 @@ fhirlint validate ./fhir/ --format json --output current.json    # on the change
 fhirlint diff baseline.json current.json
 ```
 
-```
+```text
 New issues (1)
   ✗ ERROR medication-request-003.json  dom-4 @ MedicationRequest
 
@@ -1248,7 +1249,7 @@ fhirlint compare --left ./a.json --right ./b.json
 
 For a local file the canonical URL is read from the file; for a package, name the profile with `--left-profile` / `--right-profile` (its canonical URL or id). Use `--ig` to load extra packages needed for resolution.
 
-```
+```text
 Comparing http://example.org/.../KBV_PR_Base_Patient → http://example.org/.../KBV_PR_Base_Patient
   3 difference(s)
 
@@ -1271,7 +1272,7 @@ Medical-device teams running fhirlint in a validated process must perform Comput
 fhirlint qualify
 ```
 
-```
+```bash
 fhirlint Computer System Validation — Operational Qualification
   Tool version:  v1.0.0
   JAR version:   6.9.10
@@ -1366,7 +1367,7 @@ fhirlint validate patient.json --best-practice error     # escalate to errors
 
 > **`--tx-cache` does not make a run independent of the terminology server.** It is a latency optimisation, not a reproducibility measure. The validator fetches the server's capability statement at startup, before validating anything, and aborts when that fails — warm cache or not. With a fully populated cache and an unreachable server you get no report at all:
 >
-> ```
+> ```text
 > FHIRException: Error fetching the server's capability statement: Failed to connect to ...
 > ```
 >
@@ -1376,7 +1377,7 @@ fhirlint validate patient.json --best-practice error     # escalate to errors
 
 Checking a code costs a terminology round trip, so the validator caps how many it will check for a single ValueSet include, ConceptMap group or CodeSystem supplement. Past the cap it checks **none** of them and issues a hint:
 
-```
+```text
 Checks skipped: 2 — too many codes to check against a code system. See --codesystem-size-limit.
 ```
 
@@ -1402,7 +1403,7 @@ Expect a remote terminology server to be slow about it — one round trip per co
 
 A run therefore looks like this:
 
-```
+```text
 Files: 1  Valid: 1  Errors: 0  Warnings: 0
 Codes unchecked: 1 — a code system was not available. See: fhirlint explain UNKNOWN_CODESYSTEM
 ```
@@ -1437,7 +1438,7 @@ The publisher's own QA run does carry it. Recent IG Publisher versions write `pa
 
 fhirlint reads it automatically for any file validated straight out of the FHIR package cache, and reports the comparison:
 
-```
+```text
 Files: 563  Valid: 236  Errors: 327  Warnings: 1108
 Package baseline: 563 resource(s) checked against de.fhir.medication#2.0.0-ballot
   agrees with the published build (327 expected failure(s))
@@ -1506,7 +1507,7 @@ The last point is what makes it a guarantee rather than a promise about fhirlint
 
 **One combination gets a weaker guarantee, and says so.** `--tx-offline` replays terminology from a local server on loopback, and the validator's block has no loopback exemption — it refuses `http://127.0.0.1` exactly as it refuses `https://tx.fhir.org`. So `--offline --tx-offline` cannot use the block:
 
-```
+```text
 --offline: terminology is replayed from a local server, so the validator's own
 network block cannot be used. fhirlint downloads nothing; the JAR could still
 follow a URL if content asks it to. For a hard block, drop --tx-offline or
@@ -1534,7 +1535,7 @@ fhirlint validate ./fhir/ --terminology-server http://localhost:8080/fhir --allo
 
 The flag is needed because validator 6.10.0 and later refuse plain-HTTP and private-network destinations outright, as protection against server-side request forgery. Without it the run stops before reading a resource:
 
-```
+```text
 The validator refused to contact http://localhost:8080/fhir.
   Refusing to fetch from non-https URL: http://localhost:8080/fhir/metadata
 This is not a connection failure. Validator 6.10.0 and later block plain HTTP
@@ -1545,7 +1546,7 @@ and private-network destinations, so a proxy or a different URL will not help.
 
 The exemption is announced on stderr, because a run that weakens a security control should not look like one that did not:
 
-```
+```text
 Exempting http://localhost:8080/fhir from the validator's SSRF protection (--allow-insecure-tx).
 ```
 
@@ -1566,7 +1567,7 @@ export FHIRLINT_TX_TOKEN="$ONTOSERVER_TOKEN"
 fhirlint validate ./fhir/ --terminology-server https://ontoserver.example.org/fhir
 ```
 
-```
+```text
 Authenticating to https://ontoserver.example.org/fhir (bearer token from FHIRLINT_TX_TOKEN)
 ```
 
@@ -1603,7 +1604,7 @@ Under the hood fhirlint runs a loopback HTTP server that stands in for the termi
 
 **A request that was not recorded is an error, never a silent fallback to the network:**
 
-```
+```text
 Error: 2 terminology request(s) were not in the recording in .fhirlint-tx/:
   POST /r4/ValueSet/$validate-code (system http://loinc.org, code 8302-2)
   POST /r4/CodeSystem/$validate-code (system http://snomed.info/sct, code 271649006)
@@ -1777,7 +1778,7 @@ The validator also loads packages nobody asked for. When the input names a canon
 
 fhirlint names them once per run on stderr, and in the JSON report as `meta.implicitPackages`:
 
-```
+```text
 note: the validator loaded 15 package(s) that no --ig, fhirlint.yml or fhirlint.lock named, and the findings depend on them: hl7.fhir.r4.examples#4.0.1, hl7.fhir.us.core#9.0.0, …
 warn: 2 of them are pre-releases: hl7.fhir.uv.extensions#5.1.0-snapshot1, hl7.fhir.uv.extensions.r4#5.3.0-ballot-tc1 — pin the version you mean with --ig <id>#<version>
 ```
@@ -1809,7 +1810,7 @@ fhirlint update --validator-version 6.9.13
 
 The lock file records the version in use, and a later run against a different validator fails rather than quietly producing different results:
 
-```
+```text
 Error: lock file expects validator 6.9.12, running 6.9.13 — pin it with
 --validator-version 6.9.12, or run with --lock to accept 6.9.13
 ```
@@ -1824,7 +1825,7 @@ fhirlint upgrade-check --to 7.0.3 ./fhir/ --ig kbv.basis#1.10.0
 
 The output looks like this (an illustration built from the changes seen between 6.10.3 and 7.0.3, not one recorded run):
 
-```
+```text
 Validator upgrade check
   from: 6.10.3
   to:   FHIR Validation tool Version 7.0.3 (Git# 28e9fac6d79d). Built 2026-10-21T16:46:58.228Z
@@ -1872,7 +1873,7 @@ Both ask the validator to stop and hand back the issues it found so far, so the 
 
 **Hitting a bound fails the run.** This is not caution for its own sake: when the validator stops early it returns only the messages gathered so far, so files with real errors come back with none and are counted as valid. The same input that reports `Files: 2  Valid: 0  Errors: 5` unbounded reports `Files: 2  Valid: 2  Errors: 0` under `--max-messages 1`. Exiting 0 there would turn a bound into a way to make a red pipeline green.
 
-```
+```text
 Error: validation stopped early because --max-messages was reached, so the results
 are partial and files with errors may be reported as valid — raise the bound, or
 set --fail-on never to accept partial results
@@ -1892,7 +1893,7 @@ For CI that validates pull requests from other people, see [Limits for untrusted
 
 Some inputs make the validator throw instead of reporting, and when it does it writes no output for any file in the run. fhirlint contains that: it reports the file the validator was on as `fatal` with message id `fhirlint-validator-crash` and the exception's first line, then validates the other files again in a new JVM, so one such file does not hide every other finding.
 
-```
+```text
 warn: the validator crashed on in/BodyStructure-0c5948ba-….json; re-running the other 12 file(s) in a new JVM
 ```
 
@@ -1902,7 +1903,7 @@ Each re-run costs a JVM start. After three crashes in one run, or when `--timeou
 
 "Profile reference … has not been checked because it could not be found" almost always means that the package defining the profile was not loaded. fhirlint looks the canonical up in the `.index.json` files of your local package cache (`~/.fhir/packages`) and names the package:
 
-```
+```text
   ⚠ WARN   Profile reference 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Patient|1.10.0' has not been checked because it could not be found, …
            @ Patient (line 1, col 2)
            ↳ defined in kbv.basis#1.10.0 (also kbv.basis#1.9.0): add --ig kbv.basis#1.10.0, or the built-in alias --profile kbv-basis
@@ -1914,7 +1915,7 @@ It suggests the highest final release, lists every installed version, and never 
 
 When the validator cannot generate a profile's snapshot, its report says only that the profile "has no snapshot". The reason is printed on the validator's console. fhirlint reads it from there and attaches it to the finding:
 
-```
+```text
   ✗ ERROR  StructureDefinition http://example.org/fhir/StructureDefinition/Slice-nonrepeating|1.0.0 has no snapshot - validation is against the snapshot, so it must be provided
            @ Patient (line 1, col 2)
            ↳ cause: Attempt to a slice an element that does not repeat: Patient.maritalStatus/Patient.maritalStatus … at element married (slice = {5})
@@ -1965,13 +1966,13 @@ Three sets are validated:
 
 Deleted files are skipped; a renamed file is validated at its new path. Files that did not change are reported and then left alone:
 
-```
+```text
 Skipped 214 unchanged file(s) (--since main)
 ```
 
 An empty change set exits 0 and says so rather than passing silently:
 
-```
+```text
 No changed files to validate (--since main)
 ```
 
@@ -2044,6 +2045,7 @@ fhirlint config check
 ```
 
 It reports:
+
 - Unknown keys and likely typos (with "did you mean?" suggestions)
 - Wrong value types (e.g. a string where a boolean is expected)
 - Invalid enum values (e.g. an unknown `severity` or `fail-on` value)
@@ -2262,7 +2264,7 @@ fhirlint packages --sort size  # largest first
 fhirlint packages --json
 ```
 
-```
+```text
 FHIR package cache — 61 package(s), 1.2 GB
 
 hl7.terminology.r4
@@ -2281,7 +2283,7 @@ Versions of one package are grouped rather than scattered through an alphabetica
 fhirlint packages tree de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1
 ```
 
-```
+```text
 de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1
 ├── de.basisprofil.r4#1.5.4   (declared 1.5.x)
 │   └── hl7.fhir.r4.core#4.0.1
@@ -2336,7 +2338,7 @@ fhirlint validate patient.json
 
 When a newer fhirlint release or validator JAR exists, `fhirlint version` and the end of a `validate` run say so:
 
-```
+```text
 Updates available:
   fhirlint   v1.16.0 → v1.17.0  https://github.com/fhirlint/fhirlint/releases
   validator  6.9.0 → 6.10.2     run: fhirlint update
@@ -2346,7 +2348,7 @@ The lookup is cached for 24 hours, times out after 3 seconds, and fails silently
 
 **Advisories are reported separately, and are harder to silence.** When a published security advisory affects the validator you have installed, a second line appears:
 
-```
+```text
 Security: 2 published advisory/advisories affect validator 6.9.11 (high or worse). Run: fhirlint audit
 ```
 
@@ -2386,7 +2388,7 @@ Two things decide what a validation run reports: the validator JAR and the IG pa
 fhirlint audit
 ```
 
-```
+```text
 Validator JAR
   current:  6.10.1
   latest:   6.10.2
@@ -2412,7 +2414,7 @@ The IG half asks the FHIR package registries about each of your packages — `pa
 
 The header names which one was used, and the config fallback adds a note:
 
-```
+```text
 IG packages (fhirlint.yml)
   ✓ de.medizininformatikinitiative.kerndatensatz.person  2025.0.1 — current
   ✗ kbv.basis                                            1.5.0 → 1.9.0 available
@@ -2442,7 +2444,6 @@ A package is reported as:
 The `versions not comparable`, `ahead` and `registry latest is a pre-release` rows are worth explaining. FHIR IG versions are usually semver, but the registry does not enforce it, so fhirlint only calls a package *outdated* when it could actually establish that your pin is older. When a publisher switches versioning scheme, you are told the versions differ rather than being given a confident but invented direction.
 
 A `latest` tag can also point at a *pre-release*. Publishers move it during a ballot round: as of September 2026, all twelve `de.medizininformatikinitiative.kerndatensatz.*` modules tag a `2027.0.0-ballot*` version while their last final release is from 2026. A ballot is a draft for comment, not something to pin a pipeline to, so fhirlint does not call your final pin outdated and does not count it as a finding — it says the tag moved and leaves the decision to you. This applies only when your pin is itself a final; if you are tracking a ballot round deliberately, a newer pre-release is still reported as outdated, because that is the release you asked to follow.
-
 
 The final row is a note rather than a finding, and it can appear under a package that is otherwise `current`. fhirlint pins and compares against `dist-tags.latest` — what the publisher says is current — not against the highest number on the registry, because publishing a tarball and blessing it are separate acts. The gap between the two is real and can last a long time: at the time of writing, `fhir.r4.ukcore.stu2` serves 2.1.0 while tagging 2.0.2, and `de.medizininformatikinitiative.kerndatensatz.icu` serves the finals 2026.0.3 and 2027.0.0 while tagging 2027.0.0-ballot.3. Nothing is wrong with a pin that follows the tag, but you should be able to see the difference without reading the packument yourself. Pre-releases are excluded from this list, as are versions that could not be ordered.
 
