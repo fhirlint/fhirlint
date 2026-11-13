@@ -79,10 +79,12 @@ lint rules realistically need; anything outside the subset makes the rule fail
 to compile (rather than evaluate incorrectly).
 
 **Navigation**
+
 - Path steps with an optional leading resourceType filter: `Patient.name.given`
 - Indexers: `name[0].given`
 
 **Functions**
+
 - Collection: `exists([criteria])`, `empty()`, `where(criteria)`, `all(criteria)`,
   `count()`, `first()`, `last()`
 - Boolean: `not()`, `hasValue()`
@@ -92,12 +94,14 @@ to compile (rather than evaluate incorrectly).
   complex type, such as a CodeableConcept
 
 **Operators**
+
 - Equality: `=`, `!=`
 - Comparison: `<`, `>`, `<=`, `>=`
 - Logic: `and`, `or`, `xor`, `implies`
 - Membership: `in`
 
 **Literals**
+
 - Boolean (`true`, `false`), single-quoted strings (`'value'`), numbers, and `$this`
 
 ### Not supported

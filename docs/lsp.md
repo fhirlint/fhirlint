@@ -92,7 +92,7 @@ Suppressed findings are not shown. A suppression is a decision the project alrea
 
 The server logs to stderr, which most editors expose as the LSP server log. Startup looks like:
 
-```
+```bash
 fhirlint lsp: starting validator server…
 fhirlint lsp: ready (validator at http://localhost:42593)
 ```

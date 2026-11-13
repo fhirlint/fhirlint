@@ -11,7 +11,7 @@ fhirlint is designed to slot into any CI pipeline with minimal configuration. Th
 - [JUnit XML test results](#junit-xml-test-results)
 - [SARIF output for GitHub Code Scanning](#sarif-output-for-github-code-scanning)
 - [Markdown summary as a PR comment](#markdown-summary-as-a-pr-comment)
-- [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintymll)
+- [Project-level config with fhirlint.yml](#project-level-config-with-fhirlintyml)
 - [GitLab CI/CD Component](#gitlab-cicd-component)
 - [GitLab CI](#gitlab-ci)
 - [GitLab Code Quality (merge-request widget)](#gitlab-code-quality-merge-request-widget)
@@ -392,7 +392,7 @@ fhir-validation:
 
 ## GitLab Code Quality (merge-request widget)
 
-`--format codeclimate` produces a [CodeClimate-format](https://docs.gitlab.com/ee/ci/testing/code_quality.html#implement-a-custom-tool) JSON report that GitLab's **Code Quality** feature ingests and renders inline on the merge request — new and resolved findings appear directly in the MR widget. Unlike SARIF (which GitLab only surfaces on Ultimate), Code Quality is available on all tiers.
+`--format codeclimate` produces a [CodeClimate-format](https://docs.gitlab.com/ci/testing/code_quality/#code-quality-report-format) JSON report that GitLab's **Code Quality** feature ingests and renders inline on the merge request — new and resolved findings appear directly in the MR widget. Unlike SARIF (which GitLab only surfaces on Ultimate), Code Quality is available on all tiers.
 
 Wire it up by writing the report to a `codequality` artifact:
 
@@ -472,6 +472,7 @@ The values above are starting points, not recommendations for every repository: 
 ### The pull request's own config
 
 fhirlint reads `fhirlint.yml` (searched in the working directory and the two above it) and `.fhirlintignore` from where it runs. In a pull request from a fork, those are the author's files, and they decide how the pull request is checked. They can:
+
 - suppress or re-level any finding (`suppress:`, `severity-override:`, `baseline:`);
 - set `fail-on: never`;
 - `ignore:` or `exclude:` every file;

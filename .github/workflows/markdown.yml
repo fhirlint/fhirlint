@@ -1,0 +1,36 @@
+name: Markdown
+
+# Lints the Markdown docs with markdownlint-cli2 (config:
+# .markdownlint-cli2.jsonc), for structure and rendering only, not style
+# (#548).
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+      - .markdownlint-cli2.jsonc
+      - .github/workflows/markdown.yml
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - .markdownlint-cli2.jsonc
+      - .github/workflows/markdown.yml
+
+permissions: {}
+
+jobs:
+  lint:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint all Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
+        with:
+          globs: "**/*.md"

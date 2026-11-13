@@ -82,7 +82,8 @@ Whether the output stays readable for the tools that consume it, and the parts t
 
 | Layer | Protects against | Runs |
 |---|---|---|
-| *Planned:* link check and markdownlint (#548) | dead links and anchors, broken tables and lists | pull requests that change Markdown, weekly |
+| Link check: [lychee](https://lychee.cli.rs/) on every Markdown file, anchors and code blocks included ([`lychee.toml`](lychee.toml), each exclusion with its reason) (#548) | dead links and anchors, here and on linked pages | pull requests that change Markdown; weekly, opening an issue |
+| [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), structure and rendering rules only ([`.markdownlint-cli2.jsonc`](.markdownlint-cli2.jsonc)) (#548) | tables that split into the wrong cells, lists and code blocks glued to a paragraph, code blocks without a language, broken in-page anchors | pull requests and pushes to `main` that change Markdown |
 
 ### Before each release
 

@@ -17,10 +17,10 @@ report you can act on directly.
    not installed, tell the user to install it and stop:
    - Homebrew: `brew install fhirlint/tap/fhirlint`
    - Go: `go install github.com/fhirlint/fhirlint@latest`
-   - or download a binary from https://github.com/fhirlint/fhirlint/releases
+   - or download a binary from <https://github.com/fhirlint/fhirlint/releases>
 2. **First run downloads the validator JAR (~250 MB) and needs Java 17+.** Tell
    the user the first invocation may take a minute and is **not** a hang. If
-   `fhirlint` reports Java is missing, point them to https://adoptium.net.
+   `fhirlint` reports Java is missing, point them to <https://adoptium.net>.
 
 ## How to run
 

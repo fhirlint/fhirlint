@@ -1,0 +1,46 @@
+# Link check configuration for the docs (.github/workflows/links.yml, #548).
+# Exclusions are reviewed like code: each one names why the URL is not a
+# real, checkable page.
+
+max_retries = 3
+
+# A slow external host is not a dead link. Timeouts are still listed in the
+# report but do not fail the run.
+accept_timeouts = true
+
+# Check URLs in code blocks too: install commands live there.
+include_verbatim = true
+timeout = 30
+
+# Anchors count: a renamed heading, here or on a linked page, breaks the link
+# as surely as a moved page.
+include_fragments = "full"
+accept = ["200..=299", "429"]
+
+exclude = [
+  # Illustrative URLs in examples.
+  '^https?://([a-z0-9-]+\.)*example(\.[a-z]+)?(/|$)',
+  '\.example(/|:|$)',
+  '^https?://(localhost|127\.0\.0\.1)',
+  '^https?://[^/]*\.internal(/|:|$)',
+  '^https?://fhir\.my-hospital\.de/',
+  '^https?://github\.com/my-org/',
+  # Single-label hosts (https://my-api/, https://host/) and URLs with
+  # credentials (http://user:pass@proxy:3128/) only appear in examples.
+  '^https?://[^/.@]+(:[0-9]+)?(/|$)',
+  '^https?://[^/]*@',
+  # FHIR canonical identifiers of code systems: names, not pages. Some
+  # resolve to a page, some answer 404, and neither says the doc is wrong.
+  '^http://snomed\.info/sct$',
+  '^http://fhir\.de/CodeSystem/',
+  # HAPI's public test server: its data is reset, so a sample resource URL
+  # comes and goes.
+  '^https://hapi\.fhir\.org/baseR4/',
+  # Not a page: the GitHub Actions OIDC issuer, used as a value.
+  '^https://token\.actions\.githubusercontent\.com',
+  # Templates and elisions: ${VERSION}, $TOKEN, "…".
+  '\$\{|%7B|\$[A-Za-z_]',
+  '…|%E2%80%A6',
+]
+
+exclude_path = ["testdata"]

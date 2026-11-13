@@ -100,7 +100,7 @@ fhirlint validate api-response.json --extract-each "$.medications"
 
 Output:
 
-```
+```text
 ▶ api-response.json[0] (Medication/med-001)
   ✓ Valid
 
