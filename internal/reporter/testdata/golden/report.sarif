@@ -103,7 +103,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "1c72f64ac63224e40a22d6dc68276055b537f21bd262d26f1ff4d9a3c333b5a5"
+          }
         },
         {
           "ruleId": "Validation_VAL_Profile_Minimum",
@@ -130,7 +133,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "2f5be67910012e87c71f821e6a701419c00aebe967e4e0092901df245f95d40c"
+          }
         },
         {
           "ruleId": "BP_DOM_6",
@@ -153,7 +159,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "9836b2e975bc48d8a4e78e92d109ff672c838e05c3dda09f8b274245a9e79670"
+          }
         },
         {
           "ruleId": "Terminology_TX_NoValid_1_CC",
@@ -180,7 +189,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "659324a06581f290880cc1063fbc15482e43d2182e8de67fdc11c0ab00eefa4c"
+          }
         },
         {
           "ruleId": "Reference_REF_CantResolve",
@@ -208,6 +220,9 @@
               ]
             }
           ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "0955e8ce0a5671b26bca57eacc95afddbb7f8a7cd255dd2198c75ccb29df34a4"
+          },
           "properties": {
             "originalSeverity": "error"
           }
@@ -237,7 +252,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "d428cbb480259abc2ee35a2f787dd27ed42d9f42bbcaf9f4d72c14602350f13e"
+          }
         },
         {
           "ruleId": "VALIDATION_VAL_PROFILE_NOSNAPSHOT",
@@ -264,7 +282,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "3e0912b56083e3dbbcff30c46d4e36c3c737ae8bdd96339170c4e21d30863b4e"
+          }
         },
         {
           "ruleId": "VALIDATION_VAL_PROFILE_UNKNOWN",
@@ -291,7 +312,10 @@
                 }
               ]
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "d5202477e6ce0d1b7484bfabc70500651af1d4e703be350603e53ec38528fcc4"
+          }
         },
         {
           "ruleId": "fhirlint-validator-crash",
@@ -308,7 +332,10 @@
                 }
               }
             }
-          ]
+          ],
+          "partialFingerprints": {
+            "fhirlintFinding/v1": "1bc113c9a4b3cee3bbd49d1bf2af8d76dc68d2e4ecc048e1c98fb571f38f98de"
+          }
         }
       ]
     }

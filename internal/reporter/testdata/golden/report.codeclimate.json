@@ -2,7 +2,7 @@
   {
     "description": "Validation_VAL_Unknown: Unable to parse JSON",
     "check_name": "Validation_VAL_Unknown",
-    "fingerprint": "bbf95968c2716a25e220568f3d2e946cfccf4632dc626efdbdb42d9386eb6f7d",
+    "fingerprint": "1c72f64ac63224e40a22d6dc68276055b537f21bd262d26f1ff4d9a3c333b5a5",
     "severity": "critical",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -14,7 +14,7 @@
   {
     "description": "Validation_VAL_Profile_Minimum: Observation.status: minimum required = 1, but only found 0",
     "check_name": "Validation_VAL_Profile_Minimum",
-    "fingerprint": "31eb0b5909bb94b46f2aedd188a6ec279ec02a6c863bf7d08f7d5e782f53f067",
+    "fingerprint": "2f5be67910012e87c71f821e6a701419c00aebe967e4e0092901df245f95d40c",
     "severity": "major",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -26,7 +26,7 @@
   {
     "description": "BP_DOM_6: Best practice: dom-6",
     "check_name": "BP_DOM_6",
-    "fingerprint": "4be9e17314521237aec3aed098948dc72f7b89f964a480eb4f69c80c3a3da5f7",
+    "fingerprint": "9836b2e975bc48d8a4e78e92d109ff672c838e05c3dda09f8b274245a9e79670",
     "severity": "minor",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -38,7 +38,7 @@
   {
     "description": "Terminology_TX_NoValid_1_CC: Code 'xyz' not found in value set",
     "check_name": "Terminology_TX_NoValid_1_CC",
-    "fingerprint": "c7c50a695db45b0f8b8cccea7d17cb78c3acd07697e21212485cdf1be1f48c89",
+    "fingerprint": "659324a06581f290880cc1063fbc15482e43d2182e8de67fdc11c0ab00eefa4c",
     "severity": "info",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -50,7 +50,7 @@
   {
     "description": "Reference_REF_CantResolve: Severity lowered by config",
     "check_name": "Reference_REF_CantResolve",
-    "fingerprint": "ebf4a9238a6c7175bca8065b0754073f9aced2fe97040976f4da8dbae52c717b",
+    "fingerprint": "0955e8ce0a5671b26bca57eacc95afddbb7f8a7cd255dd2198c75ccb29df34a4",
     "severity": "minor",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -62,7 +62,7 @@
   {
     "description": "Type_Specific_Checks_DT_String_Length: Long message start xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx … [123 characters omitted; full text with --format json] … xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx end",
     "check_name": "Type_Specific_Checks_DT_String_Length",
-    "fingerprint": "75df1f7af004e9cdfa96b0c3970a2961a8f5aa3be9c4f1fb6b954a2d92923cc2",
+    "fingerprint": "d428cbb480259abc2ee35a2f787dd27ed42d9f42bbcaf9f4d72c14602350f13e",
     "severity": "major",
     "location": {
       "path": "examples/Observation-bad.json",
@@ -74,7 +74,7 @@
   {
     "description": "VALIDATION_VAL_PROFILE_NOSNAPSHOT: Profile http://example.org/StructureDefinition/p has no snapshot\nCause: Unable to generate snapshot: base not found",
     "check_name": "VALIDATION_VAL_PROFILE_NOSNAPSHOT",
-    "fingerprint": "4b6ef395eb4503dceec613b93c8991b424bf5e9489ab1c64287e06449ab0ea97",
+    "fingerprint": "3e0912b56083e3dbbcff30c46d4e36c3c737ae8bdd96339170c4e21d30863b4e",
     "severity": "major",
     "location": {
       "path": "examples/Ärzte Liste/Practitioner 1.json",
@@ -86,7 +86,7 @@
   {
     "description": "VALIDATION_VAL_PROFILE_UNKNOWN: Unable to resolve profile https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Practitioner\nHint: defined in kbv.basis#1.7.0: add --ig kbv.basis#1.7.0, or the built-in alias --profile kbv-basis",
     "check_name": "VALIDATION_VAL_PROFILE_UNKNOWN",
-    "fingerprint": "bafdcd7c288da171a5c5f367937864b338e9a58b16a2d3a840b2130ab59bb72b",
+    "fingerprint": "d5202477e6ce0d1b7484bfabc70500651af1d4e703be350603e53ec38528fcc4",
     "severity": "major",
     "location": {
       "path": "examples/Ärzte Liste/Practitioner 1.json",
@@ -98,7 +98,7 @@
   {
     "description": "fhirlint-validator-crash: the validator crashed on this file: java.lang.NullPointerException",
     "check_name": "fhirlint-validator-crash",
-    "fingerprint": "1c892f51a88cadb6c76b5822b7494267891560352db8da9c375ef2c1259fd706",
+    "fingerprint": "1bc113c9a4b3cee3bbd49d1bf2af8d76dc68d2e4ecc048e1c98fb571f38f98de",
     "severity": "critical",
     "location": {
       "path": "examples/crash.xml",

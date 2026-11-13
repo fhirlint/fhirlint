@@ -1,8 +1,6 @@
 package reporter
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -52,6 +50,7 @@ func CodeClimate(results []*validator.Result, minSeverity, dest string) error {
 
 func buildCodeClimateReport(results []*validator.Result, minSeverity string) []ccIssue {
 	out := make([]ccIssue, 0)
+	ids := newFindingHashes()
 	for _, r := range results {
 		path := filepath.ToSlash(r.Filename)
 		for _, iss := range filterIssues(r.Issues, minSeverity) {
@@ -69,7 +68,7 @@ func buildCodeClimateReport(results []*validator.Result, minSeverity string) []c
 			out = append(out, ccIssue{
 				Description: ccDescription(iss),
 				CheckName:   check,
-				Fingerprint: ccFingerprint(path, iss),
+				Fingerprint: ids.next(r.Filename, iss),
 				Severity:    ccSeverity(iss.Severity),
 				Location: ccLocation{
 					Path:  path,
@@ -103,11 +102,4 @@ func ccSeverity(severity string) string {
 	default:
 		return "info"
 	}
-}
-
-// ccFingerprint derives a stable identifier from the parts of an issue that do
-// not change between runs, so GitLab can track findings as new or resolved.
-func ccFingerprint(path string, iss validator.Issue) string {
-	h := sha256.Sum256([]byte(path + "\x00" + iss.MessageID + "\x00" + iss.Location + "\x00" + iss.Message))
-	return hex.EncodeToString(h[:])
 }

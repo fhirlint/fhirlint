@@ -416,7 +416,7 @@ fhir-validation:
       codequality: gl-code-quality.json
 ```
 
-Each finding's `fingerprint` is derived from its file path, location, message ID, and message, so it stays stable across runs — that is what lets GitLab tell genuinely new findings apart from pre-existing ones. The `--severity` filter is respected, and FHIR severities map onto the CodeClimate scale (`fatal` → `critical`, `error` → `major`, `warning` → `minor`, `information` → `info`).
+Each finding's `fingerprint` is derived from the same parts the [baseline](baseline.md) keys on: the file path relative to the working directory, the message ID and the location without line and column, plus the message text only for a finding without a message ID, and an occurrence number for identical findings in one file. It stays stable when a file is reformatted or a validator release rewords a message — that is what lets GitLab tell genuinely new findings apart from pre-existing ones. The SARIF report carries the same value as `partialFingerprints."fhirlintFinding/v1"` for GitHub code scanning. (Before 1.18, the fingerprint included line, column and message text, so the first run after upgrading shows every finding once as resolved and new.) The `--severity` filter is respected, and FHIR severities map onto the CodeClimate scale (`fatal` → `critical`, `error` → `major`, `warning` → `minor`, `information` → `info`).
 
 ---
 
