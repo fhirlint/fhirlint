@@ -807,3 +807,32 @@ func TestCheckOptionsSupported_Ecosystem(t *testing.T) {
 		t.Error("HasEcosystem gate wrong")
 	}
 }
+
+// A relative path that climbs out of the working directory crashes the JAR
+// (#560); it goes in absolute. Other paths are passed as given.
+func TestBuildArgs_ParentRelativeInputIsAbsolute(t *testing.T) {
+	up := filepath.Join("..", "fhir", "a.json")
+	wantUp, err := filepath.Abs(up)
+	if err != nil {
+		t.Fatal(err)
+	}
+	climb := filepath.Join("x", "..", "..", "d.json")
+	wantClimb, err := filepath.Abs(climb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	abs := filepath.Join(t.TempDir(), "c.json")
+	args := buildArgs("/tmp/v.jar", []string{up, "b.json", abs, climb}, "/tmp/out.json", Options{FHIRVersion: "4.0.1"})
+	has := map[string]bool{}
+	for _, a := range args {
+		has[a] = true
+		if !filepath.IsAbs(a) && strings.HasPrefix(filepath.Clean(a), "..") {
+			t.Errorf("a ../ path reached the JAR: %q", a)
+		}
+	}
+	for _, want := range []string{wantUp, "b.json", abs, wantClimb} {
+		if !has[want] {
+			t.Errorf("args missing %q: %q", want, args)
+		}
+	}
+}
