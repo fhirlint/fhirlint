@@ -52,6 +52,18 @@ against the latest upstream release with no JAR cache, so an upstream
 regression surfaces within a week. Bump the pin once that canary has been green
 on the newer release.
 
+### Coverage
+
+CI fails the unit-test job when the total statement coverage, or that of `pkg/fhirlint` or `internal/validator`, falls below its floor, and when a pull request's changed lines are mostly uncovered (#545). The floors and exclusions are in `.github/workflows/test.yml`; raise a floor on purpose, never lower one to make a change pass. Locally:
+
+```bash
+go test -short -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out | tail -1
+# changed lines of your branch against main
+git diff --unified=0 origin/main -- '*.go' ':!*_test.go' > change.diff
+go run ./internal/tools/patchcoverage -min 60 -grace 5 -diff change.diff
+```
+
 ## Linting
 
 ```bash

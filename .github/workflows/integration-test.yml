@@ -83,7 +83,7 @@ jobs:
         # 20m, not 10m: on a cache miss — the first run after the pin moves —
         # the ~250 MB download happens inside TestMain and so inside this
         # timeout. The suite itself runs in a couple of minutes.
-        run: go test -v -tags integration -count=1 -timeout 20m ./internal/validator/...
+        run: go test -v -tags integration -count=1 -timeout 20m -coverprofile=coverage-validator.out ./internal/validator/...
 
       # A separate step, not another package in the one above: `go test` runs
       # packages in parallel, and on a cache miss both TestMains would download
@@ -93,7 +93,18 @@ jobs:
         env:
           FHIRLINT_VALIDATOR_VERSION: ${{ matrix.validator }}
         # No download here — the step above populated the cache.
-        run: go test -v -tags integration -count=1 -timeout 10m ./cmd/...
+        run: go test -v -tags integration -count=1 -timeout 10m -coverprofile=coverage-cmd.out ./cmd/...
+
+      # What the JAR paths add over the unit tests (#545). Shown, not gated:
+      # the floor in test.yml counts the unit profile only, because this job
+      # doesn't run on every pull request.
+      - name: Integration coverage
+        if: always()
+        run: |
+          for f in coverage-validator.out coverage-cmd.out; do
+            [ -f "$f" ] || continue
+            echo "$f: $(go tool cover -func="$f" | tail -1 | awk '{ print $NF }')" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
 
   canary:
     name: Integration tests (latest validator, ${{ matrix.os }})
