@@ -97,3 +97,52 @@ jobs:
         run: |
           check-jsonschema --check-metaschema fhirlint-report.schema.json internal/reporter/testdata/schemas/codeclimate.schema.json
           check-jsonschema --schemafile fhirlint-report.schema.json "$GOLDEN/report.json"
+
+  # Syntax, expressions and the shell in every workflow's run: blocks
+  # (actionlint runs ShellCheck on them), and ShellCheck on the scripts users
+  # and CI run: the plugin hook, .github/scripts, and the shell inside the
+  # composite Action and the GitLab templates (#546). Every workflow is covered,
+  # the scheduled and release ones too. Both tools pinned; a disabled
+  # diagnostic needs a narrow scope and a reason.
+  workflows-shell:
+    name: actionlint and ShellCheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SHELLCHECK_VERSION: v0.11.0
+      SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+      ACTIONLINT_VERSION: v1.7.12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install ShellCheck
+        run: |
+          archive="$RUNNER_TEMP/shellcheck.tar.xz"
+          curl -fsSL -o "$archive" "https://github.com/koalaman/shellcheck/releases/download/$SHELLCHECK_VERSION/shellcheck-$SHELLCHECK_VERSION.linux.x86_64.tar.xz"
+          echo "$SHELLCHECK_SHA256  $archive" | sha256sum -c -
+          tar -xJf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/shellcheck-$SHELLCHECK_VERSION" >> "$GITHUB_PATH"
+
+      - name: Install actionlint
+        run: go install "github.com/rhysd/actionlint/cmd/actionlint@$ACTIONLINT_VERSION"
+
+      - name: Workflows
+        run: actionlint
+
+      - name: Shell scripts
+        if: ${{ !cancelled() }}
+        run: shellcheck hooks/*.sh .github/scripts/*.sh
+
+      - name: Shell in action.yml and the GitLab templates
+        if: ${{ !cancelled() }}
+        run: |
+          go run ./internal/tools/extractshell -o "$RUNNER_TEMP/extracted" action.yml templates/fhirlint.yml .gitlab-ci.yml
+          shellcheck "$RUNNER_TEMP"/extracted/*.sh
