@@ -23,6 +23,7 @@ jobs:
   lint:
     name: Lint Markdown
     runs-on: ubuntu-latest
+    timeout-minutes: 5 # max 7s in 6 runs
     permissions:
       contents: read
     steps:

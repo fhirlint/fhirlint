@@ -35,6 +35,7 @@ jobs:
     name: Integration tests (validator ${{ matrix.validator }}, ${{ matrix.os }})
     if: github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 50 # max 12m in 11 runs; the two go test steps allow 20m each, plus setup and the JAR download
     permissions:
       contents: read
     strategy:
@@ -111,6 +112,7 @@ jobs:
     name: Integration tests (latest validator, ${{ matrix.os }})
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 50 # max 6.5m; always downloads the JAR; the go test steps allow 20m each
     permissions:
       contents: read
     strategy:

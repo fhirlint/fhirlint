@@ -12,6 +12,7 @@ jobs:
   lint:
     name: golangci-lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # max 54s in 12 runs
     permissions:
       contents: read
     steps:
@@ -34,6 +35,7 @@ jobs:
   config-schema:
     name: fhirlint.yml JSON Schema
     runs-on: ubuntu-latest
+    timeout-minutes: 5 # max 13s in 12 runs
     permissions:
       contents: read
     steps:
@@ -59,6 +61,7 @@ jobs:
   report-schemas:
     name: Report schemas
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 38s in 4 runs
     permissions:
       contents: read
     env:
@@ -109,6 +112,7 @@ jobs:
   workflows-shell:
     name: actionlint and ShellCheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 21s in 11 runs
     permissions:
       contents: read
     env:
@@ -158,6 +162,7 @@ jobs:
   deadcode:
     name: Unreachable functions
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 22s in 8 runs
     permissions:
       contents: read
     steps:

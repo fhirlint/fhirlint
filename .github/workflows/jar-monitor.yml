@@ -14,6 +14,7 @@ jobs:
   check-signing-key:
     name: Warn before the pinned HL7 signing key expires
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 24s in 12 runs
     permissions:
       contents: read
       issues: write
@@ -68,6 +69,7 @@ jobs:
   check-advisories:
     name: Check advisories affecting the latest JAR
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 24s in 12 runs
     permissions:
       issues: write
     steps:

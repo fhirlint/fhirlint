@@ -16,6 +16,7 @@ jobs:
     # actually verifies it.
     name: Unit tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20 # max 116s (macOS) in 12 runs
     permissions:
       contents: read
     strategy:
@@ -139,6 +140,7 @@ jobs:
     needs: test
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5 # max 5s in 12 runs
     permissions:
       contents: read
     steps:
