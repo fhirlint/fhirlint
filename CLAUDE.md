@@ -42,6 +42,8 @@ testdata/      fixtures for unit tests
 
 ### Tests
 
+TESTING.md describes every test layer, what it protects against and when it runs. A PR that adds or removes a layer updates it.
+
 - `go test ./...` — unit tests, no Java required
 - `go test ./... -tags integration` — integration tests, downloads JAR (~250 MB), requires Java 17+
 - `go test -tags registry ./internal/profiles/ ./internal/validator/` — checks the built-in aliases and the FHIR version table against the package registry and tx.fhir.org; needs network, run it when changing a pin or a version row

@@ -18,3 +18,4 @@
 - [ ] `go test ./...` passes locally
 - [ ] `golangci-lint run` passes locally
 - [ ] `go mod tidy -diff` reports nothing
+- [ ] `TESTING.md` updated if a test layer was added, removed or changed

@@ -3,6 +3,17 @@ name: Integration Tests
 on:
   push:
     branches: [main]
+  # Only the paths the unit job can't reach: the JAR invocation, the download
+  # and the temp IG bundling (#553). Other pull requests merge on the unit
+  # tests, and the push to main runs this anyway.
+  pull_request:
+    paths:
+      - 'internal/validator/**'
+      - 'internal/localig/**'
+      - 'cmd/validate.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/integration-test.yml'
   schedule:
     - cron: '0 6 * * 1'   # Weekly, Monday 06:00 UTC
   workflow_dispatch:
@@ -86,7 +97,7 @@ jobs:
 
   canary:
     name: Integration tests (latest validator, ${{ matrix.os }})
-    if: github.event_name != 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
