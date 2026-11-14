@@ -229,18 +229,12 @@ func init() {
 			"0 = no limit; -1 leaves the validator's own default (1000) in place.")
 	validateCmd.Flags().BoolVar(&flagOffline, "offline", false,
 		"Forbid all network access: use the cached JAR and cached IG packages, and block the validator's own HTTP")
-	_ = viper.BindPFlag("offline", validateCmd.Flags().Lookup("offline"))
-	_ = viper.BindPFlag("codesystem-size-limit", validateCmd.Flags().Lookup("codesystem-size-limit"))
-	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
-	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
 	// Credentials deliberately have no flag and no config key — see
 	// validator.ProxyAuthEnvVar.
 	validateCmd.Flags().StringVar(&flagProxy, "proxy", "",
 		"HTTP proxy for the validator's terminology calls, host:port (default: $HTTP_PROXY)")
 	validateCmd.Flags().StringVar(&flagHTTPSProxy, "https-proxy", "",
 		"HTTPS proxy for the validator's terminology calls, host:port (default: $HTTPS_PROXY)")
-	_ = viper.BindPFlag("proxy", validateCmd.Flags().Lookup("proxy"))
-	_ = viper.BindPFlag("https-proxy", validateCmd.Flags().Lookup("https-proxy"))
 	validateCmd.Flags().StringVar(&flagURLTimeout, "url-timeout", "30s",
 		"Timeout for HTTP fetches via --url (e.g. 10s, 1m). Set to 0 to disable.")
 	validateCmd.Flags().BoolVar(&flagLock, "lock", false,
@@ -249,57 +243,69 @@ func init() {
 		"Generate a baseline file from current issues (build always succeeds; re-run to update)")
 	validateCmd.Flags().StringVar(&flagBaseline, "baseline", "",
 		"Baseline file — issues recorded here are suppressed; only new issues fail the build")
-	_ = viper.BindPFlag("baseline", validateCmd.Flags().Lookup("baseline"))
 	validateCmd.Flags().BoolVar(&flagBundleEntries, "bundle-entries", false,
 		"Also validate each entry.resource inside a FHIR Bundle as a standalone resource")
-	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
 	validateCmd.Flags().BoolVar(&flagSkipNonFHIR, "skip-non-fhir", false,
 		"Skip files that are not FHIR resources instead of reporting them as errors")
-	_ = viper.BindPFlag("skip-non-fhir", validateCmd.Flags().Lookup("skip-non-fhir"))
 	validateCmd.Flags().StringArrayVar(&flagValidatorArg, "validator-arg", nil,
 		"Extra argument passed straight to the validator JAR (repeatable, unvalidated)")
-	_ = viper.BindPFlag("validator-arg", validateCmd.Flags().Lookup("validator-arg"))
 	validateCmd.Flags().BoolVar(&flagRequireSuppressReason, "require-suppress-reason", false,
 		"Fail when a suppression rule has no reason")
-	_ = viper.BindPFlag("require-suppress-reason", validateCmd.Flags().Lookup("require-suppress-reason"))
 	validateCmd.Flags().BoolVar(&flagShowSource, "show-source", false,
 		"Show the offending source line under each finding (terminal output only)")
-	_ = viper.BindPFlag("show-source", validateCmd.Flags().Lookup("show-source"))
 	validateCmd.Flags().BoolVar(&flagRedact, "redact", false,
 		"Remove message text and source lines from all reports, keeping severity, location and message ID (for reports that leave a trusted environment)")
-	_ = viper.BindPFlag("redact", validateCmd.Flags().Lookup("redact"))
 	validateCmd.Flags().BoolVar(&flagGroup, "group", false,
 		"Group repeated findings into one block each with a count (terminal output only)")
-	_ = viper.BindPFlag("group", validateCmd.Flags().Lookup("group"))
 	validateCmd.Flags().IntVar(&flagSlowest, "slowest", 0,
 		"After the summary, list the N files the validator took longest on (terminal output only)")
-	_ = viper.BindPFlag("slowest", validateCmd.Flags().Lookup("slowest"))
 	validateCmd.Flags().BoolVarP(&flagQuiet, "quiet", "q", false,
 		"Suppress per-file output for valid files; only files with issues are printed")
-	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
 	validateCmd.Flags().BoolVar(&flagNoColor, "no-color", false,
 		"Disable ANSI color output")
-	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
 	validateCmd.Flags().StringVar(&flagRulesFile, "rules-file", "",
 		"Load custom FHIRPath lint rules from a YAML file (overrides rules: in config)")
 	validateCmd.Flags().BoolVar(&flagCheckReferences, "check-references", false,
 		"Check that references resolve within the validated resource set (dangling-reference detection)")
-	_ = viper.BindPFlag("check-references", validateCmd.Flags().Lookup("check-references"))
 	validateCmd.Flags().StringVar(&flagSince, "since", "",
 		"Validate only files changed against this git ref (e.g. main), including uncommitted and untracked ones")
-	_ = viper.BindPFlag("since", validateCmd.Flags().Lookup("since"))
 	validateCmd.Flags().BoolVar(&flagTxOffline, "tx-offline", false,
 		"Replay terminology responses recorded by 'fhirlint tx warm' instead of contacting a server; an unrecorded request is an error")
-	_ = viper.BindPFlag("tx-offline", validateCmd.Flags().Lookup("tx-offline"))
 	validateCmd.Flags().StringVar(&flagTxDir, "tx-dir", "",
 		"Directory holding the terminology recording (default: "+txreplay.DefaultDir+"/)")
-	_ = viper.BindPFlag("tx-dir", validateCmd.Flags().Lookup("tx-dir"))
 	validateCmd.Flags().StringVar(&flagServer, "server", "",
 		"Validate via a running validator server instead of a per-run JVM (e.g. http://localhost:8080; see 'fhirlint serve')")
-	_ = viper.BindPFlag("server", validateCmd.Flags().Lookup("server"))
 
-	// Bind all flags to viper so fhirlint.yml values are used as defaults.
-	// CLI flags always take precedence over config file values.
+	registerFlagCompletions(validateCmd)
+	bindValidateConfig()
+}
+
+// bindValidateConfig binds the validate flags to viper, so fhirlint.yml values
+// are used as defaults; CLI flags always take precedence over config file
+// values. Separate from init so tests can restore it after a viper.Reset.
+func bindValidateConfig() {
+	_ = viper.BindPFlag("offline", validateCmd.Flags().Lookup("offline"))
+	_ = viper.BindPFlag("codesystem-size-limit", validateCmd.Flags().Lookup("codesystem-size-limit"))
+	_ = viper.BindPFlag("validation-timeout", validateCmd.Flags().Lookup("validation-timeout"))
+	_ = viper.BindPFlag("max-messages", validateCmd.Flags().Lookup("max-messages"))
+	_ = viper.BindPFlag("proxy", validateCmd.Flags().Lookup("proxy"))
+	_ = viper.BindPFlag("https-proxy", validateCmd.Flags().Lookup("https-proxy"))
+	_ = viper.BindPFlag("baseline", validateCmd.Flags().Lookup("baseline"))
+	_ = viper.BindPFlag("bundle-entries", validateCmd.Flags().Lookup("bundle-entries"))
+	_ = viper.BindPFlag("skip-non-fhir", validateCmd.Flags().Lookup("skip-non-fhir"))
+	_ = viper.BindPFlag("validator-arg", validateCmd.Flags().Lookup("validator-arg"))
+	_ = viper.BindPFlag("require-suppress-reason", validateCmd.Flags().Lookup("require-suppress-reason"))
+	_ = viper.BindPFlag("show-source", validateCmd.Flags().Lookup("show-source"))
+	_ = viper.BindPFlag("redact", validateCmd.Flags().Lookup("redact"))
+	_ = viper.BindPFlag("group", validateCmd.Flags().Lookup("group"))
+	_ = viper.BindPFlag("slowest", validateCmd.Flags().Lookup("slowest"))
+	_ = viper.BindPFlag("quiet", validateCmd.Flags().Lookup("quiet"))
+	_ = viper.BindPFlag("no-color", validateCmd.Flags().Lookup("no-color"))
+	_ = viper.BindPFlag("check-references", validateCmd.Flags().Lookup("check-references"))
+	_ = viper.BindPFlag("since", validateCmd.Flags().Lookup("since"))
+	_ = viper.BindPFlag("tx-offline", validateCmd.Flags().Lookup("tx-offline"))
+	_ = viper.BindPFlag("tx-dir", validateCmd.Flags().Lookup("tx-dir"))
+	_ = viper.BindPFlag("server", validateCmd.Flags().Lookup("server"))
 	_ = viper.BindPFlag("profile", validateCmd.Flags().Lookup("profile"))
 	_ = viper.BindPFlag("ig", validateCmd.Flags().Lookup("ig"))
 	_ = viper.BindPFlag("fhir-version", validateCmd.Flags().Lookup("fhir-version"))
@@ -330,8 +336,6 @@ func init() {
 	_ = viper.BindPFlag("watch-settle-time", validateCmd.Flags().Lookup("watch-settle-time"))
 	_ = viper.BindPFlag("timeout", validateCmd.Flags().Lookup("timeout"))
 	_ = viper.BindPFlag("url-timeout", validateCmd.Flags().Lookup("url-timeout"))
-
-	registerFlagCompletions(validateCmd)
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
@@ -1367,7 +1371,25 @@ func matchesExclude(relPath, pattern string) bool {
 
 // loadProfileMap parses the profile-map config key.
 func loadProfileMap() (profileMapping, error) {
-	return parseProfileMap(viper.Get("profile-map"))
+	return parseProfileMap(profileMapRaw())
+}
+
+// profileMapRaw returns the profile-map section with its keys as written. Its
+// keys are FHIR resource types and filename globs, which are case-sensitive,
+// but viper lowercases every key it reads: through viper.Get, `Patient`
+// arrived as `patient` and never matched a resource (#597). So the section is
+// read from the config file itself; viper is the fallback only when no file
+// is in use or it does not parse.
+func profileMapRaw() any {
+	if path := viper.ConfigFileUsed(); path != "" {
+		if data, err := os.ReadFile(path); err == nil { //nolint:gosec // the config file viper already read
+			var doc map[string]any
+			if yaml.Unmarshal(data, &doc) == nil {
+				return doc["profile-map"]
+			}
+		}
+	}
+	return viper.Get("profile-map")
 }
 
 // loadOverrides parses the overrides: config key into a slice of configOverride.

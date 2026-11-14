@@ -61,11 +61,6 @@ func init() {
 	rootCmd.PersistentFlags().String("jar", "", "Path to a local validator_cli.jar (overrides auto-download, also: FHIRLINT_JAR env var)")
 	rootCmd.PersistentFlags().String("validator-version", "",
 		"Pin the auto-downloaded validator JAR to an upstream release, e.g. 6.9.12 (default: latest)")
-	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
-	_ = viper.BindPFlag("jar", rootCmd.PersistentFlags().Lookup("jar"))
-	_ = viper.BindEnv("jar", "FHIRLINT_JAR")
-	_ = viper.BindPFlag("validator-version", rootCmd.PersistentFlags().Lookup("validator-version"))
-	_ = viper.BindEnv("validator-version", "FHIRLINT_VALIDATOR_VERSION")
 
 	rootCmd.Version = fhirlintVersion()
 
@@ -83,6 +78,17 @@ func init() {
 	rootCmd.AddCommand(compareCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(packagesCmd)
+	bindRootConfig()
+}
+
+// bindRootConfig connects the root flags and their environment variables to
+// viper. Separate from init so tests can restore it after a viper.Reset.
+func bindRootConfig() {
+	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	_ = viper.BindPFlag("jar", rootCmd.PersistentFlags().Lookup("jar"))
+	_ = viper.BindEnv("jar", "FHIRLINT_JAR")
+	_ = viper.BindPFlag("validator-version", rootCmd.PersistentFlags().Lookup("validator-version"))
+	_ = viper.BindEnv("validator-version", "FHIRLINT_VALIDATOR_VERSION")
 }
 
 func initConfig() {
