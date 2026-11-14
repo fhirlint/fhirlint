@@ -20,6 +20,8 @@ fhirlint is usually pointed at data it has no reason to trust — resources from
 
 The security-relevant question is whether untrusted input can make fhirlint do something other than report findings about it.
 
+[ARCHITECTURE.md](ARCHITECTURE.md#threat-model) has the threat model and the assurance case built on this boundary.
+
 ### In scope
 
 - A crafted resource that makes fhirlint itself misbehave — crash in a way that hides findings, consume unbounded memory, read or write outside the paths it was given.

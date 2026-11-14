@@ -71,14 +71,14 @@ Level 1 is met.
 | LE-01.01 Contributors assert their right to contribute | met | Every commit in a pull request needs a DCO sign-off. The DCO check enforces it ([`.github/dco.yml`](../.github/dco.yml), [CONTRIBUTING.md](../CONTRIBUTING.md#developer-certificate-of-origin)). |
 | QA-03.01 Status checks pass before merging | met | Required checks on `main`: golangci-lint, unit tests, govulncheck, cfgaudit, glsec, the sensitive-paths gate and DCO, in strict mode. Releases additionally wait for all of CI (`require-green-ci.yml`). |
 | QA-06.01 Automated tests before a change is accepted | met | Unit tests on Linux, macOS and Windows are a required check ([TESTING.md](../TESTING.md)). |
-| SA-01.01 Design documentation of actions and actors | partly met | The [trust boundary](../SECURITY.md#trust-boundary) names who and what fhirlint trusts. The architecture map is in `CLAUDE.md`. There is no single design document of all actors and actions. |
+| SA-01.01 Design documentation of actions and actors | met | [ARCHITECTURE.md](../ARCHITECTURE.md): the steps of a run, the interfaces and network endpoints, and the actors in building and shipping. |
 | SA-02.01 External interfaces | met | CLI ([README](../README.md)), the Go library ([pkg.go.dev](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)), the JSON schemas of the config and the report, the GitHub Action ([`action.yml`](../action.yml)), the GitLab component ([docs/ci.md](ci.md)) and the LSP server ([docs/lsp.md](lsp.md)). |
 | SA-03.01 Security assessment | met | [SECURITY.md](../SECURITY.md): trust boundary, what is in scope and out of it, and the properties users can rely on. |
 | VM-01.01 Coordinated disclosure with a response time | met | [SECURITY.md](../SECURITY.md): GitHub Security Advisory, with a response within 5 business days. |
 | VM-03.01 Private reporting | met | Private vulnerability reporting is enabled. |
 | VM-04.01 Published vulnerability data | met | Confirmed vulnerabilities are published as GitHub Security Advisories of this repository ([SECURITY.md](../SECURITY.md)). None have been published so far. |
 
-Level 2 is open in one place: SA-01.01.
+Level 2 is met.
 
 ### Level 3
 
@@ -91,6 +91,7 @@ These aren't a goal yet. Already met:
 - DO-03.01 and DO-03.02: [verifying archives](../README.md#pre-built-binary-recommended) and [the image](../README.md#verifying-the-image), including the signing workflow.
 - QA-02.02: an SPDX SBOM per archive, and an SBOM attestation on the image.
 - QA-06.02: [TESTING.md](../TESTING.md).
+- SA-03.02: the [threat model](../ARCHITECTURE.md#threat-model) and the [assurance case](../ARCHITECTURE.md#assurance-case).
 - VM-05.03: dependency review and OSV-Scanner on every pull request.
 
 Open:
@@ -99,7 +100,6 @@ Open:
 - DO-04.01 and DO-05.01: [SECURITY.md](../SECURITY.md#supported-versions) says that only the latest release gets fixes, but it doesn't give a duration per release.
 - QA-06.03: a written test policy for major changes.
 - QA-07.01: approval by a non-author.
-- SA-03.02: a threat model.
 - VM-04.02: VEX documents.
 - VM-05.01, VM-05.02, VM-06.01 and VM-06.02: written remediation thresholds for SCA and SAST findings.
 
@@ -126,7 +126,6 @@ Open:
 
 1. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
 2. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
-3. **One design document of actors and actions** (SA-01.01).
 
 ## Keeping this page current
 
