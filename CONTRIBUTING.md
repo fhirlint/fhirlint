@@ -1,6 +1,6 @@
 # Contributing to fhirlint
 
-Thanks for your interest in contributing! This document covers everything from setting up your environment to getting a PR merged.
+Thanks for your interest in contributing! This document covers everything from setting up your environment to getting a PR merged. Everyone taking part in fhirlint's issues, pull requests and reviews follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Prerequisites
 
@@ -78,6 +78,7 @@ golangci-lint run
 - Config is in `.golangci.yml`
 - All linter warnings must be resolved before a PR is merged
 - `//nolint` comments require a reason (e.g. `//nolint:gosec // intentional: ...`)
+- **Static analysis findings block the merge, at every severity.** golangci-lint, gosec included, and govulncheck are required checks. A finding is fixed, or it is suppressed with a `//nolint:<linter>` comment that says why it doesn't apply. Without the reason, the suppression is rejected in review. zizmor, glsec and cfgaudit findings on the workflows are fixed the same way, or carry an inline `ignore` with a reason
 
 ### Workflows and shell scripts
 
@@ -149,11 +150,54 @@ A check on every pull request blocks commits without a sign-off. To fix them:
 - several commits: `git rebase --signoff main`, then force-push;
 - or, without rewriting history, add one empty commit that signs off the earlier ones, as the check's details page describes.
 
+## Dependencies
+
+fhirlint keeps its dependencies few and checked:
+
+- **Go modules.** `go.mod` lists the direct dependencies and `go.sum` pins their hashes. CI fails if `go mod tidy` would change either file, and the release build runs `go mod verify`. A new dependency needs a reason in the pull request. Prefer the standard library, and pick maintained, widely used modules.
+- **Updates.** Dependabot proposes updates for Go modules, GitHub Actions, the Docker base images and the CI's Python tools. Version updates wait 7 days after an upstream release (`cooldown` in `.github/dependabot.yml`), the window in which a compromised release is usually caught. Security updates are not delayed. Updates go through the same checks as any change.
+- **Pinning.** GitHub Actions are pinned to commit SHAs with a version comment that pinact verifies. The CI's Python tools are pinned with hashes (`.github/requirements/`), and the Docker base images by tag and digest.
+- **Checks.** govulncheck, OSV-Scanner and dependency review run on every pull request, and all three are required checks. OSV-Scanner covers `go.mod` and the Python requirements against known vulnerabilities and known malicious packages. Trivy scans the container image.
+- **The validator JAR** is a runtime dependency outside Go modules. It is verified against HL7's signing key on download and watched for advisories ([SECURITY.md](SECURITY.md#third-party-dependency-hl7-fhir-validator-jar)).
+
+What blocks a merge or a release:
+
+- **Vulnerabilities.** Any of these blocks:
+  - a known vulnerability, of any severity, in a dependency that a pull request adds or changes;
+  - a vulnerability that govulncheck finds reachable from fhirlint's code;
+  - an OSV-Scanner finding that affects fhirlint;
+  - a HIGH or CRITICAL finding in the image for which a fix exists.
+
+  A finding that doesn't affect fhirlint, for example unreachable code, may be accepted only with a written reason in the pull request. Once it reaches users, it also needs a VEX statement as described in [SECURITY.md](SECURITY.md#vulnerabilities-that-dont-affect-fhirlint).
+- **Malicious packages.** Always. The dependency is removed, and if a release contained it, the release is withdrawn and a security advisory is published.
+- **Licenses.** Dependencies must be under a permissive or weak-copyleft license compatible with fhirlint's Apache-2.0 license: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, PSF-2.0, Unlicense or 0BSD. Dependency review fails on any other license. An exception needs a maintainer decision with a reason, recorded in `security.yml` next to `allow-dependencies-licenses`.
+
+## Code review
+
+Every change to `main` goes through a pull request. Before it is merged, the reviewer checks the following. Today the reviewer is a maintainer ([GOVERNANCE.md](GOVERNANCE.md#roles)), who applies the same checks to their own pull requests.
+
+- **Correctness.** The change does what the issue asks, and the tests cover it. A bug fix has a test that fails without the fix. CI is green, including the coverage floors.
+- **Findings.** A new or changed built-in lint rule or reference check comes with the corpus diff and a precision sample ([docs/corpus-scan.md](docs/corpus-scan.md)). A change to how validator output is parsed, suppressed or reported has been checked against a real JAR run.
+- **Security.** fhirlint reads untrusted resources:
+  - input is never executed, and processes start with argument lists, never through a shell;
+  - paths stay inside what the user named;
+  - responses from the network are bounded;
+  - output escapes what it quotes.
+
+  [ARCHITECTURE.md](ARCHITECTURE.md#threat-model) has the threat model. A change that touches one of its boundaries says so in the pull request.
+- **Dependencies.** A new or updated dependency meets the [dependency rules](#dependencies).
+- **Docs.** User-visible behaviour is documented in the same pull request: the README, the pages in `docs/`, `fhirlint.yml.example` and the schemas.
+- **Conventions.** Branch name, signed-off commits, and a pull request description that says what changed, why, what was ruled out, and how to test it.
+
+The reviewer leaves comments on anything that needs to change, and a pull request is merged only when none are open. Branch protection doesn't enforce this; the reviewer does.
+
 ## Opening a PR
 
 - One PR per feature or fix — keep it focused
 - **All new flags must also be supported in `fhirlint.yml`** (config file)
 - New functionality requires tests — unit tests at minimum, integration tests where the JAR is involved
+- A bug fix comes with a test that fails without the fix
+- A major change adds or updates tests in the automated suite in the same PR: a new command, flag, report format or rule, or a change to how validator output is parsed, suppressed or reported
 - Update `README.md` if the flag table or usage examples are affected
 - PRs go directly against `main`
 - `go.mod` and `go.sum` must be tidy: CI runs `go mod tidy -diff`

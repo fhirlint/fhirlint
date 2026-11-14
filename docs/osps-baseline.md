@@ -35,7 +35,7 @@ Status: **met**, **partly met** or **open**.
 |---|---|---|
 | AC-01.01 MFA for sensitive actions | met | The organization requires two-factor authentication for every member, since 2026-11-14. |
 | AC-02.01 Least privilege for new collaborators | met | The organization's default repository permission is `read`. Write and admin access is granted per person. |
-| AC-03.01 No direct commits to the primary branch | met | Branch protection on `main` requires a pull request and seven status checks in strict mode, and it applies to administrators too. |
+| AC-03.01 No direct commits to the primary branch | met | Branch protection on `main` requires a pull request and nine status checks in strict mode, and it applies to administrators too. |
 | AC-03.02 Primary branch can't be deleted | met | Branch protection disallows deletion and force pushes. |
 | BR-01.01 Untrusted metadata is sanitized | met | Workflows pass event data to `run:` blocks through `env:`, never inline. zizmor, glsec and cfgaudit check for template injection on every pull request ([TESTING.md](../TESTING.md#supply-chain-and-repository-security)). |
 | BR-01.03 Untrusted code has no privileged credentials | met | Pull requests run under `pull_request`, with a read-only token and no secrets. The one `pull_request_target` workflow, [`sensitive-paths.yml`](../.github/workflows/sensitive-paths.yml), checks out `main` only and reads the pull request through the API. |
@@ -71,7 +71,7 @@ Level 1 is met.
 | GV-01.02 Roles and responsibilities | met | [GOVERNANCE.md](../GOVERNANCE.md#roles). |
 | GV-03.02 Requirements for contributions | met | [CONTRIBUTING.md](../CONTRIBUTING.md) (tests, linting, commit messages, AI-assisted contributions) and the [PR template](../.github/pull_request_template.md). |
 | LE-01.01 Contributors assert their right to contribute | met | Every commit in a pull request needs a DCO sign-off. The DCO check enforces it ([`.github/dco.yml`](../.github/dco.yml), [CONTRIBUTING.md](../CONTRIBUTING.md#developer-certificate-of-origin)). |
-| QA-03.01 Status checks pass before merging | met | Required checks on `main`: golangci-lint, unit tests, govulncheck, cfgaudit, glsec, the sensitive-paths gate and DCO, in strict mode. Releases additionally wait for all of CI (`require-green-ci.yml`). |
+| QA-03.01 Status checks pass before merging | met | Required checks on `main`: golangci-lint, unit tests, govulncheck, OSV-Scanner, dependency review, cfgaudit, glsec, the sensitive-paths gate and DCO, in strict mode. Releases additionally wait for all of CI (`require-green-ci.yml`). |
 | QA-06.01 Automated tests before a change is accepted | met | Unit tests on Linux, macOS and Windows are a required check ([TESTING.md](../TESTING.md)). |
 | SA-01.01 Design documentation of actions and actors | met | [ARCHITECTURE.md](../ARCHITECTURE.md): the steps of a run, the interfaces and network endpoints, and the actors in building and shipping. |
 | SA-02.01 External interfaces | met | CLI ([README](../README.md)), the Go library ([pkg.go.dev](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)), the JSON schemas of the config and the report, the GitHub Action ([`action.yml`](../action.yml)), the GitLab component ([docs/ci.md](ci.md)) and the LSP server ([docs/lsp.md](lsp.md)). |
@@ -84,26 +84,28 @@ Level 2 is met.
 
 ### Level 3
 
-These aren't a goal yet. Already met:
+Met:
 
 - AC-04.02: minimal permissions per job.
+- BR-01.04: no workflow takes input from collaborators (`workflow_dispatch` has no inputs), and zizmor checks the workflows for template injection.
 - BR-02.02: every asset name carries the version.
 - BR-07.02: the [secrets policy](../GOVERNANCE.md#secrets-and-credentials).
-- GV-04.01: [granting access](../GOVERNANCE.md#granting-access).
 - DO-03.01 and DO-03.02: [verifying archives](../README.md#pre-built-binary-recommended) and [the image](../README.md#verifying-the-image), including the signing workflow.
+- DO-04.01 and DO-05.01: [supported versions](../SECURITY.md#supported-versions). Only the latest release gets fixes, and a release stops getting them as soon as a newer one is published.
+- GV-04.01: [granting access](../GOVERNANCE.md#granting-access).
 - QA-02.02: an SPDX SBOM per archive, and an SBOM attestation on the image.
+- QA-04.02: not applicable. A release is built from this repository alone.
 - QA-06.02: [TESTING.md](../TESTING.md).
+- QA-06.03: the test policy in [Opening a PR](../CONTRIBUTING.md#opening-a-pr). A bug fix brings a test that fails without it, and a major change adds or updates tests.
 - SA-03.02: the [threat model](../ARCHITECTURE.md#threat-model) and the [assurance case](../ARCHITECTURE.md#assurance-case).
-- VM-05.03: dependency review and OSV-Scanner on every pull request.
+- VM-04.02: OpenVEX statements for [vulnerabilities that don't affect fhirlint](../SECURITY.md#vulnerabilities-that-dont-affect-fhirlint).
+- VM-05.01 and VM-05.02: what blocks a merge or a release, for vulnerabilities, malicious packages and licences ([Dependencies](../CONTRIBUTING.md#dependencies)).
+- VM-05.03: govulncheck, OSV-Scanner and dependency review are required checks on every pull request.
+- VM-06.01 and VM-06.02: static analysis findings block the merge at every severity, unless suppressed with a reason ([Linting](../CONTRIBUTING.md#linting)).
 
 Open:
 
-- BR-01.04: sanitizing trusted collaborator input.
-- DO-04.01 and DO-05.01: [SECURITY.md](../SECURITY.md#supported-versions) says that only the latest release gets fixes, but it doesn't give a duration per release.
-- QA-06.03: a written test policy for major changes.
-- QA-07.01: approval by a non-author.
-- VM-04.02: VEX documents.
-- VM-05.01, VM-05.02, VM-06.01 and VM-06.02: written remediation thresholds for SCA and SAST findings.
+- QA-07.01: approval by a non-author. With one active maintainer, there is nobody to approve.
 
 ## Codebases
 
@@ -121,7 +123,7 @@ Open:
 - **Base images:** pinned by tag and digest.
 - **Python CI tools:** hash-pinned in `.github/requirements`.
 - **Updates:** Dependabot raises version updates weekly for each ecosystem, after a seven-day cooldown, and raises security updates as soon as an advisory appears.
-- **Pull request gates:** dependency review blocks a pull request that adds a dependency with a known vulnerability or a licence outside the allowlist in `security.yml`. govulncheck and OSV-Scanner also run weekly on `main`.
+- **Pull request gates:** govulncheck, OSV-Scanner and dependency review are required checks. Dependency review blocks a pull request that adds a dependency with a known vulnerability or a licence outside the allowlist in `security.yml`. govulncheck and OSV-Scanner also run weekly on `main`. What blocks a merge is in [CONTRIBUTING.md](../CONTRIBUTING.md#dependencies).
 - **The HL7 validator JAR:** it isn't a Go module and is tracked separately: verified against HL7's signing key on download, and watched for advisories by `jar-monitor.yml` ([SECURITY.md](../SECURITY.md#third-party-dependency-hl7-fhir-validator-jar)).
 
 ## Open items
