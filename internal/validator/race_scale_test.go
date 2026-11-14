@@ -5,4 +5,6 @@
 
 package validator
 
-const raceEnabled = true
+// gobco type-checks every file regardless of build tags, so the flag is a
+// var declared once in race_flag_test.go and set here (#617).
+func init() { raceEnabled = true }

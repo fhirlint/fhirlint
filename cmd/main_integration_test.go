@@ -8,7 +8,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -26,11 +25,14 @@ import (
 // ./cmd/...` on a machine with no cached JAR must honour the pin too. A pin
 // that is not a release tag fails in EnsureJAR, which reports the download URL
 // it could not fetch.
-func TestMain(m *testing.M) {
-	if _, err := validator.EnsureJAR("", os.Getenv("FHIRLINT_VALIDATOR_VERSION")); err != nil {
-		fmt.Fprintf(os.Stderr, "integration tests: preparing the validator JAR: %v\n", err)
-		os.Exit(1)
+//
+// It runs as setUpTests from the package's one TestMain (main_test.go).
+func init() {
+	setUpTests = func() error {
+		if _, err := validator.EnsureJAR("", os.Getenv("FHIRLINT_VALIDATOR_VERSION")); err != nil {
+			return fmt.Errorf("integration tests: preparing the validator JAR: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "integration tests: running against validator %s\n", validator.ValidatorVersion())
+		return nil
 	}
-	fmt.Fprintf(os.Stderr, "integration tests: running against validator %s\n", validator.ValidatorVersion())
-	os.Exit(m.Run())
 }

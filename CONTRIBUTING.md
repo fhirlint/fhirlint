@@ -71,6 +71,13 @@ git diff --unified=0 origin/main -- '*.go' ':!*_test.go' > change.diff
 go run ./internal/tools/patchcoverage -min 60 -grace 5 -diff change.diff
 ```
 
+The *Branch coverage* job counts each branch with [gobco](https://github.com/rillig/gobco), so an untested `else` or early return shows even where the statement is covered, and it fails below `BRANCH_FLOOR` (#617). gobco type-checks every file of a package regardless of build tags. So a package keeps one untagged declaration of anything its tagged test files would otherwise each declare: `TestMain` lives in `main_test.go` and calls the `setUpTests` hook that the fake-validator and the integration files set in `init`, and `raceEnabled` is a var that the race build's `init` sets. Locally, per package:
+
+```bash
+go install github.com/rillig/gobco@v1.3.4
+gobco -branch -test -short ./internal/lint
+```
+
 ## Linting
 
 ```bash
