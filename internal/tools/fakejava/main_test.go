@@ -224,3 +224,28 @@ func TestTerminologyMarker(t *testing.T) {
 		t.Errorf("-tx n/a must not reach a server: code %d, %v", code, asked)
 	}
 }
+
+func TestCompareMode(t *testing.T) {
+	dest := t.TempDir()
+	var so, se bytes.Buffer
+	call := func(l, r string) int {
+		return run([]string{"-jar", "v.jar", "compare", "-version", "4.0.1", "-tx", "n/a", "-left", l, "-right", r, "-dest", dest}, &so, &se, env(nil))
+	}
+	if code := call("http://x/A", "http://x/B"); code != 0 {
+		t.Fatalf("compare: %d %s", code, se.String())
+	}
+	pages, _ := filepath.Glob(filepath.Join(dest, "sd*.html"))
+	if len(pages) != 1 {
+		t.Fatalf("want one comparison page, got %v", pages)
+	}
+	data, _ := os.ReadFile(pages[0]) //nolint:gosec // test output
+	if !strings.Contains(string(data), ">Messages<") || !strings.Contains(string(data), "Fake difference between http://x/A and http://x/B") {
+		t.Errorf("page: %s", data)
+	}
+	if code := call("unresolvable", "http://x/B"); code != 1 || !strings.Contains(so.String(), "Unable to resolve") {
+		t.Errorf("unresolvable: %d %q", code, so.String())
+	}
+	if code := run([]string{"-jar", "v.jar", "compare", "-left", "a"}, &so, &se, env(nil)); code != 2 {
+		t.Errorf("an incomplete compare call: %d", code)
+	}
+}

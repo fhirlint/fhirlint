@@ -242,3 +242,31 @@ func TestFakeServer_StartupFailures(t *testing.T) {
 		t.Error("an unknown FHIR version must be rejected")
 	}
 }
+
+func TestFakeRunCompare(t *testing.T) {
+	opts, _ := fakeSetup(t)
+	co := CompareOptions{FHIRVersion: "4.0.1", JARPath: opts.JARPath, DestDir: t.TempDir(), IGs: []string{"kbv.basis#1.5.0"}}
+	res, err := RunCompare("http://x/A", "http://x/B", co)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Differs() || res.Messages[0].Path != "Patient.name" || res.HTMLFile == "" {
+		t.Errorf("differing profiles: %+v", res)
+	}
+	co.DestDir = t.TempDir()
+	if res, err := RunCompare("http://x/A", "http://x/A", co); err != nil || res.Differs() {
+		t.Errorf("a profile against itself: %+v %v", res, err)
+	}
+	co.DestDir = t.TempDir()
+	if _, err := RunCompare("unresolvable", "http://x/A", co); err == nil || !strings.Contains(err.Error(), "Unable to resolve") {
+		t.Errorf("a side the JAR can't resolve must surface its line, got %v", err)
+	}
+	for _, bad := range []CompareOptions{{FHIRVersion: "4.0.1"}, {FHIRVersion: "9.9.9", DestDir: t.TempDir()}} {
+		if _, err := RunCompare("a", "b", bad); err == nil {
+			t.Errorf("%+v must be rejected", bad)
+		}
+	}
+	if _, err := RunCompare("", "b", co); err == nil {
+		t.Error("an empty side must be rejected")
+	}
+}
