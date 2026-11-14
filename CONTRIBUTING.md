@@ -131,6 +131,23 @@ refactor: extract buildArgs as pure function
 - First line under 72 characters
 - Reference the relevant issue number where applicable
 - **No AI co-author lines** — do not add `Co-Authored-By: Claude` or similar AI attribution to commits
+- **Signed off** with `git commit -s` (see [Developer Certificate of Origin](#developer-certificate-of-origin))
+
+## Developer Certificate of Origin
+
+Every commit must be signed off. A sign-off is a line at the end of the commit message:
+
+```text
+Signed-off-by: Your Name <you@example.com>
+```
+
+With it you certify the [Developer Certificate of Origin](https://developercertificate.org/): that you wrote the change or otherwise have the right to submit it under the project's license. `git commit -s` adds the line from your `user.name` and `user.email`; the name and email must match the commit's author.
+
+A check on every pull request blocks commits without a sign-off. To fix them:
+
+- the last commit: `git commit --amend -s --no-edit`, then force-push;
+- several commits: `git rebase --signoff main`, then force-push;
+- or, without rewriting history, add one empty commit that signs off the earlier ones, as the check's details page describes.
 
 ## Opening a PR
 
@@ -150,6 +167,8 @@ Contributions written with AI tools are welcome on the same terms as any other:
 - **Understand and stand behind every line.** You are the author. "The model wrote it" is not an answer in review.
 - **Check FHIR and validator claims against the source:** the FHIR specification, the IG, or the HL7 validator's code and messages. Do not take a model's word for them. Message ids, element paths, terminology behaviour and version numbers are where generated text is most often confidently wrong.
 - **One issue per pull request.** Generated changes tend to sprawl; keep them to what the issue asks for.
+
+The sign-off works the same way: with it you certify that you have the right to submit the change, however it was written.
 
 ## Adding a new flag
 

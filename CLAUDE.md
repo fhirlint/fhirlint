@@ -70,3 +70,4 @@ golangci-lint run
 - Follow [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 - Reference the issue number where applicable: `fix(#12): ...`
 - **No `Co-Authored-By` lines** — do not add AI co-author attribution to commits
+- Sign off every commit (`git commit -s`): the DCO check blocks commits without `Signed-off-by:` (#578)
