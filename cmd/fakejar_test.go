@@ -52,11 +52,9 @@ func TestMain(m *testing.M) {
 // buildFakeJava builds internal/tools/fakejava into dir as java (java.exe on
 // Windows), with the go command that runs these tests.
 func buildFakeJava(dir string) error {
-	gobin := filepath.Join(runtime.GOROOT(), "bin", "go")
-	if _, err := os.Stat(gobin); err != nil {
-		if gobin, err = exec.LookPath("go"); err != nil {
-			return err
-		}
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return err
 	}
 	name := "java"
 	if runtime.GOOS == "windows" {
@@ -190,10 +188,10 @@ func argAfter(args []string, flag string) []string {
 func writeFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+	if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil { //nolint:gosec // a test file under the test's temp dir
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
+	if err := os.WriteFile(p, []byte(content), 0o600); err != nil { //nolint:gosec // a test file under the test's temp dir
 		t.Fatal(err)
 	}
 	return p

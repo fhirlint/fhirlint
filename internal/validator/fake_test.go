@@ -37,11 +37,9 @@ func TestMain(m *testing.M) {
 }
 
 func buildFakeJava(dir string) error {
-	gobin := filepath.Join(runtime.GOROOT(), "bin", "go")
-	if _, err := os.Stat(gobin); err != nil {
-		if gobin, err = exec.LookPath("go"); err != nil {
-			return err
-		}
+	gobin, err := exec.LookPath("go")
+	if err != nil {
+		return err
 	}
 	name := "java"
 	if runtime.GOOS == "windows" {

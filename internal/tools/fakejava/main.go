@@ -96,13 +96,13 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	if len(oos) > 1 {
 		entries := make([]map[string]any, len(oos))
 		for i, oo := range oos {
-			entries[i] = map[string]any{"fullUrl": "file://" + inputs[i], "resource": oo}
+			entries[i] = map[string]any{"fullUrl": "file://" + inputs[i], "resource": oo} //nolint:gosec // oos has one entry per input
 		}
 		doc = map[string]any{"resourceType": "Bundle", "type": "collection", "entry": entries}
 	}
 	b, err := json.Marshal(doc)
 	if err == nil {
-		err = os.WriteFile(out, b, 0o600)
+		err = os.WriteFile(out, b, 0o600) //nolint:gosec // -output as fhirlint under test passed it
 	}
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "fakejava: %v\n", err)
