@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -212,4 +213,84 @@ func TestResolve_URL_DefaultTimeout_IsApplied(t *testing.T) {
 		t.Fatalf("expected success with default timeout, got: %v", err)
 	}
 	in.Cleanup()
+}
+
+// limitURLBytes lowers the --url size limit and points the temp directory at
+// an empty one, so a test can also check that nothing is left behind.
+func limitURLBytes(t *testing.T, n int64) string {
+	t.Helper()
+	old := maxURLBytes
+	maxURLBytes = n
+	t.Cleanup(func() { maxURLBytes = old })
+	dir := t.TempDir()
+	for _, v := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(v, dir)
+	}
+	return dir
+}
+
+func assertEmptyDir(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("temp files left behind: %v", entries)
+	}
+}
+
+func TestResolve_URL_AtLimit_IsAccepted(t *testing.T) {
+	limitURLBytes(t, 16)
+	body := strings.Repeat("x", 16)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	in, err := Resolve("", srv.URL, 0)
+	if err != nil {
+		t.Fatalf("a body of exactly the limit must be accepted: %v", err)
+	}
+	defer in.Cleanup()
+	data, err := os.ReadFile(in.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != body {
+		t.Errorf("temp file = %q, want %q", data, body)
+	}
+}
+
+func TestResolve_URL_StreamedBodyOverLimit_Fails(t *testing.T) {
+	dir := limitURLBytes(t, 16)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Flushing first sends the body chunked, without a Content-Length,
+		// so only the read itself can notice the size.
+		_, _ = w.Write([]byte(strings.Repeat("x", 10)))
+		w.(http.Flusher).Flush()
+		_, _ = w.Write([]byte(strings.Repeat("x", 10)))
+	}))
+	defer srv.Close()
+
+	_, err := Resolve("", srv.URL, 0)
+	if err == nil || !strings.Contains(err.Error(), "over the limit of 16 bytes") {
+		t.Fatalf("want an over-the-limit error, got %v", err)
+	}
+	assertEmptyDir(t, dir)
+}
+
+func TestResolve_URL_ContentLengthOverLimit_FailsBeforeReading(t *testing.T) {
+	dir := limitURLBytes(t, 16)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "1000")
+		_, _ = w.Write([]byte(strings.Repeat("x", 1000)))
+	}))
+	defer srv.Close()
+
+	_, err := Resolve("", srv.URL, 0)
+	if err == nil || !strings.Contains(err.Error(), "is 1000 bytes, over the limit of 16") {
+		t.Fatalf("want a Content-Length error, got %v", err)
+	}
+	assertEmptyDir(t, dir)
 }

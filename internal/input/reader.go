@@ -13,6 +13,12 @@ import (
 
 const defaultHTTPTimeout = 30 * time.Second
 
+// maxURLBytes bounds a --url response. The body comes from a server fhirlint
+// has no reason to trust, so it is streamed to disk and cut off here rather
+// than read into memory whole (#586). The limit matches the one for package
+// downloads in internal/coverage. A variable so tests can lower it.
+var maxURLBytes int64 = 512 << 20
+
 type Source int
 
 const (
@@ -81,20 +87,36 @@ func fromHTTP(rawURL string, timeout time.Duration) (*Input, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d from %s", resp.StatusCode, rawURL)
 	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading response: %w", err)
+	if resp.ContentLength > maxURLBytes {
+		return nil, fmt.Errorf("response from %s is %d bytes, over the limit of %d", rawURL, resp.ContentLength, maxURLBytes)
 	}
 	ext := "json"
 	if strings.Contains(resp.Header.Get("Content-Type"), "xml") {
 		ext = "xml"
 	}
-	tmp, err := writeTempFile(data, rawURL, ext)
+	f, err := os.CreateTemp("", "fhirlint-*."+ext)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
-	tmp.Label = rawURL
-	return tmp, nil
+	n, copyErr := io.Copy(f, io.LimitReader(resp.Body, maxURLBytes+1))
+	closeErr := f.Close()
+	switch {
+	case copyErr != nil:
+		_ = os.Remove(f.Name())
+		return nil, fmt.Errorf("reading response: %w", copyErr)
+	case n > maxURLBytes:
+		_ = os.Remove(f.Name())
+		return nil, fmt.Errorf("response from %s is over the limit of %d bytes", rawURL, maxURLBytes)
+	case closeErr != nil:
+		_ = os.Remove(f.Name())
+		return nil, closeErr
+	}
+	return &Input{
+		Source:   SourceStdin,
+		Path:     f.Name(),
+		TempFile: f.Name(),
+		Label:    rawURL,
+	}, nil
 }
 
 // writeTempFileDetectExt creates a temp file with .xml or .json extension based on content.
