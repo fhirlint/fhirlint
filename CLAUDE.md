@@ -58,6 +58,16 @@ golangci-lint run
 
 `//nolint` annotations require a reason comment.
 
+## Working on an issue
+
+Treat the issue as a hypothesis to test, not a spec to fill. fhirlint's value is findings people can trust, so the thinking matters more than the diff.
+
+- Before coding, restate the problem in your own words and check the premise against the primary source: the FHIR specification (element definitions, invariants, the datatype), the IG, or the HL7 validator's code and messages. If it doesn't hold, say so and propose the correction instead of implementing a change you've shown to be wrong.
+- Hunt the counter-evidence: a realistic valid resource or configuration that trips the change (false positive), the findings a fix could silently drop (`scripts/corpus/must-stay-reported.txt`), a simpler or more general approach, an existing helper in `internal/lint`, `internal/refcheck` or `internal/validator` that already covers it.
+- For any change to a built-in lint rule or the reference check, run `scripts/rule-diff.sh` over the corpus and put the finding delta (added/removed, true vs false positive) in the PR ([docs/corpus-scan.md](docs/corpus-scan.md)). For a change to how validator output is parsed or reported, check it against a real JAR run. Don't claim corpus-clean from unit tests.
+- Put the reasoning in the PR description: what you considered and rejected, the scope boundary (what it deliberately doesn't do), the tradeoffs. "Implements #N" is not a description.
+- Disagreeing with the issue, backed by evidence, is wanted. Raise it rather than quietly building the wrong thing.
+
 ## Branching & PRs
 
 - Every issue gets its own branch: `issue-<number>-<short-slug>`
