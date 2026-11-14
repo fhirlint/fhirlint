@@ -15,6 +15,11 @@
 //	FAKE_WARNING  a warning, message id FAKE_WARNING_ID, at Patient, line 1
 //	FAKE_CRASH    the JAR prints a Java exception and exits 1 without output
 //
+//	FAKE_TX:<code>  with -tx URL, ask that terminology server about <code>
+//	                (GET <tx>/CodeSystem/$validate-code?system=http://example.org/cs&code=<code>):
+//	                an error FAKE_TX_UNKNOWN when it answers result false, and
+//	                FAKE_TX_UNAVAILABLE when it doesn't answer 200 (#612)
+//
 // An input without a marker gets the validator's "All OK" information issue.
 // Several inputs come back as a Bundle of OperationOutcomes, one per input in
 // order, as the real validator writes them.
@@ -40,7 +45,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -79,7 +86,7 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		_, _ = fmt.Fprintln(stderr, "fakejava: validation refused")
 		return 3
 	}
-	jar, ver, out := -1, -1, ""
+	jar, ver, out, tx := -1, -1, "", ""
 	for i, a := range args {
 		switch {
 		case a == "-jar" && jar < 0:
@@ -88,6 +95,8 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			ver = i
 		case a == "-output" && i+1 < len(args):
 			out = args[i+1]
+		case a == "-tx" && i+1 < len(args) && args[i+1] != "n/a":
+			tx = strings.TrimRight(args[i+1], "/")
 		}
 	}
 	if jar < 0 || ver < 0 || ver < jar+2 || out == "" {
@@ -111,7 +120,11 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash`)
 			return 1
 		}
-		oos = append(oos, outcome(string(data)))
+		oo := outcome(string(data))
+		if tx != "" {
+			addTerminologyIssues(oo, tx, string(data))
+		}
+		oos = append(oos, oo)
 	}
 	var doc any = oos[0]
 	if len(oos) > 1 {
@@ -220,4 +233,53 @@ func serve(port string, stdout, stderr io.Writer, getenv func(string) string) in
 	<-stop
 	_ = ln.Close()
 	return 0
+}
+
+var txCode = regexp.MustCompile(`FAKE_TX:([A-Za-z0-9-]+)`)
+
+// addTerminologyIssues asks the terminology server at tx about every
+// FAKE_TX:<code> in text, as the validator checks a code against its server.
+func addTerminologyIssues(oo map[string]any, tx, text string) {
+	matches := txCode.FindAllStringSubmatch(text, -1)
+	if len(matches) == 0 {
+		return
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	var found []map[string]any
+	for _, m := range matches {
+		u := tx + "/CodeSystem/$validate-code?" + url.Values{"system": {"http://example.org/cs"}, "code": {m[1]}}.Encode()
+		resp, err := client.Get(u) //nolint:gosec,noctx // the terminology server fhirlint under test passed
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if resp != nil {
+				_ = resp.Body.Close()
+			}
+			found = append(found, issue("error", "exception", "Terminology server unavailable for code "+m[1], "FAKE_TX_UNAVAILABLE", "Patient"))
+			continue
+		}
+		var params struct {
+			Parameter []struct {
+				Name         string `json:"name"`
+				ValueBoolean bool   `json:"valueBoolean"`
+			} `json:"parameter"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&params)
+		_ = resp.Body.Close()
+		ok := false
+		for _, p := range params.Parameter {
+			if p.Name == "result" {
+				ok = p.ValueBoolean
+			}
+		}
+		if !ok {
+			found = append(found, issue("error", "code-invalid", "Unknown code "+m[1], "FAKE_TX_UNKNOWN", "Patient"))
+		}
+	}
+	if len(found) == 0 {
+		return
+	}
+	issues := oo["issue"].([]map[string]any)
+	if len(issues) == 1 && issues[0]["severity"] == "information" {
+		issues = nil
+	}
+	oo["issue"] = append(issues, found...)
 }
