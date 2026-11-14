@@ -33,6 +33,13 @@ var (
 	pascalRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9]*$`)
 )
 
+// notCanonicalURL lists the resource types whose url element is not a
+// canonical URL (#577): in R4, R4B and R5, Device.url and (R4, R4B)
+// DeviceDefinition.url are the "network address to contact device". Every
+// other resource's top-level url is its canonical identifier.
+// canonical-url-pattern has nothing to say about a network address.
+var notCanonicalURL = map[string]bool{"Device": true, "DeviceDefinition": true}
+
 // registry holds every built-in rule, keyed by name.
 var registry = map[string]builtinRule{
 	"id-kebab-case": {
@@ -59,6 +66,9 @@ var registry = map[string]builtinRule{
 		defaultSev:     "error",
 		requiredParams: []string{"base"},
 		check: func(res gjson.Result, params map[string]string) []rawFinding {
+			if notCanonicalURL[res.Get("resourceType").String()] {
+				return nil
+			}
 			base := params["base"]
 			url := res.Get("url")
 			if !url.Exists() {

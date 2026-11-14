@@ -36,6 +36,11 @@ FHIRLINT_VALIDATOR_VERSION=6.10.1 go test ./... -tags integration
 # in internal/profiles/aliases.go or a row in internal/validator/fhirversion.go
 go test -tags registry -v ./internal/profiles/ ./internal/validator/
 
+# Corpus false-positive scan — run it when you add or change a built-in lint
+# rule (internal/lint) or the reference check (internal/refcheck), and paste the
+# summary into the PR; conventions in docs/corpus-scan.md
+scripts/corpus-fetch.sh && scripts/rule-diff.sh
+
 # Fuzz one target, e.g. the LSP framing. The targets are the Fuzz* functions;
 # .github/workflows/fuzz.yml lists them all with their packages
 go test ./internal/lsp -run '^$' -fuzz '^FuzzRead$' -fuzztime 60s -fuzzminimizetime 5s

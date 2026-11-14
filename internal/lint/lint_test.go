@@ -107,6 +107,17 @@ func TestCanonicalURLPattern(t *testing.T) {
 	if len(good) != 0 {
 		t.Fatalf("expected no finding for compliant url, got %+v", good)
 	}
+
+	// Device.url and DeviceDefinition.url are network addresses, not
+	// canonicals (#577); Contract.url is a canonical and stays checked.
+	for _, rt := range []string{"Device", "DeviceDefinition"} {
+		if got := eng.Evaluate([]byte(`{"resourceType":"` + rt + `","url":"http://acme.com/goodhealth/ehr/"}`)); len(got) != 0 {
+			t.Errorf("%s.url is not a canonical, got %+v", rt, got)
+		}
+	}
+	if got := eng.Evaluate([]byte(`{"resourceType":"Contract","url":"http://other.com/Contract/1"}`)); len(got) != 1 {
+		t.Errorf("Contract.url is a canonical and must be checked, got %+v", got)
+	}
 }
 
 func TestProfileNamePascalCase(t *testing.T) {

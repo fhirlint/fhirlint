@@ -49,8 +49,11 @@ func (ix *Index) addTypeID(rt, id string) {
 	}
 }
 
-// Add indexes a resource's identity and, for Bundles, each entry's fullUrl and
-// nested resource identity. Malformed JSON is ignored.
+// Add indexes a resource's identity and, for every Bundle in it, each entry's
+// fullUrl and nested resource identity. That includes a Bundle inside a Bundle
+// entry and a Bundle contained in another resource (a Questionnaire's
+// extraction template, for one): their entries reference each other just like
+// a top-level Bundle's do (#577). Malformed JSON is ignored.
 func (ix *Index) Add(resourceJSON []byte) {
 	var root map[string]interface{}
 	if err := json.Unmarshal(resourceJSON, &root); err != nil {
@@ -59,11 +62,28 @@ func (ix *Index) Add(resourceJSON []byte) {
 	rt, _ := root["resourceType"].(string)
 	id, _ := root["id"].(string)
 	ix.addTypeID(rt, id)
+	ix.addBundles(root)
+}
 
-	if rt != "Bundle" {
-		return
+// addBundles indexes the entries of every Bundle at or below node.
+func (ix *Index) addBundles(node interface{}) {
+	switch n := node.(type) {
+	case map[string]interface{}:
+		if rt, _ := n["resourceType"].(string); rt == "Bundle" {
+			ix.addBundleEntries(n)
+		}
+		for _, v := range n {
+			ix.addBundles(v)
+		}
+	case []interface{}:
+		for _, v := range n {
+			ix.addBundles(v)
+		}
 	}
-	entries, ok := root["entry"].([]interface{})
+}
+
+func (ix *Index) addBundleEntries(bundle map[string]interface{}) {
+	entries, ok := bundle["entry"].([]interface{})
 	if !ok {
 		return
 	}
@@ -133,29 +153,46 @@ func (c *collector) add(iss validator.Issue, ref string) {
 }
 
 // walk recursively visits node, collecting reference findings. contained is the
-// set of contained resource ids in scope for the enclosing resource; it is
-// recomputed whenever a nested resource (an object with a resourceType) is
-// entered.
+// set of contained resource ids in scope. It is recomputed whenever a resource
+// (an object with a resourceType) is entered, except for a contained resource:
+// that has no contained resources of its own, and a "#id" in it points at a
+// sibling in its container (#577).
 func walk(node interface{}, path string, contained map[string]struct{}, ix *Index, c *collector) {
+	walkNode(node, path, contained, false, ix, c)
+}
+
+func walkNode(node interface{}, path string, contained map[string]struct{}, inContained bool, ix *Index, c *collector) {
 	switch n := node.(type) {
 	case map[string]interface{}:
-		if _, ok := n["resourceType"]; ok {
+		_, isResource := n["resourceType"]
+		if isResource && !inContained {
 			contained = containedIDs(n)
 		}
 		for k, v := range n {
 			if k == "reference" {
-				if ref, ok := v.(string); ok {
+				// A string "reference" directly on a resource is one of its own
+				// elements, such as DetectedIssue.reference (a uri), not the
+				// reference of a Reference datatype, which is always an object.
+				if ref, ok := v.(string); ok && !isResource {
 					if iss, normalised, ok := classify(ref, path+".reference", contained, ix); ok {
 						c.add(iss, normalised)
 					}
 					continue
 				}
 			}
-			walk(v, joinPath(path, k), contained, ix, c)
+			if k == "contained" && isResource && !inContained {
+				if arr, ok := v.([]interface{}); ok {
+					for i, e := range arr {
+						walkNode(e, fmt.Sprintf("%s[%d]", joinPath(path, k), i), contained, true, ix, c)
+					}
+					continue
+				}
+			}
+			walkNode(v, joinPath(path, k), contained, false, ix, c)
 		}
 	case []interface{}:
 		for i, e := range n {
-			walk(e, fmt.Sprintf("%s[%d]", path, i), contained, ix, c)
+			walkNode(e, fmt.Sprintf("%s[%d]", path, i), contained, inContained, ix, c)
 		}
 	}
 }

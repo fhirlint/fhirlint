@@ -37,7 +37,7 @@ lint:
 |------|------------------|------------|--------|
 | `id-kebab-case` | `warning` | — | `Resource.id` is lowercase, hyphen-separated (`[a-z0-9]` words joined by `-`). |
 | `profile-name-pascalcase` | `warning` | — | `StructureDefinition.name` is PascalCase (starts uppercase; letters and digits only). |
-| `canonical-url-pattern` | `error` | `base` (required) | A resource's canonical `url` starts with the configured `base`. |
+| `canonical-url-pattern` | `error` | `base` (required) | A resource's canonical `url` starts with the configured `base`. `Device` and `DeviceDefinition` are skipped: their `url` is a network address, not a canonical. |
 
 Rules only fire when the relevant element is present: a resource without an
 `id`, a non-`StructureDefinition` resource, or a resource without a `url` is not
@@ -48,6 +48,9 @@ flagged by the respective rule.
 The FHIR validator rejects an *invalid* id (e.g. one containing an underscore or
 exceeding 64 characters). It does **not** object to `ExamplePatient1` — a valid
 FHIR id that is not lowercase-hyphenated. Convention rules cover that gap.
+
+How the rules are checked for false positives on real-world data, and what a
+new or changed rule has to go through, is in [corpus-scan.md](corpus-scan.md).
 
 ## Suppressing a rule finding
 

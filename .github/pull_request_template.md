@@ -19,3 +19,4 @@
 - [ ] `golangci-lint run` passes locally
 - [ ] `go mod tidy -diff` reports nothing
 - [ ] `TESTING.md` updated if a test layer was added, removed or changed
+- [ ] Built-in lint rule or reference check changed: `scripts/rule-diff.sh` summary and precision sample in the description ([docs/corpus-scan.md](../docs/corpus-scan.md))

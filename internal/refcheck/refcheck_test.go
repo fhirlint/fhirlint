@@ -220,3 +220,51 @@ func check(resourceJSON []byte, ix *Index) []validator.Issue {
 	issues, _ := CheckWithRefs(resourceJSON, ix)
 	return issues
 }
+
+// A "#id" inside a contained resource points at a sibling in the container;
+// contained resources have no contained resources of their own (#577, found on
+// the core examples, e.g. PlanDefinition-example-cardiology-os).
+func TestContainedSiblingReference(t *testing.T) {
+	res := `{"resourceType":"PlanDefinition","id":"pd","contained":[
+		{"resourceType":"ActivityDefinition","id":"ad","productReference":{"reference":"#med"}},
+		{"resourceType":"Medication","id":"med"}],
+		"action":[{"definitionCanonical":"#ad"}]}`
+	if issues := check([]byte(res), NewIndex()); len(issues) != 0 {
+		t.Fatalf("sibling contained reference should resolve, got %+v", issues)
+	}
+	broken := strings.Replace(res, `"#med"`, `"#nope"`, 1)
+	issues := check([]byte(broken), NewIndex())
+	if len(issues) != 1 || issues[0].Location != "PlanDefinition.contained[0].productReference.reference" {
+		t.Fatalf("missing sibling should still be reported once, got %+v", issues)
+	}
+}
+
+// The entries of a Bundle nested in a Bundle entry, or contained in another
+// resource, resolve against each other (#577, found on the core examples'
+// Bundle of Bundles and SDC's extraction templates).
+func TestNestedBundleEntriesAreIndexed(t *testing.T) {
+	outer := `{"resourceType":"Bundle","id":"outer","type":"collection","entry":[
+		{"fullUrl":"https://example.com/base/Bundle/3","resource":{"resourceType":"Bundle","id":"3","type":"collection","entry":[
+			{"fullUrl":"https://example.com/base/DiagnosticReport/3","resource":{"resourceType":"DiagnosticReport","id":"3","result":[{"reference":"Observation/o1"}]}},
+			{"fullUrl":"https://example.com/base/Observation/o1","resource":{"resourceType":"Observation","id":"o1"}}]}}]}`
+	if issues := check([]byte(outer), index(outer)); len(issues) != 0 {
+		t.Fatalf("reference into a nested Bundle should resolve, got %+v", issues)
+	}
+
+	template := `{"resourceType":"Questionnaire","id":"q","contained":[{"resourceType":"Bundle","id":"tpl","type":"transaction","entry":[
+		{"fullUrl":"urn:uuid:6f6177d2-13ee-4d27-b0e8-3eaf663dd031","resource":{"resourceType":"Patient"}},
+		{"fullUrl":"urn:uuid:7a1b","resource":{"resourceType":"Observation","subject":{"reference":"urn:uuid:6f6177d2-13ee-4d27-b0e8-3eaf663dd031"}}}]}]}`
+	if issues := check([]byte(template), index(template)); len(issues) != 0 {
+		t.Fatalf("urn reference inside a contained Bundle should resolve, got %+v", issues)
+	}
+}
+
+// DetectedIssue.reference is a uri element of the resource, not the reference
+// of a Reference datatype (#577).
+func TestResourceLevelReferenceElementSkipped(t *testing.T) {
+	res := `{"resourceType":"DetectedIssue","id":"d","reference":"http://www.tmhp.com/guidelines.pdf","patient":{"reference":"Patient/missing"}}`
+	issues := check([]byte(res), NewIndex())
+	if len(issues) != 1 || issues[0].Location != "DetectedIssue.patient.reference" {
+		t.Fatalf("want only the patient reference, got %+v", issues)
+	}
+}
