@@ -7,6 +7,8 @@ This page records how fhirlint measures up against two OpenSSF yardsticks (#578)
 
 Assessed on 2026-11-14. Repository settings were read through the GitHub API on that day.
 
+The same answers are published as [bestpractices.dev project 16686](https://www.bestpractices.dev/projects/16686): the OpenSSF Best Practices passing badge, and OSPS Baseline levels 1 and 2, all reached on 2026-11-14. When a control changes here, update it there too.
+
 ## Scorecard
 
 A local run of Scorecard v5.6.0 against `main` before this change scored 7.4 out of 10. This table shows what was found and what #578 did about it:
@@ -19,7 +21,7 @@ A local run of Scorecard v5.6.0 against `main` before this change scored 7.4 out
 | Signed-Releases | 0 | Scorecard looks for a signature or provenance file among the release assets. The SLSA provenance from `attest-build-provenance` was only in the GitHub attestations API. | `release.yml` attaches it to each release as `fhirlint_<version>.sigstore.json` and `.intoto.jsonl`. The score rises as new releases replace the last five that Scorecard checks. |
 | Branch-Protection | 3 | The protection rules don't apply to administrators. Pull requests and reviews aren't required, and there are no code owners. | On 2026-11-14 branch protection was extended to administrators, and a pull request is now required, with no approvals, so a single maintainer can still merge. Required reviews, stale-review dismissal and code owners stay off; see Code-Review. |
 | Code-Review | 0 | 0 of 24 recent changesets were approved by someone other than the author. | Not changed. Approvals aren't required, so a maintainer can merge alone. CI, the sensitive-paths gate and the PR template are the review that exists. |
-| CII-Best-Practices | 0 | No OpenSSF Best Practices badge. | Not changed. The badge needs a maintainer to register the project at bestpractices.dev; see open items. |
+| CII-Best-Practices | 0 | No OpenSSF Best Practices badge. | On 2026-11-14 the project was registered as [bestpractices.dev project 16686](https://www.bestpractices.dev/projects/16686), and it reached the passing badge and OSPS Baseline levels 1 and 2 there the same day. |
 
 The other checks scored 10: Binary-Artifacts, CI-Tests, Contributors, Dangerous-Workflow, Dependency-Update-Tool, Fuzzing, License, Maintained, Packaging, SAST and Security-Policy.
 
@@ -124,8 +126,7 @@ Open:
 
 ## Open items
 
-1. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
-2. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
+1. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
 
 ## Keeping this page current
 

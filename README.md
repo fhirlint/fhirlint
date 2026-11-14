@@ -12,6 +12,8 @@
 [![agent security: cfgaudit](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cfgaudit/cfgaudit/main/assets/badge/v1.json)](https://github.com/cfgaudit/cfgaudit)
 [![CI/CD security: glsec](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/glsec/glsec/main/assets/badge/v1.json)](https://github.com/glsec/glsec)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fhirlint/fhirlint/badge)](https://scorecard.dev/viewer/?uri=github.com/fhirlint/fhirlint)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16686/badge)](https://www.bestpractices.dev/projects/16686)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/16686/baseline)](https://www.bestpractices.dev/projects/16686)
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
