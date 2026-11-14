@@ -11,9 +11,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fhirlint/fhirlint/internal/updatecheck"
 )
 
-const advisoriesURL = "https://api.github.com/repos/hapifhir/org.hl7.fhir.core/security-advisories"
+// advisoriesURL is the validator's advisory list, under the same API base as
+// the release lookups, so a test can serve both (#613).
+func advisoriesURL() string {
+	return updatecheck.APIBase + "/repos/hapifhir/org.hl7.fhir.core/security-advisories"
+}
 
 // advisoryTimeout keeps an unreachable API from stalling the audit. It used to
 // borrow the update check's constant; that moved to internal/updatecheck (#360)
@@ -165,7 +171,7 @@ func fetchAdvisories() ([]Advisory, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), advisoryTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, advisoriesURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, advisoriesURL(), nil)
 	if err != nil {
 		return nil, err
 	}

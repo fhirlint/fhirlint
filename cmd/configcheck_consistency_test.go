@@ -35,7 +35,7 @@ var configOnlyKeys = map[string]bool{
 // configcheck.
 func TestAllValidateFlagsKnownToConfigCheck(t *testing.T) {
 	known := configcheck.KnownKeys()
-	validateCmd.Flags().VisitAll(func(f *pflag.Flag) {
+	visitValidateFlags(func(f *pflag.Flag) {
 		if cliOnlyFlags[f.Name] {
 			return
 		}
@@ -77,7 +77,7 @@ func TestAllValidateFlagsDocumented(t *testing.T) {
 		t.Fatalf("could not read %s: %v", referenceDoc, err)
 	}
 	content := string(data)
-	validateCmd.Flags().VisitAll(func(f *pflag.Flag) {
+	visitValidateFlags(func(f *pflag.Flag) {
 		if !strings.Contains(content, "--"+f.Name) {
 			t.Errorf("flag --%s not mentioned anywhere in %s", f.Name, referenceDoc)
 		}
@@ -120,4 +120,17 @@ func TestFHIRVersionsDocumentedInExampleConfig(t *testing.T) {
 		}
 	}
 	t.Errorf("fhirlint.yml.example has no line starting with %q", prefix)
+}
+
+// visitValidateFlags visits validate's own flags. Not validateCmd.Flags():
+// once any command has run through rootCmd.Execute, as the fake-validator
+// tests do, cobra has merged the inherited root flags and --help into it, and
+// those are documented and configured elsewhere.
+func visitValidateFlags(fn func(*pflag.Flag)) {
+	validateCmd.LocalNonPersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Name == "help" {
+			return
+		}
+		fn(f)
+	})
 }
