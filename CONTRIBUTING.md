@@ -253,6 +253,7 @@ Open a [GitHub issue](https://github.com/fhirlint/fhirlint/issues) and include:
 
 ## Suggesting features
 
+- See the [roadmap](ROADMAP.md) for what is planned and what is deliberately out of scope
 - Open an issue first before starting implementation
 - Describe the **use case**, not just the solution
 - Check existing issues — the feature may already be planned
