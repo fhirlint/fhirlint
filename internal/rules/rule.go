@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package rules implements custom FHIRPath-based lint rules. A rule asserts a
 // boolean FHIRPath expression over every validated resource; when the assertion
 // does not hold, the rule produces a validator.Issue that flows through the

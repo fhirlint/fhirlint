@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package localig creates a minimal temporary FHIR IG package directory from
 // individual FHIR resource files (CodeSystems, ValueSets, etc.).
 // The resulting directory can be passed to the HL7 FHIR Validator via -ig.

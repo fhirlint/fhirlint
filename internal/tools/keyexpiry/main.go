@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Command keyexpiry prints how long the pinned HL7 signing key remains valid,
 // as "<days>\t<YYYY-MM-DD>". CI uses it to open a rotation issue before the pin
 // lapses, since an expired pin degrades JAR verification quietly (#358).

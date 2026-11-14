@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package baseline implements the fhirlint-baseline.json file for suppressing
 // pre-existing validation issues and failing only on regressions.
 package baseline

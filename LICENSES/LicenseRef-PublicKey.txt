@@ -1,0 +1,3 @@
+This file is an OpenPGP public key, published by its owner so that anyone can
+verify the signatures made with it. It is redistributed unchanged, for that
+purpose only. No license is granted or claimed for it by the fhirlint project.

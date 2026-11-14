@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package scaling holds the linear scaling test and the benchmarks of
 // fhirlint's Go-side pipeline after the validator: suppression, baseline,
 // package hints, --group, every report format and --slowest (#552). It has no

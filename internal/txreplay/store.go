@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package txreplay records the validator's terminology traffic and replays it
 // from disk, so a validation run can be reproduced without reaching a
 // terminology server.

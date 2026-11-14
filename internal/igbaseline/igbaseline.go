@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package igbaseline reads the validation baseline an IG package ships about
 // its own contents.
 //

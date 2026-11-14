@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Command fakejava stands in for "java" running the HL7 validator, so the
 // tests of fhirlint's validate pipeline run without Java (#595). The tests of
 // cmd and pkg/fhirlint build it into a directory as "java" and put that

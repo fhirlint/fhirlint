@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package fhirpath implements the subset of FHIRPath used by fhirlint's custom
 // lint rules. It evaluates expressions directly against FHIR JSON (via gjson),
 // so it is FHIR-version agnostic (R4/R4B/R5) and needs no JVM or generated

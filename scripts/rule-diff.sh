@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 # rule-diff.sh [-n N] [A_REF] [B_REF] — diff the findings of fhirlint's own
 # rules (built-in lint rules and the reference check) between two builds over
 # the real-world corpus (#577).

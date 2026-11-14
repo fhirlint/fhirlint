@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package resultcache stores validation results on disk keyed by file content hash.
 // Cache entries are only valid when the file content and all validation options match.
 package resultcache

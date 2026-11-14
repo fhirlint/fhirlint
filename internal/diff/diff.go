@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package diff compares two validation runs and categorises every issue as
 // new, resolved, or unchanged. It is the engine behind the `fhirlint diff`
 // command used for change-control evidence in regulated environments.

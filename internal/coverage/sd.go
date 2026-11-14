@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package coverage reports which elements of a profile are actually exercised
 // by a set of FHIR resources, with an emphasis on the mustSupport elements.
 //

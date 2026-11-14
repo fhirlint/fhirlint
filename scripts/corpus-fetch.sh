@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 # corpus-fetch.sh [DIR] — download the real-world FHIR corpus for the
 # false-positive scan of the built-in rules (#577) and unpack it into DIR
 # (default: $FHIRLINT_CORPUS, else ~/.cache/fhirlint-corpus).

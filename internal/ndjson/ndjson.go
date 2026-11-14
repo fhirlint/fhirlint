@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package ndjson splits NDJSON (Newline Delimited JSON) files produced by FHIR
 // Bulk Data exports into per-resource temp files for individual validation.
 package ndjson

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 #
 # fhirlint PostToolUse hook — validate a FHIR resource right after Claude edits it.
 #

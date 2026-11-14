@@ -152,6 +152,19 @@ A check on every pull request blocks commits without a sign-off. To fix them:
 - several commits: `git rebase --signoff main`, then force-push;
 - or, without rewriting history, add one empty commit that signs off the earlier ones, as the check's details page describes.
 
+## License headers
+
+Every source file starts with a copyright and license line, so the license stays with a file that is copied out of the repository on its own:
+
+```go
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+```
+
+Shell scripts and the `Dockerfile` use `#` instead of `//`; in a script the lines go right after the `#!` line. "The fhirlint Authors" are everyone who has contributed to fhirlint; the Git history records who wrote what. The *License headers* check fails on any `.go` file, shell script or `Dockerfile` without the SPDX line.
+
+All other files, such as Markdown, YAML, fixtures and images, get the same license from [`REUSE.toml`](REUSE.toml), so the repository follows the [REUSE specification](https://reuse.software/). That rule assumes everything here was written for fhirlint. A file taken from another project keeps its own copyright and license and needs its own entry in `REUSE.toml`, with the license text in `LICENSES/`. The excerpt of the validator's messages, the captured validator output and HL7's signing key have such entries. `reuse lint` checks the whole repository.
+
 ## Dependencies
 
 fhirlint keeps its dependencies few and checked:

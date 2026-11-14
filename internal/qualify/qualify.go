@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package qualify runs fhirlint against a set of known-good and known-bad FHIR
 // resources and produces an Operational Qualification (OQ) report — documented
 // evidence, for Computer System Validation under ISO 13485 / IEC 62304 / FDA

@@ -81,3 +81,4 @@ Treat the issue as a hypothesis to test, not a spec to fill. fhirlint's value is
 - Reference the issue number where applicable: `fix(#12): ...`
 - **No `Co-Authored-By` lines** — do not add AI co-author attribution to commits
 - Sign off every commit (`git commit -s`): the DCO check blocks commits without `Signed-off-by:` (#578)
+- A new `.go`, shell or Dockerfile starts with `// Copyright The fhirlint Authors` and `// SPDX-License-Identifier: Apache-2.0` (`#` outside Go); a file taken from elsewhere gets an entry in `REUSE.toml` instead (#602)

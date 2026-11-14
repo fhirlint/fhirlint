@@ -1,0 +1,35 @@
+version = 1
+
+# Files without their own header (Markdown, YAML, JSON, fixtures, images)
+# share the project license. A header in the file itself takes precedence
+# (#602).
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "The fhirlint Authors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# An excerpt of the validator's Messages.properties, kept verbatim for the
+# message id inference tests (#449). It is part of hapifhir/org.hl7.fhir.core.
+[[annotations]]
+path = "internal/validator/testdata/messages-7.0.1-excerpt.properties"
+precedence = "override"
+SPDX-FileCopyrightText = "The HL7 FHIR core contributors (hapifhir/org.hl7.fhir.core)"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Output of the HL7 FHIR Validator, captured as fixtures for the output parser:
+# its message texts come from the validator.
+[[annotations]]
+path = ["internal/validator/testdata/oo-*.json", "internal/validator/testdata/stdout-*.txt", "internal/validator/testdata/profile-fetch-errors.json"]
+precedence = "override"
+SPDX-FileCopyrightText = ["The fhirlint Authors", "The HL7 FHIR core contributors (hapifhir/org.hl7.fhir.core)"]
+SPDX-License-Identifier = "Apache-2.0"
+
+# HL7's public key for the validator release signatures, pinned so that a
+# downloaded JAR can be verified. It is redistributed unchanged; fhirlint
+# claims no rights in it.
+[[annotations]]
+path = "internal/validator/hl7_signing_key.asc"
+precedence = "override"
+SPDX-FileCopyrightText = "Health Level Seven International"
+SPDX-License-Identifier = "LicenseRef-PublicKey"
