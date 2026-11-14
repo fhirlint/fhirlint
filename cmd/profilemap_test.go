@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/fhirlint/fhirlint/internal/validator"
+	"github.com/spf13/viper"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -125,5 +126,41 @@ func TestResolveProfileEntries_EvalErrorDoesNotApply(t *testing.T) {
 	p := writeMapFixture(t, "o.json", `{"resourceType":"Observation","code":{"coding":[{"code":"1"},{"code":"2"}]}}`)
 	if got := resolveProfilesForPath(p, pm); len(got) != 0 {
 		t.Errorf("non-boolean condition applied: %v", got)
+	}
+}
+
+// TestLoadProfileMap_KeepsTheCaseOfKeysFromTheConfigFile goes through viper,
+// as a run does: viper lowercases keys, so a resource type key never matched
+// a resource (#597).
+func TestLoadProfileMap_KeepsTheCaseOfKeysFromTheConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "fhirlint.yml")
+	if err := os.WriteFile(cfg, []byte("profile-map:\n  Patient: http://example.org/patient\n  \"tests/DE-*.json\": http://example.org/de\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	viper.Reset()
+	t.Cleanup(func() {
+		viper.Reset()
+		bindRootConfig()
+		bindValidateConfig()
+	})
+	viper.SetConfigFile(cfg)
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatal(err)
+	}
+	pm, err := loadProfileMap()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	patient := filepath.Join(dir, "p.json")
+	if err := os.WriteFile(patient, []byte(`{"resourceType":"Patient"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveProfilesForPath(patient, pm); !reflect.DeepEqual(got, []string{"http://example.org/patient"}) {
+		t.Errorf("resource type key: got %v", got)
+	}
+	if got := resolveProfilesForPath("tests/DE-1.json", pm); !reflect.DeepEqual(got, []string{"http://example.org/de"}) {
+		t.Errorf("upper-case glob key: got %v", got)
 	}
 }
