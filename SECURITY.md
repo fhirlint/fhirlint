@@ -4,6 +4,8 @@
 
 Please open a [GitHub Security Advisory](https://github.com/fhirlint/fhirlint/security/advisories/new) rather than a public issue. We aim to respond within 5 business days.
 
+A confirmed vulnerability is published as a [GitHub Security Advisory](https://github.com/fhirlint/fhirlint/security/advisories) of this repository, naming the release that fixes it.
+
 ## Supported versions
 
 Fixes go into the latest release. There are no maintained release branches, so upgrading is the mitigation for anything reported here.
@@ -53,6 +55,8 @@ The security-relevant question is whether untrusted input can make fhirlint do s
 ### Repository controls
 
 Secret scanning and Dependabot security updates are enabled on this repository. Every pull request runs unit tests, `golangci-lint`, `govulncheck`, `zizmor` (GitHub Actions auditing), `cfgaudit` (CLAUDE.md, the Claude Code plugin, its hooks and skills, with a config the pull request cannot change), and Docker gates (hadolint, Trivy, dockle). Releases and image publishes are gated on those runs being green.
+
+OpenSSF Scorecard runs weekly and on every push to `main`. [docs/osps-baseline.md](docs/osps-baseline.md) maps the [OSPS Baseline](https://baseline.openssf.org/) controls to the evidence in this repository and lists what is still open.
 
 ## Third-party dependency: HL7 FHIR Validator JAR
 
@@ -135,6 +139,8 @@ What is covered:
 | `checksums.txt` | yes | n/a | n/a |
 | Archive SBOMs (`*.sbom.json`) | yes | n/a | n/a |
 | Container image | yes, plus a cosign signature | yes | yes (from the release after v1.5.0) |
+
+Releases after v1.17.0 also carry the archives' provenance as release assets, `fhirlint_<version>.sigstore.json` and `fhirlint_<version>.intoto.jsonl`, for verifying without the attestations API.
 
 ### Rebuilding a release
 

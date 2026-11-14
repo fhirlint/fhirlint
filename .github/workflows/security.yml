@@ -10,6 +10,9 @@ on:
   schedule:
     - cron: "0 6 * * 1"  # every Monday 06:00 UTC
 
+# Every job grants its own permissions; nothing is granted by default.
+permissions: {}
+
 jobs:
   govulncheck:
     name: govulncheck
@@ -142,7 +145,15 @@ jobs:
           # detection reports a mix that includes GPL-1.0-or-later from the
           # history section of the Python license text. It comes in through
           # check-jsonschema, which only runs in CI; nothing ships with fhirlint.
-          allow-dependencies-licenses: pkg:pypi/typing-extensions
+          # The golang.org/x modules are BSD-3-Clause; GitHub's detection also
+          # reports LicenseRef-scancode-google-patent-license-golang for their
+          # PATENTS file, Google's additional patent grant, which only adds
+          # rights (#578).
+          allow-dependencies-licenses: >-
+            pkg:pypi/typing-extensions,
+            pkg:golang/golang.org/x/crypto,
+            pkg:golang/golang.org/x/sys,
+            pkg:golang/golang.org/x/text
 
   # zizmor and cfgaudit check that every action is pinned to a SHA; pinact also
   # checks that the version comment next to it is true, so a pin can't claim a

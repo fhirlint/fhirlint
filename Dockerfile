@@ -1,4 +1,7 @@
-FROM golang:1.27.4-alpine AS builder
+# Base images are pinned by digest as well as by tag, so a rebuilt tag cannot
+# change the image without a reviewed change here; Dependabot (docker) moves
+# the digest (#578).
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -13,7 +16,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
 
 # Download the validator JAR at image build time so containers start immediately
 # without a ~250 MB network fetch on first use.
-FROM eclipse-temurin:25-jre-alpine AS jar-downloader
+FROM eclipse-temurin:25-jre-alpine@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918 AS jar-downloader
 # pipefail so a failing command inside the pipes below (e.g. curl erroring) fails
 # the build rather than being masked by the exit status of the last stage.
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
@@ -44,7 +47,7 @@ RUN apk add --no-cache curl && \
     # Fail the build rather than shipping an unparsed version file.
     grep -qE '^[0-9]+\.[0-9]+' /out/validator_version.txt
 
-FROM eclipse-temurin:25-jre-alpine AS runtime
+FROM eclipse-temurin:25-jre-alpine@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918 AS runtime
 # Pull in base-image package fixes that are published upstream but not yet in a
 # temurin release, so the shipped image does not carry known HIGH/CRITICAL CVEs.
 # The reproducibility cost is accepted deliberately: shipping known-vulnerable

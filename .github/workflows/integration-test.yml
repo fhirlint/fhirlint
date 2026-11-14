@@ -26,6 +26,9 @@ on:
 #     upstream drift surfaces within a week instead of whenever an unrelated
 #     edit happened to bust the JAR cache (#310).
 
+# Every job grants its own permissions; nothing is granted by default.
+permissions: {}
+
 jobs:
   integration:
     # The unit job runs with -short and never touches exec.Command("java"),
