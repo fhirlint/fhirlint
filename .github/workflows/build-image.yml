@@ -1,0 +1,117 @@
+name: Build image
+
+# Builds and pushes the container image, attests its provenance and SBOM, and
+# signs it with cosign. Only docker.yml calls it, after its green-CI gate.
+#
+# Running the build in a reusable workflow makes this file, not the workflow
+# that the tag push triggers, the signer of the provenance and of the cosign
+# signature. That isolation is what GitHub documents as SLSA v1 Build Level 3
+# for artifact attestations (#601): verify with `gh attestation verify
+# --signer-workflow fhirlint/fhirlint/.github/workflows/build-image.yml`.
+
+on:
+  workflow_call:
+
+# Default-deny; the job grants only what it needs.
+permissions: {}
+
+jobs:
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20 # max 156s in 12 runs
+    permissions:
+      contents: read
+      packages: write
+      id-token: write     # keyless signing via Sigstore (cosign, attestations)
+      attestations: write # write attestations to the GitHub attestations API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/fhirlint/fhirlint
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build date
+        id: date
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          # VERSION also reaches the builder stage, so the binary inside the
+          # image reports the release version rather than "dev".
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            DATE=${{ steps.date.outputs.date }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # The runtime stage runs `apk --no-cache upgrade`. Cached, that layer
+          # replays an upgrade from whenever it first ran and never picks up a
+          # base-image fix published since — which is how openssl 3.5.7-r0
+          # survived in the image after 3.5.8-r0 was already in Alpine (#371).
+          # The jar-downloader stage stays cached, so the ~250 MB validator JAR
+          # is still not refetched.
+          no-cache-filters: runtime
+
+      # Everything below is keyed on the immutable digest, not a tag: tags move,
+      # and an attestation that points at a moving target proves nothing.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/fhirlint/fhirlint
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "ghcr.io/fhirlint/fhirlint@${DIGEST}"
+
+      - name: Generate image SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ghcr.io/fhirlint/fhirlint@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          # Defaults to true, which makes the action attach the SBOM to the
+          # GitHub Release on a tag push — that needs contents: write, which
+          # this job deliberately does not have (#266). The image SBOM exists to
+          # be attested below; the archive SBOMs are attached to the release by
+          # GoReleaser already.
+          upload-release-assets: false
+
+      - name: Attest image SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ghcr.io/fhirlint/fhirlint
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: sbom.spdx.json
+          push-to-registry: true

@@ -37,6 +37,10 @@ jobs:
     timeout-minutes: 20 # one GoReleaser build without SBOMs, as rebuild in reproducible-build.yml (max 127s for two)
     permissions:
       contents: read
+    # The release build gets the pin from here: a reusable workflow's inputs
+    # can't read env, and both builds must use the same GoReleaser.
+    outputs:
+      goreleaser-version: ${{ env.GORELEASER_VERSION }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,86 +79,16 @@ jobs:
     permissions:
       contents: read
 
+  # The build runs in a reusable workflow so that it, not this file, signs
+  # the provenance: SLSA Build Level 3 (#601).
   release:
-    name: GoReleaser
-    needs: [require-green-ci, smoke]
-    runs-on: ubuntu-latest
-    timeout-minutes: 40 # max 19m in 12 runs (the slowest also waited on syft and the cask push)
+    needs: [require-green-ci, smoke-build, smoke]
+    uses: $/.github/workflows/build-release.yml
+    with:
+      goreleaser-version: ${{ needs.smoke-build.outputs.goreleaser-version }}
+    secrets:
+      HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
     permissions:
       contents: write
-      id-token: write     # keyless signing of the provenance via Sigstore
-      attestations: write # write attestations to the GitHub attestations API
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: false
-
-      - name: Verify module cache integrity
-        run: go mod verify
-
-      # GoReleaser's `sboms` block shells out to syft, so it has to be on PATH
-      # before the release runs.
-      - name: Install syft
-        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
-
-      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
-        with:
-          version: ${{ env.GORELEASER_VERSION }}
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Write access to the fhirlint/homebrew-tap repo so GoReleaser can
-          # publish the updated Homebrew cask on each release.
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-
-      - name: Attest release artifacts
-        id: attest
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: |
-            dist/*.tar.gz
-            dist/*.zip
-            dist/checksums.txt
-            dist/*.sbom.json
-
-      # The attestation also lives in the GitHub attestations API. Attaching it
-      # to the release lets users verify downloads offline, and is where
-      # OpenSSF Scorecard's Signed-Releases check looks for a signature and
-      # provenance (#578).
-      - name: Attach the attestation to the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-        run: |
-          set -euo pipefail
-          version="${TAG#v}"
-          cp "$BUNDLE" "fhirlint_${version}.sigstore.json"
-          jq -c .dsseEnvelope "$BUNDLE" > "fhirlint_${version}.intoto.jsonl"
-          gh release upload "$TAG" --repo "$REPO" \
-            "fhirlint_${version}.sigstore.json" "fhirlint_${version}.intoto.jsonl"
-
-      # The archives just published must be the ones the smoke test ran. The
-      # build is reproducible, so a difference means something changed
-      # between the two builds; investigate before announcing the release.
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-archives
-          path: smoke-tested
-
-      - name: Published archives equal the smoke-tested ones
-        run: |
-          # Archives only: the release job's checksums.txt also lists the
-          # SBOMs, which the smoke build skips.
-          archives() { grep -E '\.(tar\.gz|zip)$' "$1" | sort; }
-          if ! diff -u <(archives smoke-tested/checksums.txt) <(archives dist/checksums.txt); then
-            echo "::error::the published archives differ from the smoke-tested build"
-            exit 1
-          fi
+      id-token: write
+      attestations: write

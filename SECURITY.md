@@ -151,9 +151,11 @@ What is covered:
 
 Releases after v1.17.0 also carry the archives' provenance as release assets, `fhirlint_<version>.sigstore.json` and `fhirlint_<version>.intoto.jsonl`, for verifying without the attestations API.
 
+**SLSA Build Level.** From the release after v1.17.0 on, the archives and the image are built, attested and signed in the reusable workflows `build-release.yml` and `build-image.yml`. They, not the workflow that the tag push triggers, are the signers of the provenance. That isolation is what GitHub documents as [SLSA v1 Build Level 3](https://docs.github.com/actions/security-guides/using-artifact-attestations-and-reusable-workflows-to-achieve-slsa-v1-build-level-3) for artifact attestations (#601), and `gh attestation verify --signer-workflow` checks it. v1.17.0 and earlier were attested by `release.yml` and `docker.yml` directly, which is Build Level 2.
+
 ### Rebuilding a release
 
-The release archives are reproducible from the release after v1.17.0 on (#549): the binaries are built with `-trimpath`, without a build ID and with the commit time, and the archive entries carry a fixed owner and the commit time. Two builds of the same tag give the same bytes, which `.github/workflows/reproducible-build.yml` checks on every push to `main`. To check a release yourself, with the Go version from its `go.mod` and the GoReleaser version pinned in `.github/workflows/release.yml`:
+The release archives are reproducible from the release after v1.17.0 on (#549): the binaries are built with `-trimpath`, without a build ID and with the commit time, and the archive entries carry a fixed owner and the commit time. Two builds of the same tag give the same bytes, which `.github/workflows/reproducible-build.yml` checks on every push to `main`. To check a release yourself, with the Go version from its `go.mod` and the GoReleaser version pinned in `.github/workflows/release.yml` (`GORELEASER_VERSION`):
 
 ```bash
 git checkout vX.Y.Z
