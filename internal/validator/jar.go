@@ -37,6 +37,11 @@ var errNoSuchRelease = errors.New("no validator release")
 // just fired.
 var errVerification = errors.New("JAR verification failed")
 
+// jarURLFor is jarURLForVersion behind a variable, like jarSignatureURLFor and
+// releaseAPIURLFor, so unit tests can serve the download from a local server
+// (#610).
+var jarURLFor = jarURLForVersion
+
 // jarURLForVersion returns the download URL for a specific validator release,
 // or the "latest" URL when version is empty.
 func jarURLForVersion(version string) string {
@@ -314,7 +319,7 @@ func formatBytes(n int64) string {
 }
 
 func downloadJAR(dest, pinned string) error {
-	return downloadJARFrom(jarURLForVersion(pinned), dest, pinned)
+	return downloadJARFrom(jarURLFor(pinned), dest, pinned)
 }
 
 // downloadJARFrom fetches the JAR at url into dest. pinned is the release the
@@ -573,7 +578,7 @@ func EnsureSideJAR(version string) (string, error) {
 		return "", err
 	}
 	fmt.Fprintf(os.Stderr, "Downloading FHIR validator JAR %s for the comparison (~250 MB, kept in %s)...\n", version, jarDir)
-	if err := fetchJAR(jarURLForVersion(version), jarPath, version, false); err != nil {
+	if err := fetchJAR(jarURLFor(version), jarPath, version, false); err != nil {
 		return "", err
 	}
 	return jarPath, nil
