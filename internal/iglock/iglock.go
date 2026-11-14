@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package iglock implements the fhirlint.lock file for reproducible IG validation.
 // The lock file records the SHA256 of each IG package's manifest (package.json) as
 // installed in the FHIR package cache (~/.fhir/packages/).

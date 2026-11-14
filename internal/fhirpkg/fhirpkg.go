@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package fhirpkg reads the FHIR package cache — the ~/.fhir/packages directory
 // the validator JAR populates and the rest of the FHIR toolchain shares.
 //

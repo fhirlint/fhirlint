@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package advisor converts fhirlint suppression rules into the HL7 validator's
 // advisor file format, the one `-advisor-file` reads.
 //

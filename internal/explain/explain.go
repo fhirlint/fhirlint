@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package explain provides built-in, offline explanations for common FHIR
 // validation message IDs (core invariants) and remediation advice. It backs the
 // `fhirlint explain` command and the inline hints in terminal output.

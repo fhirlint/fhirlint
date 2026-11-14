@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package configcheck validates a fhirlint.yml config file for unknown keys,
 // invalid enum values, and type errors. It reads the raw YAML so that it can
 // report line numbers and catch keys that viper silently ignores.

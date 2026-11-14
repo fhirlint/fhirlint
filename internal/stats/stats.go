@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package stats summarises a FHIR dataset: how many resources of each type
 // exist, which profiles they declare, and (optionally) an aggregate validation
 // summary. It powers the `fhirlint stats` command.

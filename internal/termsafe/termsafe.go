@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package termsafe renders untrusted text for a terminal.
 //
 // Validator messages quote values from the input file verbatim, so a resource

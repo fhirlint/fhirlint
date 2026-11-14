@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Command rulescan runs fhirlint's own rules — the built-in lint rules
 // (internal/lint) and the reference check (internal/refcheck) — over a corpus
 // of real-world FHIR resources, and compares two such scans (#577).

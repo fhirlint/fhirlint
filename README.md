@@ -175,6 +175,6 @@ To report a vulnerability in fhirlint, see [SECURITY.md](SECURITY.md). It also d
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE). The repository follows the [REUSE specification](https://reuse.software/): every file carries or is assigned its copyright and license, and `reuse lint` passes.
 
 HL7® and FHIR® are registered trademarks of Health Level Seven International.

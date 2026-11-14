@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package fhirlint provides a Go library API for validating FHIR resources.
 //
 // It wraps the HL7 FHIR Validator JAR and exposes a simple, stable API that

@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package jarsettings writes the fhir-settings.json the HL7 validator reads
 // with -fhir-settings.
 //

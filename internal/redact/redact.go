@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package redact strips resource-derived content from validation results
 // before they reach a reporter.
 //

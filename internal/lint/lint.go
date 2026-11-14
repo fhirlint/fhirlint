@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package lint implements built-in style/convention checks for FHIR resources —
 // naming conventions and URL patterns that profile validation does not enforce.
 // Each rule is opt-in via the lint: config key, carries its own severity, and

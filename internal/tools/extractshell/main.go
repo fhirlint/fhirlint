@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Command extractshell writes the shell code embedded in YAML files to
 // separate scripts, so ShellCheck can read it (#546): the run: blocks of a
 // composite GitHub Action (action.yml) and the script:, before_script: and

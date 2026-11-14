@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Command patchcoverage checks how much of the code a pull request adds or
 // changes the tests cover (#545). It reads a Go coverage profile and a
 // unified diff. A changed line counts when it has statements, so comments,

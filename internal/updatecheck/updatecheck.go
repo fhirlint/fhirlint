@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package updatecheck looks up the newest release of a GitHub repository and
 // remembers the answer, so fhirlint can mention a pending update without a
 // network call on every run.

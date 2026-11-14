@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pkgindex answers "which installed package defines this canonical?"
 // from the package/.index.json files in the FHIR package cache (#523).
 //

@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package rules
 
 import "github.com/fhirlint/fhirlint/internal/rules/fhirpath"

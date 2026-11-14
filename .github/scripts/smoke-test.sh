@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 # Smoke test of a release archive (#549): the unpacked binary, run the way
 # users run it, before the release is published.
 #

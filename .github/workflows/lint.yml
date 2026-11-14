@@ -55,6 +55,39 @@ jobs:
       - name: Validate the example config against the schema
         run: check-jsonschema --force-filetype yaml --schemafile fhirlint.schema.json fhirlint.yml.example
 
+  # Every source file carries its copyright and license, so the license stays
+  # with a file copied out of the repository, and the repository follows the
+  # REUSE specification (#602). See CONTRIBUTING.md#license-headers.
+  license-headers:
+    name: License headers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5 # new; reuse lint over the repository takes a few seconds
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pattern below is not a license expression for reuse lint.
+      # REUSE-IgnoreStart
+      - name: Every source file carries the SPDX license line
+        run: |
+          missing=$(git ls-files '*.go' '*.sh' Dockerfile \
+            | xargs grep -L -E '^(//|#) SPDX-License-Identifier: Apache-2\.0$' || true)
+          if [ -n "$missing" ]; then
+            echo "::error::files without a license header (see CONTRIBUTING.md#license-headers):"
+            echo "$missing"
+            exit 1
+          fi
+      # REUSE-IgnoreEnd
+      # Version and hashes pinned in .github/requirements/reuse.txt, where
+      # OSV-Scanner and Dependabot see them.
+      - name: Install reuse
+        run: pip install --require-hashes --no-deps -r .github/requirements/reuse.txt
+      # Every file has a copyright and a license, and the license texts are in
+      # LICENSES/.
+      - run: reuse lint
+
   # The golden reports in internal/reporter/testdata/golden are what the
   # reporters write (TestGoldenReports keeps them current); this checks them
   # against each consumer's schema, so a report GitHub code scanning or GitLab

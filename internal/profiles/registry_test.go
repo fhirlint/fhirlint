@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build registry
 
 // This file checks the built-in alias table against the live FHIR package

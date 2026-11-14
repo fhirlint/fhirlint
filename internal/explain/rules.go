@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package explain
 
 // rules is the built-in set of explanations, keyed by lowercase message ID.

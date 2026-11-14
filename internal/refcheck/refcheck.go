@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package refcheck performs referential-integrity checking across a set of FHIR
 // resources: it indexes every resource's identity (ResourceType/id, Bundle entry
 // fullUrls) and then reports literal references that do not resolve within the

@@ -124,6 +124,7 @@ jobs:
           scan-args: |-
             --recursive
             --lockfile=requirements.txt:./.github/requirements/check-jsonschema.txt
+            --lockfile=requirements.txt:./.github/requirements/reuse.txt
             ./
 
   # Blocks a pull request that adds a dependency with a known vulnerability or
@@ -149,7 +150,12 @@ jobs:
           # reports LicenseRef-scancode-google-patent-license-golang for their
           # PATENTS file, Google's additional patent grant, which only adds
           # rights (#578).
+          # reuse (GPL-3.0) and its dependency python-debian (GPL-2.0) only run
+          # in the license headers job of lint.yml; nothing from them ships
+          # with fhirlint (#602).
           allow-dependencies-licenses: >-
+            pkg:pypi/reuse,
+            pkg:pypi/python-debian,
             pkg:pypi/typing-extensions,
             pkg:golang/golang.org/x/crypto,
             pkg:golang/golang.org/x/sys,

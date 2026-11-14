@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package lsp implements a Language Server Protocol server for FHIR resources,
 // so validation findings appear in an editor while authoring instead of only
 // when the CLI is run.

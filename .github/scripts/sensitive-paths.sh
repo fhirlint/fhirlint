@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 # Helpers for .github/workflows/sensitive-paths.yml. The workflow runs this
 # file from main (pull_request_target), never from the pull request. The list
 # of sensitive paths lives here, in filter(), and nowhere else.

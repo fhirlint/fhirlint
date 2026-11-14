@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package registry knows which FHIR package registries the validator consults,
 // and in which order, so that the commands that ask a registry on their own —
 // audit, coverage — reach the same answer the validator would.

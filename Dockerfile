@@ -1,3 +1,6 @@
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Base images are pinned by digest as well as by tag, so a rebuilt tag cannot
 # change the image without a reviewed change here; Dependabot (docker) moves
 # the digest (#578).

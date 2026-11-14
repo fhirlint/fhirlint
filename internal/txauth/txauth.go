@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package txauth carries credentials for a terminology server.
 //
 // Credentials come from the environment and from nowhere else. There is no flag

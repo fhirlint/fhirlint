@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright The fhirlint Authors
+# SPDX-License-Identifier: Apache-2.0
 # Weekly duration watch (#551), run by .github/workflows/duration-watch.yml.
 #
 #   duration-watch.sh REPO BUDGETS DAYS

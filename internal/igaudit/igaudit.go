@@ -1,3 +1,6 @@
+// Copyright The fhirlint Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package igaudit checks the IG packages recorded in fhirlint.lock against the
 // FHIR package registry.
 //
