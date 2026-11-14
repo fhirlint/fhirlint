@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -252,7 +253,9 @@ func validateExpansionParameters(path string) error {
 // Separated from Run() so it can be unit-tested without invoking the JAR.
 func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Options) []string {
 	args := jvmArgs(jarPath)
-	args = append(args, inputPaths...)
+	for _, p := range inputPaths {
+		args = append(args, jarSourcePath(p))
+	}
 	args = append(args, "-version", opts.FHIRVersion)
 	// outputPath is empty in watch mode — skip structured output flags.
 	if outputPath != "" {
@@ -342,6 +345,25 @@ func validateFHIRVersion(version string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown FHIR version %q — allowed: %s", version, FHIRVersionList())
+}
+
+// jarSourcePath is the path the JAR gets for an input file. A relative path
+// that climbs out of the working directory ("../fhir/a.json") makes the
+// validator throw in PathBuilder.checkPathIsChildOfTarget ("Computed path does
+// not start with first element") before it validates anything, so such a path
+// goes in absolute (#560). Every other path is passed as given. The results
+// keep the path the user wrote: they are mapped back by position.
+func jarSourcePath(p string) string {
+	if filepath.IsAbs(p) {
+		return p
+	}
+	if c := filepath.Clean(p); c != ".." && !strings.HasPrefix(c, ".."+string(filepath.Separator)) {
+		return p
+	}
+	if abs, err := filepath.Abs(p); err == nil {
+		return abs
+	}
+	return p
 }
 
 // jvmArgs starts the argument list for every JVM fhirlint launches.
