@@ -39,6 +39,7 @@ jobs:
   rebuild:
     name: Build twice and compare
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # max 127s in 3 runs
     permissions:
       contents: read
     steps:

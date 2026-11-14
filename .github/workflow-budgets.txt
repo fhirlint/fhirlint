@@ -1,0 +1,27 @@
+# Duration budget per workflow run, in minutes (#551). duration-watch.yml opens
+# an issue when the 90th percentile of last week's successful runs is over it.
+# Set from the runs of 2026-10-16 to 2026-11-13 (p90, wall time including
+# queueing), with room for a busy runner pool. Raise one on purpose, with the
+# reason in the commit, when a workflow grows by design.
+# Every workflow that runs on its own has a line here; TestWorkflowBudgets
+# (internal/workflows) checks it. Reusable workflows (workflow_call) don't.
+#
+# file                   minutes  # p90 measured
+action-test.yml          5        # 2m
+alias-monitor.yml        5        # 1.2m
+docker-security.yml      10       # 5.2m
+docker.yml               10       # 2.6m
+duration-watch.yml       5        # new; about 1m
+fuzz.yml                 20       # 5.7m on PRs; the weekly run fuzzes 10m per target
+gitlab-mirror.yml        5        # 1.5m
+integration-test.yml     25       # 11.7m
+jar-monitor.yml          5        # 0.4m
+links.yml                10       # new; 1.6m
+lint.yml                 8        # 2m
+markdown.yml             5        # new; 1.9m
+release.yml              30       # 2.4m
+reproducible-build.yml   15       # new; 5.2m
+security.yml             8        # 2m
+sensitive-paths.yml      5        # 1.4m
+test.yml                 10       # 3.6m
+zizmor.yml               5        # 1.7m

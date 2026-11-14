@@ -30,6 +30,7 @@ jobs:
   fuzz:
     name: Fuzz ${{ matrix.target }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # max 98s in 288 runs at 45s; the weekly run fuzzes 10m
     permissions:
       contents: read
     strategy:

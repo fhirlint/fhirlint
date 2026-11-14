@@ -78,14 +78,46 @@ func crashedFile(stdout string, paths []string) (idx int, message string, ok boo
 // indexOfPath finds the input the validator named. It logs absolute paths,
 // while fhirlint may have passed relative ones.
 func indexOfPath(logged string, paths []string) int {
-	want := filepath.Clean(logged)
+	return newPathIndex(paths).lookup(logged)
+}
+
+// pathIndex answers indexOfPath for many logged lines of one run. Scanning
+// paths for every "Validate" line, with a filepath.Abs (a getwd call) per
+// path, made each stdout parser quadratic in the number of files: seconds per
+// parser on a whole IG (#552).
+type pathIndex struct {
+	clean map[string]int // filepath.Clean(path) -> first index
+	abs   map[string]int // filepath.Abs(path) -> first index
+}
+
+func newPathIndex(paths []string) pathIndex {
+	ix := pathIndex{clean: make(map[string]int, len(paths)), abs: make(map[string]int, len(paths))}
 	for i, p := range paths {
-		if filepath.Clean(p) == want {
-			return i
+		if _, ok := ix.clean[filepath.Clean(p)]; !ok {
+			ix.clean[filepath.Clean(p)] = i
 		}
-		if abs, err := filepath.Abs(p); err == nil && abs == want {
-			return i
+		if abs, err := filepath.Abs(p); err == nil {
+			if _, ok := ix.abs[abs]; !ok {
+				ix.abs[abs] = i
+			}
 		}
+	}
+	return ix
+}
+
+// lookup returns the first index whose path, cleaned or made absolute, is the
+// logged one, as the linear scan did; -1 when none is.
+func (ix pathIndex) lookup(logged string) int {
+	want := filepath.Clean(logged)
+	i, okClean := ix.clean[want]
+	j, okAbs := ix.abs[want]
+	switch {
+	case okClean && okAbs:
+		return min(i, j)
+	case okClean:
+		return i
+	case okAbs:
+		return j
 	}
 	return -1
 }

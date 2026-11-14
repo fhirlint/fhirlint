@@ -14,6 +14,7 @@ jobs:
   check-aliases:
     name: Check the alias table and the FHIR version table against the registry
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # max 66s in 10 runs; registry calls time out on their own
     permissions:
       contents: read
       issues: write

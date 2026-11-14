@@ -34,6 +34,7 @@ jobs:
     name: Build the archives for the smoke test
     needs: require-green-ci
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # one GoReleaser build without SBOMs, as rebuild in reproducible-build.yml (max 127s for two)
     permissions:
       contents: read
     steps:
@@ -78,6 +79,7 @@ jobs:
     name: GoReleaser
     needs: [require-green-ci, smoke]
     runs-on: ubuntu-latest
+    timeout-minutes: 40 # max 19m in 12 runs (the slowest also waited on syft and the cask push)
     permissions:
       contents: write
       id-token: write     # keyless signing of the provenance via Sigstore

@@ -26,6 +26,7 @@ jobs:
   require-green-ci:
     name: Require green CI
     runs-on: ubuntu-latest
+    timeout-minutes: 35 # its own wait loop gives up after TIMEOUT_MINUTES (30)
     steps:
       - name: Check required workflows succeeded for ${{ inputs.sha }}
         env:

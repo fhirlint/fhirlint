@@ -46,7 +46,8 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | [Fuzzing](CONTRIBUTING.md#running-tests) of every parser of input fhirlint didn't write, 24 targets listed in [`fuzz.yml`](.github/workflows/fuzz.yml) | crashes and hangs on hostile or broken resources, validator output, tx recordings and the LSP stream | 45 s per target on pull requests and pushes to `main`, 10 minutes weekly |
 | Race detector | data races in the server, watch and LSP modes | every pull request, all three OSes |
 | Hardening tests: control characters and clipping (`internal/termsafe`), symbolic links (`internal/input`, `internal/coverage`, `cmd`), cache entry trust (`internal/resultcache`), `--redact`, long messages | input that makes fhirlint read outside its directory, inject terminal escapes, trust a planted cache entry, or print data the user asked to redact | every pull request, as part of the unit tests |
-| *Planned:* linear scaling test and benchmarks for the Go-side pipeline (#552) | a quadratic step that only shows on a whole IG | every pull request |
+| Linear scaling (#552): the output parsers (`internal/validator`) and every stage after them — suppression, baseline, package hints, `--group`, every report format, `--slowest` (`internal/scaling`) — on 8× the input must stay under 12× the allocations and 20× the time | a quadratic step that only shows on a whole IG (it found one: the stdout parsers matched each `Validate` line against every path) | every pull request, Linux, without `-race` |
+| Benchmarks `BenchmarkParsers`, `BenchmarkPipeline` (#552), 400 files × 40 issues | — (measurement, not a gate) | by hand: `go test -run '^$' -bench . ./internal/scaling ./internal/validator` |
 
 ### Code health
 
@@ -57,6 +58,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | Coverage (#545): statement floors on the total and on `pkg/fhirlint` and `internal/validator`, and coverage of the lines a pull request changes (`internal/tools/patchcoverage`); the integration profile is shown, not gated | code no test exercises, also while the total stays high | every pull request (Linux leg of the unit tests) |
 | Unreachable code: [deadcode](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) from every main package, against the allowlist [`.github/deadcode-allow.txt`](.github/deadcode-allow.txt) (golangci-lint's `unused` covers unexported code) (#547) | exported functions nothing calls any more, such as a wrapper only tests use after a refactor, so the tests check a path production doesn't take; allowlist entries that went stale | every pull request |
 | Workflow and script lint (#546): [actionlint](https://github.com/rhysd/actionlint) on every workflow, including the shell in their `run:` blocks, and [ShellCheck](https://www.shellcheck.net/) on `hooks/*.sh`, `.github/scripts/*.sh` and the shell inside `action.yml` and the GitLab templates (`internal/tools/extractshell`), both pinned | invalid workflow syntax or expressions, shell bugs in fhirlint's CI, in the plugin hook users run, and in the Action and GitLab component that run in users' pipelines | every pull request |
+| Workflow consistency (`internal/workflows`, #551): every job has `timeout-minutes`, every workflow a duration budget | a hung job running for GitHub's default 6 hours and blocking the pull requests behind it; a workflow the duration watch doesn't see | every pull request |
 
 ### Supply chain and repository security
 
@@ -104,6 +106,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | `jar-monitor.yml`: signing key expiry, advisories | Monday | opens an issue |
 | Docker image scan, govulncheck, zizmor | Monday | red run |
 | Fuzzing, 10 minutes per target | Sunday | red run, crash input as artifact |
+| `duration-watch.yml`: median and p90 of each workflow's runs against `.github/workflow-budgets.txt` (#551) | Monday | opens an issue |
 
 ## Keeping this page current
 

@@ -106,6 +106,10 @@ docker run --rm -v "$PWD:/input:ro" -w /input lycheeverse/lychee:0.24.2 --config
 
 Code blocks name a language: `bash` for commands, `console` for a session with `$` prompts, `text` for output.
 
+### Workflow timeouts and budgets
+
+Every job in `.github/workflows/` sets `timeout-minutes`, from its measured duration plus margin, with the basis in a comment; every workflow that runs on its own has a duration budget in `.github/workflow-budgets.txt`. `go test ./internal/workflows` fails until both are there (#551). A weekly run opens an issue when a workflow's 90th percentile goes over its budget; `.github/scripts/duration-watch.sh fhirlint/fhirlint .github/workflow-budgets.txt 7` prints the same table locally.
+
 ## Commit messages
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
