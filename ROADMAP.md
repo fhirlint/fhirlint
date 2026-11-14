@@ -20,7 +20,7 @@ This is where fhirlint is heading over the next 12 months, until November 2027. 
 
 **Quality**
 
-- **Raise statement coverage to 80 percent**, and raise the CI floor with it (#595).
+- **Keep statement coverage at 80 percent or above.** It reached 80.6 percent in #595, and the CI floor is 80.
 
 ## Not planned
 
