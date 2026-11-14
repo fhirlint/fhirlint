@@ -40,9 +40,8 @@ import (
 //
 // A new route (input kind, server mode) adds itself to routes below.
 
-// routesFixtures is relative to the repository root, where every CLI route
-// runs: a path starting with ../ crashes the JAR (#560), which is its own bug
-// and would mask what this test compares. Add a ../ route once #560 is fixed.
+// routesFixtures is relative to the repository root, where the CLI routes
+// run; the ../ route runs from cmd/ instead (#560).
 const routesFixtures = "testdata/routes"
 
 // repoRoot is the parent of cmd/, where this test runs.
@@ -90,8 +89,14 @@ var common = []string{"--no-terminology-server", "--fhir-version", "4.0.1", "--f
 // (findings) is expected; anything else is a failure.
 func runJSON(t *testing.T, bin string, stdin []byte, args ...string) findings {
 	t.Helper()
+	return runJSONIn(t, bin, repoRoot, stdin, args...)
+}
+
+// runJSONIn is runJSON from another working directory.
+func runJSONIn(t *testing.T, bin, dir string, stdin []byte, args ...string) findings {
+	t.Helper()
 	cmd := exec.Command(bin, append([]string{"validate"}, args...)...) //nolint:gosec // G204: the binary just built, fixed flags
-	cmd.Dir = repoRoot
+	cmd.Dir = dir
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
@@ -207,6 +212,10 @@ func TestIntegration_EquivalentRoutesSameFindings(t *testing.T) {
 	}{
 		{"directory, one JVM for all files", func(t *testing.T) findings {
 			return runJSON(t, bin, nil, append(common, routesFixtures)...)
+		}},
+		{"a path starting with ../ (#560)", func(t *testing.T) findings {
+			// From cmd/, the fixtures are ../testdata/routes.
+			return runJSONIn(t, bin, ".", nil, append(common, filepath.Join("..", routesFixtures))...)
 		}},
 		{"stdin", func(t *testing.T) findings {
 			got := findings{}
