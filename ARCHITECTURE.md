@@ -32,7 +32,7 @@ args, fhirlint.yml ─▶ resolve inputs ─▶ preprocess ─▶ prepare the va
 
 fhirlint's external interfaces:
 
-- **The CLI and its configuration:** the command line, `fhirlint.yml` (schema: [`fhirlint.schema.json`](fhirlint.schema.json)), `.fhirlintignore`, `fhirlint.lock` and the exit codes, all documented in the [README](README.md).
+- **The CLI and its configuration:** the command line, `fhirlint.yml` (schema: [`fhirlint.schema.json`](fhirlint.schema.json)), `.fhirlintignore`, `fhirlint.lock` and the exit codes, all documented in [Configuration](docs/configuration.md) and [Using fhirlint](docs/usage.md).
 - **Reports:** the JSON report (schema: [`fhirlint-report.schema.json`](fhirlint-report.schema.json)) and the other report formats.
 - **Long-running modes:** the language server `fhirlint lsp` over stdio ([docs/lsp.md](docs/lsp.md)), the warm validator `fhirlint serve` ([docs/daemon.md](docs/daemon.md)) and `--watch`.
 - **The Go library:** [`pkg/fhirlint`](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint).
@@ -123,7 +123,7 @@ The claim: fhirlint can validate resources written by an attacker, inside the at
 | [CWE-116](https://cwe.mitre.org/data/definitions/116.html) / [CWE-117](https://cwe.mitre.org/data/definitions/117.html) Improper output encoding, log injection | Machine-readable formats are written with Go's encoders and `html/template`. GitHub workflow commands are escaped. Terminal output escapes control characters from the input (#496) |
 | [CWE-200](https://cwe.mitre.org/data/definitions/200.html) Exposure of sensitive information | `--redact` for reports, `--tx-offline` for terminology traffic, and private reporting of vulnerabilities |
 | [CWE-377](https://cwe.mitre.org/data/definitions/377.html) Insecure temporary files | Temporary files and directories are created with `os.CreateTemp` and `os.MkdirTemp` (unique names, owner-only permissions) and removed after use |
-| [CWE-494](https://cwe.mitre.org/data/definitions/494.html) Download of code without an integrity check | The JAR is verified against HL7's pinned PGP key before use. fhirlint's own releases carry signed provenance and can be rebuilt ([README](README.md#pre-built-binary-recommended)) |
+| [CWE-494](https://cwe.mitre.org/data/definitions/494.html) Download of code without an integrity check | The JAR is verified against HL7's pinned PGP key before use. fhirlint's own releases carry signed provenance and can be rebuilt ([Verifying a release](docs/verifying-releases.md#release-archives)) |
 | [CWE-1333](https://cwe.mitre.org/data/definitions/1333.html) Inefficient regular expressions | Go's RE2-based `regexp`, which runs in linear time |
 | [CWE-1395](https://cwe.mitre.org/data/definitions/1395.html) Vulnerable third-party components | govulncheck, OSV-Scanner and dependency review run on every change. govulncheck is a required check. Dependabot keeps dependencies current. `fhirlint audit` reports advisories against the installed JAR |
 

@@ -200,7 +200,7 @@ The reviewer leaves comments on anything that needs to change, and a pull reques
 - New functionality requires tests — unit tests at minimum, integration tests where the JAR is involved
 - A bug fix comes with a test that fails without the fix
 - A major change adds or updates tests in the automated suite in the same PR: a new command, flag, report format or rule, or a change to how validator output is parsed, suppressed or reported
-- Update `README.md` if the flag table or usage examples are affected
+- Update the docs if the flag table or usage examples are affected: the flag and key reference is in `docs/configuration.md`, usage in `docs/usage.md` and the pages next to it
 - PRs go directly against `main`
 - `go.mod` and `go.sum` must be tidy: CI runs `go mod tidy -diff`
 - A change to the plugin (`hooks/`, `skills/`, `.claude-plugin/`), the Action, the GitLab component or pipeline, the workflows, the release build, the JAR signing key or agent config such as `CLAUDE.md` fails the **Sensitive paths** check until a maintainer reviews it and sets the `sensitive-paths-reviewed` label. A new push removes the label again, unless the pull request's changes to the sensitive paths are the same as before the push: "Update branch", a rebase without conflicts in those files, or a push that only touches other files keep it. Any doubt (a sensitive file without a patch, more than 300 changed files, a commit the API can no longer compare after a force push, or `main` changing the same file) removes it. The full list is in `.github/scripts/sensitive-paths.sh`; its tests are in `internal/sensitivepaths`.

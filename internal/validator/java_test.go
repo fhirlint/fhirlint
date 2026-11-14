@@ -3,6 +3,7 @@ package validator
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"testing"
@@ -56,11 +57,23 @@ func TestParseJavaMajorVersion(t *testing.T) {
 }
 
 // TestMinJavaVersionConsistency ensures that every "Java X+" mention in the
-// README matches minJavaVersion, so documentation and code cannot drift apart.
+// README and the docs matches minJavaVersion, so documentation and code cannot
+// drift apart.
 func TestMinJavaVersionConsistency(t *testing.T) {
 	readme, err := os.ReadFile("../../README.md")
 	if err != nil {
 		t.Fatalf("could not read README.md: %v", err)
+	}
+	docs, err := filepath.Glob("../../docs/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range docs {
+		data, err := os.ReadFile(d) //nolint:gosec // the repository's own docs
+		if err != nil {
+			t.Fatal(err)
+		}
+		readme = append(readme, data...)
 	}
 
 	re := regexp.MustCompile(`Java (\d+)\+`)

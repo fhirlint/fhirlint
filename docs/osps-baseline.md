@@ -40,9 +40,9 @@ Status: **met**, **partly met** or **open**.
 | BR-01.01 Untrusted metadata is sanitized | met | Workflows pass event data to `run:` blocks through `env:`, never inline. zizmor, glsec and cfgaudit check for template injection on every pull request ([TESTING.md](../TESTING.md#supply-chain-and-repository-security)). |
 | BR-01.03 Untrusted code has no privileged credentials | met | Pull requests run under `pull_request`, with a read-only token and no secrets. The one `pull_request_target` workflow, [`sensitive-paths.yml`](../.github/workflows/sensitive-paths.yml), checks out `main` only and reads the pull request through the API. |
 | BR-03.01 Project channels use encryption | met | The repository, releases, `ghcr.io/fhirlint/fhirlint` and the Homebrew tap are all served over HTTPS. |
-| BR-03.02 Distribution channels are authenticated | met | HTTPS, plus SLSA provenance on the archives, the SBOMs, `checksums.txt` and the image, and a cosign signature on the image ([README](../README.md#verifying-the-image)). |
+| BR-03.02 Distribution channels are authenticated | met | HTTPS, plus SLSA provenance on the archives, the SBOMs, `checksums.txt` and the image, and a cosign signature on the image ([README](verifying-releases.md#verifying-the-image)). |
 | BR-07.01 No secrets in version control | met | Secret scanning and push protection are enabled. |
-| DO-01.01 User guides | met | [README](../README.md) and [docs/](.). |
+| DO-01.01 User guides | met | [README](../README.md) and the guides it links in [docs/](.). |
 | DO-02.01 How to report defects | met | [CONTRIBUTING.md](../CONTRIBUTING.md#reporting-bugs). |
 | GV-02.01 Public discussion | met | GitHub issues and pull requests. |
 | GV-03.01 Contribution process | met | [CONTRIBUTING.md](../CONTRIBUTING.md). |
@@ -74,7 +74,7 @@ Level 1 is met.
 | QA-03.01 Status checks pass before merging | met | Required checks on `main`: golangci-lint, unit tests, govulncheck, OSV-Scanner, dependency review, cfgaudit, glsec, the sensitive-paths gate and DCO, in strict mode. Releases additionally wait for all of CI (`require-green-ci.yml`). |
 | QA-06.01 Automated tests before a change is accepted | met | Unit tests on Linux, macOS and Windows are a required check ([TESTING.md](../TESTING.md)). |
 | SA-01.01 Design documentation of actions and actors | met | [ARCHITECTURE.md](../ARCHITECTURE.md): the steps of a run, the interfaces and network endpoints, and the actors in building and shipping. |
-| SA-02.01 External interfaces | met | CLI ([README](../README.md)), the Go library ([pkg.go.dev](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)), the JSON schemas of the config and the report, the GitHub Action ([`action.yml`](../action.yml)), the GitLab component ([docs/ci.md](ci.md)) and the LSP server ([docs/lsp.md](lsp.md)). |
+| SA-02.01 External interfaces | met | CLI ([Using fhirlint](usage.md), [Configuration](configuration.md)), the Go library ([pkg.go.dev](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)), the JSON schemas of the config and the report, the GitHub Action ([`action.yml`](../action.yml)), the GitLab component ([docs/ci.md](ci.md)) and the LSP server ([docs/lsp.md](lsp.md)). |
 | SA-03.01 Security assessment | met | [SECURITY.md](../SECURITY.md): trust boundary, what is in scope and out of it, and the properties users can rely on. |
 | VM-01.01 Coordinated disclosure with a response time | met | [SECURITY.md](../SECURITY.md): GitHub Security Advisory, with a response within 5 business days. |
 | VM-03.01 Private reporting | met | Private vulnerability reporting is enabled. |
@@ -90,7 +90,7 @@ Met:
 - BR-01.04: no workflow takes input from collaborators (`workflow_dispatch` has no inputs), and zizmor checks the workflows for template injection.
 - BR-02.02: every asset name carries the version.
 - BR-07.02: the [secrets policy](../GOVERNANCE.md#secrets-and-credentials).
-- DO-03.01 and DO-03.02: [verifying archives](../README.md#pre-built-binary-recommended) and [the image](../README.md#verifying-the-image), including the signing workflow.
+- DO-03.01 and DO-03.02: [verifying archives](verifying-releases.md#release-archives) and [the image](verifying-releases.md#verifying-the-image), including the signing workflow.
 - DO-04.01 and DO-05.01: [supported versions](../SECURITY.md#supported-versions). Only the latest release gets fixes, and a release stops getting them as soon as a newer one is published.
 - GV-04.01: [granting access](../GOVERNANCE.md#granting-access).
 - QA-02.02: an SPDX SBOM per archive, and an SBOM attestation on the image.

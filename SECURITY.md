@@ -138,7 +138,7 @@ Signing and provenance attestation apply **from v1.5.0 onward**. v1.4.0 and earl
 
 **v1.5.0 is missing the image SBOM attestation.** The release workflow failed on that step (#266) after the image had been pushed, signed and provenance-attested, so v1.5.0 has everything in the table below except the image SBOM attestation. Re-cutting a published tag to add it would have been worse than the gap; it applies from the next release.
 
-For releases that have it, the verification commands are in the README, under [pre-built binary](README.md#pre-built-binary-recommended) and [verifying the image](README.md#verifying-the-image).
+For releases that have it, the verification commands are in [Verifying a release](docs/verifying-releases.md), under [release archives](docs/verifying-releases.md#release-archives) and [verifying the image](docs/verifying-releases.md#verifying-the-image).
 
 What is covered:
 
