@@ -1313,3 +1313,33 @@ func TestPrintPackageBaseline(t *testing.T) {
 		})
 	}
 }
+
+// An indexed path follows that one element (#624); before, the index was
+// looked up as a key in every element and nothing was removed.
+func TestDeleteNestedKey_Index(t *testing.T) {
+	obj := jsonObj(t, `{"name":[{"family":"A","given":["x"]},{"family":"B"}]}`)
+	deleteNestedKey(obj, strings.Split(gjsonPath("$.name[0].family"), "."))
+	names := obj["name"].([]interface{})
+	if _, ok := names[0].(map[string]interface{})["family"]; ok {
+		t.Error("name[0].family must be removed")
+	}
+	if names[1].(map[string]interface{})["family"] != "B" {
+		t.Error("name[1].family must stay")
+	}
+
+	obj = jsonObj(t, `{"name":[{"family":"A"},{"family":"B"},{"family":"C"}]}`)
+	deleteNestedKey(obj, strings.Split(gjsonPath("$.name[1]"), "."))
+	names = obj["name"].([]interface{})
+	if len(names) != 2 || names[0].(map[string]interface{})["family"] != "A" || names[1].(map[string]interface{})["family"] != "C" {
+		t.Errorf("name[1] must be removed, got %v", names)
+	}
+
+	// Out of range, or an index on a value that isn't an array: nothing.
+	for _, p := range []string{"$.name[9].family", "$.name[9]", "$.name[-1]", "$.gender[0]"} {
+		o := jsonObj(t, `{"name":[{"family":"A"}],"gender":"male"}`)
+		deleteNestedKey(o, strings.Split(gjsonPath(p), "."))
+		if len(o["name"].([]interface{})) != 1 || o["gender"] != "male" {
+			t.Errorf("%s must change nothing, got %v", p, o)
+		}
+	}
+}

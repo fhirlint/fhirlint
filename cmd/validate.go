@@ -2895,10 +2895,33 @@ func deleteNestedKey(obj interface{}, parts []string) {
 			delete(v, parts[0])
 			return
 		}
-		if child, ok := v[parts[0]]; ok {
-			deleteNestedKey(child, parts[1:])
+		child, ok := v[parts[0]]
+		if !ok {
+			return
 		}
+		// $.name[0]: remove that element from the array the key holds.
+		if arr, isArr := child.([]interface{}); isArr && len(parts) == 2 {
+			if i, err := strconv.Atoi(parts[1]); err == nil {
+				if i >= 0 && i < len(arr) {
+					v[parts[0]] = append(arr[:i:i], arr[i+1:]...)
+				}
+				return
+			}
+		}
+		deleteNestedKey(child, parts[1:])
 	case []interface{}:
+		// An index ($.name[0].family, as gjsonPath writes it: name.0.family)
+		// follows that one element. Before #624 it was passed on to every
+		// element as a key named "0", so an indexed --ignore removed nothing.
+		// An index as the last part can't remove the element here, because
+		// the slice belongs to the parent, so it is left for the parent case.
+		if i, err := strconv.Atoi(parts[0]); err == nil {
+			if i >= 0 && i < len(v) && len(parts) > 1 {
+				deleteNestedKey(v[i], parts[1:])
+			}
+			return
+		}
+		// Without an index the path applies to every element.
 		for _, item := range v {
 			deleteNestedKey(item, parts)
 		}
