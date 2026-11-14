@@ -18,7 +18,7 @@ A local run of Scorecard v5.6.0 against `main` before this change scored 7.4 out
 | Vulnerabilities | 7 | GO-2026-6354, GO-2026-6355 (`x/crypto/ssh`) and GO-2026-5932 (`x/crypto/openpgp`), all in the indirect `golang.org/x/crypto` v0.55.0. fhirlint imports neither package (`x/crypto` comes in for `sha3`), so govulncheck and OSV-Scanner's call analysis don't report them. | Raised to v0.58.0, which fixes the two ssh entries. GO-2026-5932 is fixed only in v0.59.0, which was still inside the repository's seven-day Dependabot cooldown (see open items). |
 | Signed-Releases | 0 | Scorecard looks for a signature or provenance file among the release assets. The SLSA provenance from `attest-build-provenance` was only in the GitHub attestations API. | `release.yml` attaches it to each release as `fhirlint_<version>.sigstore.json` and `.intoto.jsonl`. The score rises as new releases replace the last five that Scorecard checks. |
 | Branch-Protection | 3 | The protection rules don't apply to administrators. Pull requests and reviews aren't required, and there are no code owners. | On 2026-11-14 branch protection was extended to administrators, and a pull request is now required, with no approvals, so a single maintainer can still merge. Required reviews, stale-review dismissal and code owners stay off; see Code-Review. |
-| Code-Review | 0 | 0 of 24 recent changesets were approved by someone other than the author. | Not changed. With one active maintainer there is nobody to approve. CI, the sensitive-paths gate and the PR template are the review that exists. |
+| Code-Review | 0 | 0 of 24 recent changesets were approved by someone other than the author. | Not changed. Approvals aren't required, so a maintainer can merge alone. CI, the sensitive-paths gate and the PR template are the review that exists. |
 | CII-Best-Practices | 0 | No OpenSSF Best Practices badge. | Not changed. The badge needs a maintainer to register the project at bestpractices.dev; see open items. |
 
 The other checks scored 10: Binary-Artifacts, CI-Tests, Contributors, Dangerous-Workflow, Dependency-Update-Tool, Fuzzing, License, Maintained, Packaging, SAST and Security-Policy.
@@ -65,10 +65,10 @@ Level 1 is met.
 | BR-06.01 Signed releases or manifest | met | `checksums.txt` lists every asset's SHA-256 and carries SLSA provenance signed through Sigstore. |
 | DO-06.01 How dependencies are selected and tracked | met | See [Dependencies](#dependencies). |
 | DO-07.01 Build instructions | met | [CONTRIBUTING.md](../CONTRIBUTING.md#prerequisites) and [Local setup](../CONTRIBUTING.md#local-setup). |
-| GV-01.01 Members with access to sensitive resources | open | Two accounts hold admin rights. They aren't listed in the documentation. |
-| GV-01.02 Roles and responsibilities | open | Not documented. |
+| GV-01.01 Members with access to sensitive resources | met | [GOVERNANCE.md](../GOVERNANCE.md#members-with-access-to-sensitive-resources). |
+| GV-01.02 Roles and responsibilities | met | [GOVERNANCE.md](../GOVERNANCE.md#roles). |
 | GV-03.02 Requirements for contributions | met | [CONTRIBUTING.md](../CONTRIBUTING.md) (tests, linting, commit messages, AI-assisted contributions) and the [PR template](../.github/pull_request_template.md). |
-| LE-01.01 Contributors assert their right to contribute | open | No DCO or CLA sign-off is required. |
+| LE-01.01 Contributors assert their right to contribute | met | Every commit in a pull request needs a DCO sign-off. The DCO check enforces it ([`.github/dco.yml`](../.github/dco.yml), [CONTRIBUTING.md](../CONTRIBUTING.md#developer-certificate-of-origin)). |
 | QA-03.01 Status checks pass before merging | met | Required checks on `main`: golangci-lint, unit tests, govulncheck, cfgaudit, glsec and the sensitive-paths gate, in strict mode. Releases additionally wait for all of CI (`require-green-ci.yml`). |
 | QA-06.01 Automated tests before a change is accepted | met | Unit tests on Linux, macOS and Windows are a required check ([TESTING.md](../TESTING.md)). |
 | SA-01.01 Design documentation of actions and actors | partly met | The [trust boundary](../SECURITY.md#trust-boundary) names who and what fhirlint trusts. The architecture map is in `CLAUDE.md`. There is no single design document of all actors and actions. |
@@ -78,7 +78,7 @@ Level 1 is met.
 | VM-03.01 Private reporting | met | Private vulnerability reporting is enabled. |
 | VM-04.01 Published vulnerability data | met | Confirmed vulnerabilities are published as GitHub Security Advisories of this repository ([SECURITY.md](../SECURITY.md)). None have been published so far. |
 
-Level 2 is open in four places: GV-01.01, GV-01.02, LE-01.01 and SA-01.01.
+Level 2 is open in one place: SA-01.01.
 
 ### Level 3
 
@@ -86,6 +86,8 @@ These aren't a goal yet. Already met:
 
 - AC-04.02: minimal permissions per job.
 - BR-02.02: every asset name carries the version.
+- BR-07.02: the [secrets policy](../GOVERNANCE.md#secrets-and-credentials).
+- GV-04.01: [granting access](../GOVERNANCE.md#granting-access).
 - DO-03.01 and DO-03.02: [verifying archives](../README.md#pre-built-binary-recommended) and [the image](../README.md#verifying-the-image), including the signing workflow.
 - QA-02.02: an SPDX SBOM per archive, and an SBOM attestation on the image.
 - QA-06.02: [TESTING.md](../TESTING.md).
@@ -94,9 +96,7 @@ These aren't a goal yet. Already met:
 Open:
 
 - BR-01.04: sanitizing trusted collaborator input.
-- BR-07.02: a written secrets policy.
 - DO-04.01 and DO-05.01: [SECURITY.md](../SECURITY.md#supported-versions) says that only the latest release gets fixes, but it doesn't give a duration per release.
-- GV-04.01: reviewing collaborators before they get escalated permissions.
 - QA-06.03: a written test policy for major changes.
 - QA-07.01: approval by a non-author.
 - SA-03.02: a threat model.
@@ -124,11 +124,9 @@ Open:
 
 ## Open items
 
-1. **List the members with admin rights and their roles** (GV-01.01, GV-01.02).
-2. **Decide on DCO sign-off** (LE-01.01).
-3. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
-4. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
-5. **One design document of actors and actions** (SA-01.01).
+1. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
+2. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
+3. **One design document of actors and actions** (SA-01.01).
 
 ## Keeping this page current
 
