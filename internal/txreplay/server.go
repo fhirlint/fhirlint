@@ -14,6 +14,12 @@ import (
 // upstreamTimeout bounds a single proxied terminology call while recording.
 const upstreamTimeout = 60 * time.Second
 
+// maxResponseBytes bounds one upstream response while recording. The
+// terminology server is untrusted (SECURITY.md) and the body is held in memory
+// and then written into the recording, so it is cut off here (#588). A large
+// ValueSet expansion stays far below it. A variable so tests can lower it.
+var maxResponseBytes int64 = 128 << 20
+
 // Miss is a request the replay server could not answer.
 type Miss struct {
 	Method string
@@ -215,9 +221,13 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request, body []byte, ta
 		return nil, false
 	}
 	defer func() { _ = resp.Body.Close() }()
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil {
 		writeOutcome(w, http.StatusBadGateway, "reading terminology response: "+err.Error())
+		return nil, false
+	}
+	if int64(len(respBody)) > maxResponseBytes {
+		writeOutcome(w, http.StatusBadGateway, fmt.Sprintf("terminology response over the limit of %d bytes; not recorded", maxResponseBytes))
 		return nil, false
 	}
 

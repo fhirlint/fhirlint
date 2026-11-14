@@ -457,3 +457,37 @@ func TestFingerprint(t *testing.T) {
 		t.Error("missing file: got nil, want an error")
 	}
 }
+
+func TestRecorderRefusesAnOversizedResponse(t *testing.T) {
+	old := maxResponseBytes
+	maxResponseBytes = 64
+	t.Cleanup(func() { maxResponseBytes = old })
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/fhir+json")
+		_, _ = io.WriteString(w, `{"resourceType":"Parameters","x":"`+strings.Repeat("a", 100)+`"}`)
+	}))
+	defer upstream.Close()
+
+	store, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := NewRecorder(store, upstream.URL+"/r4", nil)
+	base, err := rec.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = rec.Stop() }()
+
+	status, body := get(t, base, "/r4/ValueSet/$expand")
+	if status != http.StatusBadGateway {
+		t.Errorf("an oversized response must fail with 502, got %d", status)
+	}
+	if !strings.Contains(body, "over the limit of 64 bytes") {
+		t.Errorf("the error should name the limit, got %q", body)
+	}
+	if store.Len() != 0 {
+		t.Error("an oversized response must not be recorded")
+	}
+}
