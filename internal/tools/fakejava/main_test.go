@@ -6,9 +6,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -184,5 +186,41 @@ func TestServerModeFailures(t *testing.T) {
 	}
 	if code := run([]string{"-jar", "v.jar", "server", "not-a-port", "-version", "4.0.1"}, &so, &se, env(nil)); code != 2 {
 		t.Errorf("a bad port: exit %d", code)
+	}
+}
+
+func TestTerminologyMarker(t *testing.T) {
+	var asked []string
+	tx := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		asked = append(asked, r.URL.Path+"?code="+code)
+		switch code {
+		case "down":
+			http.Error(w, "no", http.StatusServiceUnavailable)
+		default:
+			known := code == "known"
+			_, _ = fmt.Fprintf(w, `{"resourceType":"Parameters","parameter":[{"name":"result","valueBoolean":%v}]}`, known) //nolint:gosec // only a boolean is written, nothing from the request
+		}
+	}))
+	defer tx.Close()
+	dir := t.TempDir()
+	in := write(t, dir, "p.json", `{"a":"FAKE_TX:known","b":"FAKE_TX:unknown","c":"FAKE_TX:down"}`)
+	out := filepath.Join(dir, "out.json")
+	var so, se bytes.Buffer
+	if code := run([]string{"-jar", "v.jar", in, "-version", "4.0.1", "-output", out, "-tx", tx.URL + "/r4/"}, &so, &se, env(nil)); code != 0 {
+		t.Fatalf("code %d: %s", code, se.String())
+	}
+	data, _ := os.ReadFile(out) //nolint:gosec // test output
+	s := string(data)
+	if !strings.Contains(s, "FAKE_TX_UNKNOWN") || !strings.Contains(s, "FAKE_TX_UNAVAILABLE") || strings.Contains(s, "All OK") || strings.Count(s, `"severity"`) != 2 {
+		t.Errorf("want one unknown and one unavailable code, nothing for the known one: %s", s)
+	}
+	if len(asked) != 3 || asked[0] != "/r4/CodeSystem/$validate-code?code=known" {
+		t.Errorf("requests: %v", asked)
+	}
+	// -tx n/a, as with --no-terminology-server: nothing is asked.
+	asked = nil
+	if code := run([]string{"-jar", "v.jar", in, "-version", "4.0.1", "-output", out, "-tx", "n/a"}, &so, &se, env(nil)); code != 0 || len(asked) != 0 {
+		t.Errorf("-tx n/a must not reach a server: code %d, %v", code, asked)
 	}
 }
