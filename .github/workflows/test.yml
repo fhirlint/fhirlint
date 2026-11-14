@@ -141,6 +141,41 @@ jobs:
           go run ./internal/tools/patchcoverage -min 60 -grace 5 -diff "$RUNNER_TEMP/change.diff" | tee -a "$GITHUB_STEP_SUMMARY"
           exit "${PIPESTATUS[0]}"
 
+      # For the Codecov upload below. Linux only: a shared artifact name
+      # collides across matrix legs, and Linux is where the floors are checked.
+      - if: matrix.os == 'ubuntu-latest' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage.out
+          retention-days: 7
+
+  # Publishes the coverage of main at app.codecov.io/gh/fhirlint/fhirlint,
+  # behind the README badge. The floors in the test job stay the gate: this
+  # job never runs on pull requests and never fails the build.
+  coverage-upload:
+    name: Upload coverage to Codecov
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # new; one upload, about 30s in glsec
+    permissions:
+      contents: read
+      id-token: write # OIDC upload, no stored Codecov token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage.out
+          disable_search: true
+          use_oidc: true
+          fail_ci_if_error: false
+
   # Branch protection on main requires the check context "Unit tests" verbatim,
   # and a matrix appends the OS to the job name, so the required context would
   # never appear again and every PR would block. This job carries that name and

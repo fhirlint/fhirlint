@@ -6,6 +6,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/fhirlint/fhirlint/pkg/fhirlint.svg)](https://pkg.go.dev/github.com/fhirlint/fhirlint/pkg/fhirlint)
 [![Tests](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/fhirlint/fhirlint/graph/badge.svg)](https://app.codecov.io/gh/fhirlint/fhirlint)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fhirlint/fhirlint/badge)](https://scorecard.dev/viewer/?uri=github.com/fhirlint/fhirlint)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16686/badge)](https://www.bestpractices.dev/projects/16686)
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/16686/baseline)](https://www.bestpractices.dev/projects/16686)
