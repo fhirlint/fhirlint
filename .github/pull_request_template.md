@@ -2,13 +2,17 @@
 
 <!-- What does this PR do and why? Link the issue. -->
 
+## Approach
+
+<!-- Skip if trivial. What did you consider and rule out, and why this way? What does this change deliberately NOT do (the scope boundary)? If the issue's framing or scope seemed off, say what you'd change. -->
+
 ## How to test
 
 <!-- Commands or steps a reviewer can run. -->
 
 ## AI assistance
 
-<!-- None, or which tool and for what (see CONTRIBUTING.md). -->
+<!-- None, or which tool, what it did, and what you checked yourself: the FHIR or validator behaviour you confirmed against the specification, the IG or the validator's code, and the finding delta you ran on the corpus or a real JAR run. "None" is a fine answer. See CONTRIBUTING.md#ai-assisted-contributions. -->
 
 ## Checklist
 
