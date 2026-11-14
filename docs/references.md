@@ -25,6 +25,9 @@ reference against it:
 - `ResourceType/id` of every resource in the set.
 - `fullUrl` of every Bundle entry (e.g. `urn:uuid:…` or an absolute URL).
 - The `ResourceType/id` of each Bundle entry's `resource`.
+- The same for every Bundle nested in a resource: a Bundle inside a Bundle
+  entry, or a Bundle contained in another resource, such as a Questionnaire's
+  extraction template.
 
 **Reference resolution**
 
@@ -32,7 +35,7 @@ reference against it:
 |----------------|------------------|---------------------|
 | Relative `Patient/123` (with optional `/_history/…`) | indexed `ResourceType/id` | error (`ref:unresolved`) |
 | `urn:uuid:…` / `urn:oid:…` | Bundle entry `fullUrl` | error (`ref:unresolved`) |
-| Contained `#id` | the `contained` array of the enclosing resource | error (`ref:unresolved`) |
+| Contained `#id` | the `contained` array of the enclosing resource; inside a contained resource, its siblings in the container | error (`ref:unresolved`) |
 | Absolute `https://host/fhir/Patient/1` | an indexed `fullUrl`, or the trailing `ResourceType/id` | information (`ref:external`) |
 
 Absolute references to a server outside the validated set cannot be verified, so
@@ -44,6 +47,12 @@ they are reported at **information** severity rather than failing the build.
   cannot be resolved by id.
 - Canonical URLs (`StructureDefinition.baseDefinition`, `Questionnaire.item.definition`,
   …) — these are `url`-typed, not `Reference` datatypes.
+- An element of the resource itself that happens to be called `reference`,
+  such as `DetectedIssue.reference` (a `uri`). Only the `reference` of a
+  Reference datatype is checked.
+
+How the check is tested against real-world data is in
+[corpus-scan.md](corpus-scan.md).
 
 ## Findings
 

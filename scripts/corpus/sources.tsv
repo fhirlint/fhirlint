@@ -1,0 +1,18 @@
+# Real-world FHIR corpus for the false-positive scan of the built-in rules (#577).
+# Fetched by scripts/corpus-fetch.sh; never committed. Columns, tab-separated:
+#   name  url  sha256  canonical-base
+# canonical-base is the "base" parameter of canonical-url-pattern for that
+# dataset: the canonical the package's own conformance resources use.
+# Pinned to exact versions and hashes; to add or bump a source, download it,
+# record its sha256 and run the rule diff against the old corpus first.
+hl7.fhir.r4.examples	https://hl7.org/fhir/R4/hl7.fhir.r4.examples.tgz	02aa10ea545301b1e14277123dd43a2a3a9297e6345de677801866df8afe7270	http://hl7.org/fhir/
+hl7.fhir.r4b.examples	https://hl7.org/fhir/R4B/hl7.fhir.r4b.examples.tgz	a64db561a943eab454d85349cfb5a088cbfc57c3d90706db36ae3df64269afa5	http://hl7.org/fhir/
+hl7.fhir.r5.examples	https://hl7.org/fhir/R5/hl7.fhir.r5.examples.tgz	129eb96eaeab3b14b4c3a89a2e3593a0a79ebddb56ef46e15fac6928a0a5976e	http://hl7.org/fhir/
+hl7.fhir.us.core	https://packages.fhir.org/hl7.fhir.us.core/8.0.1	3c02eef48ef10617021bee95e58cbc66d596ceda8cada24b72000d33ad67c464	http://hl7.org/fhir/us/core/
+hl7.fhir.uv.ips	https://packages.fhir.org/hl7.fhir.uv.ips/2.0.0	b3964eba08ee699bc121b905c4290641e54dd34f2cf3b5cd3edeb08a40a66979	http://hl7.org/fhir/uv/ips/
+hl7.fhir.uv.sdc	https://packages.fhir.org/hl7.fhir.uv.sdc/4.0.0	d785be8474c7ec7988e32e326430d9ca4aeb2cac4a1f195022e4d6f7dc5c5291	http://hl7.org/fhir/uv/sdc/
+hl7.fhir.us.mcode	https://packages.fhir.org/hl7.fhir.us.mcode/4.0.0	e603283bafa508a3705ad022bce95bba1fbd0b8b3b87b978e7412813b7bc1778	http://hl7.org/fhir/us/mcode/
+de.basisprofil.r4	https://packages.fhir.org/de.basisprofil.r4/1.5.4	9dc5392b5471060db07cf8ace2e8c81e99e3cee1e89f0b5febad362561fb739f	http://fhir.de/
+de.gematik.isik-basismodul	https://packages.fhir.org/de.gematik.isik-basismodul/4.0.3	26686790c4f1873e89e002b939329db751cc8a9f85f2b93e3cc9e3e7e8bce5be	https://gematik.de/fhir/isik/
+de.mii.laborbefund	https://packages.fhir.org/de.medizininformatikinitiative.kerndatensatz.laborbefund/2026.0.3	bc1f943729beda83a4f3ee7b8777f995815577b35fdc55ea0442c5eab5df194d	https://www.medizininformatik-initiative.de/fhir/core/
+synthea-r4-sep2019	https://synthetichealth.github.io/synthea-sample-data/downloads/synthea_sample_data_fhir_r4_sep2019.zip	a6fc595d9c0f4c646746af42f861b5a12d03c856af158dd837c764dfb81b66f8	-

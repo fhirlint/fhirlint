@@ -145,7 +145,7 @@ jobs:
 
       - name: Shell scripts
         if: ${{ !cancelled() }}
-        run: shellcheck hooks/*.sh .github/scripts/*.sh
+        run: shellcheck hooks/*.sh .github/scripts/*.sh scripts/*.sh
 
       - name: Shell in action.yml and the GitLab templates
         if: ${{ !cancelled() }}

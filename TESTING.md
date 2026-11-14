@@ -25,6 +25,7 @@ Whether fhirlint reports the validator's findings, all of them and only those.
 | Integration tests with the real JAR (`-tags integration`), pinned validator in [`integration-test.yml`](.github/workflows/integration-test.yml) | a broken JAR invocation, download, Java detection or temp IG bundling (`internal/localig`), none of which the unit tests touch | pull requests that change `internal/validator`, `internal/localig`, `cmd/validate.go`, `go.mod` or `go.sum`; every push to `main`; Linux and macOS |
 | Canary: the integration tests against the latest validator, with no JAR cache | an upstream release that breaks fhirlint, noticed within a week instead of at the next pin bump | weekly |
 | Registry tests (`-tags registry`): the built-in profile aliases, the FHIR version table and the R6 sentinel against packages.fhir.org and tx.fhir.org | an alias pointing at a package or version that doesn't exist, a wrong terminology path | weekly via [`alias-monitor.yml`](.github/workflows/alias-monitor.yml), which opens an issue on failure |
+| Corpus false-positive scan ([docs/corpus-scan.md](docs/corpus-scan.md), #577): the built-in lint rules and the reference check over ~13,000 real-world resources (HL7 and IG examples, Synthea), two builds diffed per rule (`scripts/rule-diff.sh`), a precision sample for each new or changed rule, and a must-stay-reported list of true positives | a rule that fires on resources nobody wrote a fixture for, which green unit tests can't show (the first run found 1,281 false reference findings and a `Device.url` taken for a canonical); a false-positive fix that also drops true positives | by hand: every pull request that adds or changes a built-in lint rule or the reference check, and before each release |
 | Equivalent routes (`cmd/routes_integration_test.go`, #544): each fixture in `testdata/routes` (JSON, XML, Bundle, a MedicationRequest) through a directory run, stdin, `--cache` cold and warm, `--server` and `pkg/fhirlint` gives the same findings as the one-shot file run | a route that drops or changes a finding, a location, a message ID or a severity while the others don't | with the integration tests |
 
 ### Reports and consistency
@@ -94,6 +95,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | Check | Protects against |
 |---|---|
 | `fhirlint upgrade-check` on real IG data (kbv.basis) before moving the validator pin | a validator release that changes findings in ways the fixtures don't show |
+| `scripts/rule-diff.sh` against the previous release over the real-world corpus ([docs/corpus-scan.md](docs/corpus-scan.md)) | a release that changes what fhirlint's own rules report without anyone having read the difference |
 | The weekly ecosystem review of FHIR and tooling news | upstream changes (validator, registry, terminology servers, profiles) that need an issue before they become a bug report |
 | Is this page still accurate? | layers added or removed without the overview following |
 

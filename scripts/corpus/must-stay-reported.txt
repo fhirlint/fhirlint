@@ -1,0 +1,30 @@
+# Must-stay-reported list for the corpus false-positive scan (#577).
+# True positives in the corpus (scripts/corpus/sources.tsv) that every build
+# must keep reporting; scripts/rule-diff.sh fails when one goes missing. Each
+# entry sits next to a false positive that was fixed, or stands for a class
+# of finding, so a fix that goes too far shows up here.
+# Format: rule<TAB>dataset/file<TAB>location, each preceded by why it is true.
+
+# A List entry pointing at a Patient that is in no file of the set.
+ref:unresolved	hl7.fhir.r4.examples/package/List-long.json	List.entry[100].item.reference
+# Same for a German IG example: Patient/example is not in de.basisprofil.r4.
+ref:unresolved	de.basisprofil.r4/package/examples/Condition-Example-condition-minimal.json	Condition.subject.reference
+# A urn:uuid reference with no matching fullUrl anywhere in the resource.
+ref:unresolved	hl7.fhir.r4b.examples/package/SubscriptionStatus-example.json	SubscriptionStatus.notificationEvent[0].focus.reference
+# A real Reference in a DetectedIssue: skipping the resource-level
+# DetectedIssue.reference (a uri) must not skip its Reference elements.
+ref:unresolved	hl7.fhir.r4.examples/package/DetectedIssue-ddi.json	DetectedIssue.author.reference
+# A dangling reference inside a Bundle entry: indexing nested Bundles must
+# not make every reference in a Bundle resolve.
+ref:unresolved	hl7.fhir.r4.examples/package/Bundle-dg2.json	Bundle.entry[0].resource.performer[0].reference
+# An absolute reference to a server outside the set.
+ref:external	hl7.fhir.r4.examples/package/ClaimResponse-R3500.json	ClaimResponse.request.reference
+# An id with upper-case letters, and one made of an OID.
+lint:id-kebab-case	de.basisprofil.r4/package/CodeSystem-Abrechnungsart.json	id
+lint:id-kebab-case	hl7.fhir.r4.examples/package/Organization-2.16.840.1.113883.19.5.json	id
+# A profile name that starts lower-case and has a hyphen (observation-bmi).
+lint:profile-name-pascalcase	hl7.fhir.r4.examples/package/StructureDefinition-bmi.json	name
+# A canonical outside the base; and an R5 ResearchStudy, whose url is a
+# canonical, unlike Device.url, which the rule now skips.
+lint:canonical-url-pattern	hl7.fhir.r4.examples/package/ActivityDefinition-citalopramPrescription.json	url
+lint:canonical-url-pattern	hl7.fhir.r5.examples/package/ResearchStudy-example-ctgov-study-record.json	url
