@@ -23,7 +23,7 @@ Decisions are made by the maintainers, in the open: in issues and pull requests 
 | Nicolai Ehrhardt ([@predictor2718](https://github.com/predictor2718)) | Owner of the GitHub organization `fhirlint`: repository admin for `fhirlint`, `homebrew-tap`, `web` and `example-fhir-medication-api`, branch protection, releases, GitHub Actions settings and secrets, the container image on `ghcr.io/fhirlint/fhirlint`, security advisories. Owner of the GitLab group `fhirlint`: the read-only mirror that hosts the CI/CD Catalog component. |
 | [@luma434](https://github.com/luma434) | Owner of the GitHub organization `fhirlint`, with the same GitHub access as above. |
 
-Nobody else has write access to any of these. The GitHub organization requires two-factor authentication for all members.
+Nobody else has write access to any of these. The GitHub organization requires two-factor authentication for all members and allows only secure methods: an authenticator app (TOTP), a security key or passkey, or GitHub Mobile. SMS is not accepted.
 
 ## Secrets and credentials
 
