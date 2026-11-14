@@ -409,6 +409,8 @@ fhirlint validate bundle.json --bundle-entries
 fhirlint validate ./fhir/ --bundle-entries
 ```
 
+A `--url` response is streamed to a temporary file and may be at most 512 MiB; a larger one fails the run.
+
 When validating multiple resources (several paths, directory, multiple `--url`, `--extract-each`, or NDJSON), all resources are processed in a **single JVM invocation** to avoid repeated startup overhead. Overlapping paths are de-duplicated, so naming a file that a listed directory already covers validates it once.
 
 ### Recognised file formats
