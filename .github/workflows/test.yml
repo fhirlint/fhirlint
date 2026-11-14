@@ -82,7 +82,7 @@ jobs:
         env:
           COVERAGE_FLOOR: "80.0"
           # package=floor, space-separated: the public API and the core.
-          PACKAGE_FLOORS: "pkg/fhirlint=90.9 internal/validator=79.2"
+          PACKAGE_FLOORS: "pkg/fhirlint=90.9 internal/validator=82.7"
           EXCLUDE: '^github[.]com/fhirlint/fhirlint/(main[.]go|internal/tools/)'
         run: |
           awk -v ex="$EXCLUDE" '

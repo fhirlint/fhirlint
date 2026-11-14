@@ -6,10 +6,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func env(m map[string]string) func(string) string {
@@ -103,5 +108,81 @@ func TestCrashRefuseAndBadCalls(t *testing.T) {
 	}
 	if code := run([]string{"-jar", "v.jar", ok, "-version", "4.0.1", "-output", out}, &so, &se, env(map[string]string{LogEnv: filepath.Join(dir, "no", "log")})); code != 2 {
 		t.Errorf("an unwritable log must fail, got %d", code)
+	}
+}
+
+func freePort(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = ln.Close() }()
+	return strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
+}
+
+func TestServerMode(t *testing.T) {
+	port := freePort(t)
+	pr, pw := io.Pipe()
+	done := make(chan int, 1)
+	go func() {
+		done <- run([]string{"-jar", "v.jar", "server", port, "-version", "4.0.1"}, pw, io.Discard, env(nil))
+		_ = pw.Close()
+	}()
+	ready := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 256)
+		n, _ := pr.Read(buf)
+		ready <- string(buf[:n])
+		_, _ = io.Copy(io.Discard, pr)
+	}()
+	select {
+	case line := <-ready:
+		if !strings.Contains(line, serverReady) {
+			t.Fatalf("first output %q, want the ready banner", line)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no ready banner")
+	}
+	base := "http://127.0.0.1:" + port
+	resp, err := http.Post(base+"/validateResource", "application/fhir+json", strings.NewReader(`{"x":"FAKE_ERROR"}`)) //nolint:gosec // loopback test server
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if !strings.Contains(string(body), "FAKE_ERROR_ID") {
+		t.Errorf("validateResource: %s", body)
+	}
+	resp, err = http.Post(base+"/validateResource", "application/fhir+json", strings.NewReader(`FAKE_CRASH`)) //nolint:gosec // loopback test server
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("a crash answers 500, got %d", resp.StatusCode)
+	}
+	resp, err = http.Post(base+"/stop", "", nil) //nolint:gosec // loopback test server
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	select {
+	case code := <-done:
+		if code != 0 {
+			t.Errorf("exit %d after /stop", code)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not exit after /stop")
+	}
+}
+
+func TestServerModeFailures(t *testing.T) {
+	var so, se bytes.Buffer
+	if code := run([]string{"-jar", "v.jar", "server", "1", "-version", "4.0.1"}, &so, &se, env(map[string]string{ServerFailEnv: "1"})); code != 1 {
+		t.Errorf("FAKEJAVA_SERVER_FAIL: exit %d", code)
+	}
+	if code := run([]string{"-jar", "v.jar", "server", "not-a-port", "-version", "4.0.1"}, &so, &se, env(nil)); code != 2 {
+		t.Errorf("a bad port: exit %d", code)
 	}
 }

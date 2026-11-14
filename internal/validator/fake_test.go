@@ -8,6 +8,8 @@ package validator
 import (
 	"archive/zip"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -176,5 +178,66 @@ func TestFakeRun_RefusedRunIsReportedWithWhatTheJARSaid(t *testing.T) {
 	_, err := Run(put(t, dir, "p.json", `{"resourceType":"Patient"}`), opts)
 	if err == nil || !strings.Contains(err.Error(), "validator produced no result") || !strings.Contains(err.Error(), "validation refused") {
 		t.Fatalf("a validator that wrote no result must fail and quote its stderr, got %v", err)
+	}
+}
+
+func freeTestPort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = ln.Close() }()
+	return ln.Addr().(*net.TCPAddr).Port
+}
+
+func TestFakeServer_ValidatesAndStops(t *testing.T) {
+	opts, dir := fakeSetup(t)
+	srv, err := StartServer(ServerConfig{Port: freeTestPort(t), FHIRVersion: "4.0.1", JARPath: opts.JARPath, NoTerminologyServer: true}, io.Discard, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := put(t, dir, "a.json", `{"resourceType":"Patient"}`)
+	b := put(t, dir, "b.json", `{"resourceType":"Patient","note":"FAKE_ERROR"}`)
+	rs, err := RunMultipleViaServer(srv.URL(), []string{a, b}, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 2 || !rs[0].Valid || rs[1].Valid || rs[1].Issues[0].MessageID != "FAKE_ERROR_ID" {
+		t.Fatalf("results via the server: %+v %+v", rs[0], rs[1])
+	}
+	r, err := ValidateBytesViaServer(srv.URL(), []byte(`<Patient xmlns="http://hl7.org/fhir"><note value="FAKE_WARNING"/></Patient>`), "buffer.xml", Options{Profiles: []string{"http://example.org/p"}})
+	if err != nil || r.Issues[0].MessageID != "FAKE_WARNING_ID" {
+		t.Fatalf("in-memory XML via the server: %+v, %v", r, err)
+	}
+	if _, err := ValidateBytesViaServer(srv.URL(), []byte("FAKE_CRASH"), "crash.json", Options{}); err == nil || !strings.Contains(err.Error(), "HTTP 500") {
+		t.Errorf("a server error must be an error, got %v", err)
+	}
+	if err := srv.Stop(); err != nil {
+		t.Errorf("stop: %v", err)
+	}
+	if _, err := RunMultipleViaServer(srv.URL(), []string{a}, Options{Timeout: time.Second}); err == nil {
+		t.Error("a stopped server must be an error, not a pass")
+	}
+}
+
+func TestFakeServer_StartupFailures(t *testing.T) {
+	opts, _ := fakeSetup(t)
+	cfg := ServerConfig{Port: freeTestPort(t), FHIRVersion: "4.0.1", JARPath: opts.JARPath}
+	t.Setenv("FAKEJAVA_SERVER_FAIL", "1")
+	if _, err := StartServer(cfg, io.Discard, 10*time.Second); err == nil || !strings.Contains(err.Error(), "exited during startup") {
+		t.Errorf("a server that exits before the banner: %v", err)
+	}
+	t.Setenv("FAKEJAVA_SERVER_FAIL", "")
+	t.Setenv("FAKEJAVA_SERVER_SILENT", "1")
+	cfg.Port = freeTestPort(t)
+	if _, err := StartServer(cfg, io.Discard, 500*time.Millisecond); err == nil || !strings.Contains(err.Error(), "did not become ready") {
+		t.Errorf("a server that never says it is ready: %v", err)
+	}
+	if _, err := StartServer(ServerConfig{Port: 0, FHIRVersion: "4.0.1"}, io.Discard, time.Second); err == nil {
+		t.Error("port 0 must be rejected")
+	}
+	if _, err := StartServer(ServerConfig{Port: 1, FHIRVersion: "9.9.9", JARPath: opts.JARPath}, io.Discard, time.Second); err == nil {
+		t.Error("an unknown FHIR version must be rejected")
 	}
 }
