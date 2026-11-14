@@ -10,6 +10,12 @@ A confirmed vulnerability is published as a [GitHub Security Advisory](https://g
 
 Fixes go into the latest release. There are no maintained release branches, so upgrading is the mitigation for anything reported here.
 
+A release stops receiving security fixes as soon as a newer release is published. There is no longer support period for older releases.
+
+## Vulnerabilities that don't affect fhirlint
+
+Scanners sometimes report a vulnerability that fhirlint doesn't reach: in a dependency, the Go standard library, the base image or the bundled validator JAR. When such a report reaches users, for example through a CVE in a scanner's output for the container image, we publish an [OpenVEX](https://openvex.dev) statement saying that fhirlint is `not_affected`, with the justification (such as `vulnerable_code_not_in_execute_path`). The statement goes into `vex/fhirlint.openvex.json` in this repository and is attached to the next release, so that scanners such as Trivy can read it (`trivy image --vex …`). No release has needed one so far, so the file doesn't exist yet. A vulnerability that does affect fhirlint is fixed in a release instead.
+
 ## Trust boundary
 
 fhirlint is usually pointed at data it has no reason to trust — resources from an API, a partner, or a contributor's pull request — and it runs in CI where that data reaches it automatically.
