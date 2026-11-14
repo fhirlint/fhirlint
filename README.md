@@ -14,6 +14,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fhirlint/fhirlint/badge)](https://scorecard.dev/viewer/?uri=github.com/fhirlint/fhirlint)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16686/badge)](https://www.bestpractices.dev/projects/16686)
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/16686/baseline)](https://www.bestpractices.dev/projects/16686)
+[![SLSA Build Level 3](https://slsa.dev/images/gh-badge-level3.svg)](#pre-built-binary-recommended)
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
@@ -85,11 +86,14 @@ tar xzf fhirlint_*_darwin_amd64.tar.gz && sudo mv fhirlint /usr/local/bin/
 
 Windows: download the `.zip` from the [releases page](https://github.com/fhirlint/fhirlint/releases) and add `fhirlint.exe` to your `PATH`.
 
-Release archives carry a build-provenance attestation, so you can check an archive really came from this repo's release workflow before unpacking it:
+Release archives carry a build-provenance attestation, so you can check an archive really came from this repo's release workflow before unpacking it. Releases after 1.17.0 are built in the reusable workflow `build-release.yml`, which makes their provenance SLSA Build Level 3 ([#601](https://github.com/fhirlint/fhirlint/issues/601)). `--signer-workflow` checks that this workflow signed it:
 
 ```bash
-gh attestation verify fhirlint_*_linux_amd64.tar.gz --repo fhirlint/fhirlint
+gh attestation verify fhirlint_*_linux_amd64.tar.gz --repo fhirlint/fhirlint \
+  --signer-workflow fhirlint/fhirlint/.github/workflows/build-release.yml
 ```
+
+For 1.17.0 and earlier, whose provenance `release.yml` signed (Build Level 2), drop `--signer-workflow`.
 
 `checksums.txt` is attested too, so the checksum route is trustworthy end to end — verify the file itself, then use it to check anything it lists:
 
@@ -165,20 +169,21 @@ Group `0` matters: the baked-in validator JAR and the cache directory are group-
 
 #### Verifying the image
 
-From **v1.5.0** onward, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry a build-provenance attestation. The SBOM attestation applies from **v1.6.0** onward — the v1.5.0 image is signed and provenance-attested but has no SBOM attestation ([#266](https://github.com/fhirlint/fhirlint/issues/266)).
+From **v1.5.0** onward, images are signed with [cosign](https://docs.sigstore.dev/) (keyless, via Sigstore) and carry a build-provenance attestation. Images after 1.17.0 are built and signed in the reusable workflow `build-image.yml` (SLSA Build Level 3, [#601](https://github.com/fhirlint/fhirlint/issues/601)); earlier ones in `docker.yml`. The SBOM attestation applies from **v1.6.0** onward — the v1.5.0 image is signed and provenance-attested but has no SBOM attestation ([#266](https://github.com/fhirlint/fhirlint/issues/266)).
 
 Check the signature:
 
 ```bash
 cosign verify ghcr.io/fhirlint/fhirlint:<version> \
-  --certificate-identity-regexp '^https://github\.com/fhirlint/fhirlint/\.github/workflows/docker\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github\.com/fhirlint/fhirlint/\.github/workflows/(build-image|docker)\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-Check that the image was built by this repo's release workflow, and inspect its SBOM:
+The regex accepts both workflows. To require Build Level 3, accept only `build-image`. Check that the image was built by this repo's build workflow, and inspect its SBOM:
 
 ```bash
-gh attestation verify oci://ghcr.io/fhirlint/fhirlint:<version> --repo fhirlint/fhirlint
+gh attestation verify oci://ghcr.io/fhirlint/fhirlint:<version> --repo fhirlint/fhirlint \
+  --signer-workflow fhirlint/fhirlint/.github/workflows/build-image.yml
 cosign download attestation ghcr.io/fhirlint/fhirlint:<version>
 ```
 
