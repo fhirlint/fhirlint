@@ -50,7 +50,7 @@ fhirlint profiles
 
 Aliases resolve to the full IG package reference at runtime. They are a convenience shortcut — you can always use the full package reference directly if you need a specific version.
 
-fhirlint also ships international aliases (`us-core`, `ips`, `ipa`, `uk-core`) — run `fhirlint profiles` or see the [Built-in profile aliases](../README.md#built-in-profile-aliases) table for the full list.
+fhirlint also ships international aliases (`us-core`, `ips`, `ipa`, `uk-core`) — run `fhirlint profiles` or see the [Built-in profile aliases](usage.md#built-in-profile-aliases) table for the full list.
 
 ---
 
@@ -180,7 +180,7 @@ The concepts live in `bfarm.terminologien.*` packages on the BfArM's registry, b
 | `tx.fhir.de` (Ontoserver, HL7 Germany) | 837 code systems, none German |
 | `terminologien.bfarm.de/packages` | yes, behind a token |
 
-So a German project is in this state by default, and it is not a misconfiguration. See the [README section](../README.md#german-code-systems-are-not-checked-by-default) for what a run looks like and the two ways to get real checking.
+So a German project is in this state by default, and it is not a misconfiguration. See [German code systems are not checked by default](terminology.md#german-code-systems-are-not-checked-by-default) for what a run looks like and the two ways to get real checking.
 
 ---
 

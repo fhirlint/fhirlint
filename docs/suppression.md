@@ -353,7 +353,7 @@ Alternatively, use `--best-practice ignore` to silence *all* best-practice const
 
 ### Terminology warnings for internal code systems
 
-While an internal code system is not yet published as an IG package, the validator will warn about unknown codes. Use `--codesystem` to load the definition locally (see [Profiles & implementation guides](../README.md#profiles--implementation-guides)), or suppress the warnings during the transition period:
+While an internal code system is not yet published as an IG package, the validator will warn about unknown codes. Use `--codesystem` to load the definition locally (see [Profiles & implementation guides](usage.md#profiles--implementation-guides)), or suppress the warnings during the transition period:
 
 ```yaml
 suppress:

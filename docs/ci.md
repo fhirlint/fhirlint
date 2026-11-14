@@ -465,7 +465,7 @@ Set all of them explicitly in such a job:
 
 - **Heap:** use `JDK_JAVA_OPTIONS`, which the `java` launcher reads. `JAVA_OPTS` has no effect. Leave headroom below the runner's memory for fhirlint itself and the rest of the job; large IGs may need more than `-Xmx3g`.
 - **`--timeout`** is the hard stop and yields no results. Fit it to the job's own timeout.
-- **`--validation-timeout`** and **`--max-messages`** stop the validator early and report what it found so far, so a pathological resource produces partial results instead of a killed run. Reaching either bound fails the run, because files with errors may then be reported as valid; see [Bounding a run](../README.md#bounding-a-run). Keep them below `--timeout`, or `--timeout` fires first and nothing is reported.
+- **`--validation-timeout`** and **`--max-messages`** stop the validator early and report what it found so far, so a pathological resource produces partial results instead of a killed run. Reaching either bound fails the run, because files with errors may then be reported as valid; see [Bounding a run](pipeline.md#bounding-a-run). Keep them below `--timeout`, or `--timeout` fires first and nothing is reported.
 
 The values above are starting points, not recommendations for every repository: a large IG can legitimately need more time and memory than a handful of examples.
 

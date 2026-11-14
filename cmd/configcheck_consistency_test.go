@@ -62,33 +62,38 @@ func TestAllKnownConfigKeysHaveFlag(t *testing.T) {
 	}
 }
 
-// TestAllValidateFlagsDocumented ensures every --validate flag is mentioned in
-// README.md so the flag table stays in sync with the code.
+// referenceDoc is where the flag and key reference lives since the README
+// was cut down to an overview (#603).
+const referenceDoc = "../docs/configuration.md"
+
+// TestAllValidateFlagsDocumented ensures every validate flag is in the flag
+// reference, so the table stays in sync with the code.
 func TestAllValidateFlagsDocumented(t *testing.T) {
-	data, err := os.ReadFile("../README.md")
+	data, err := os.ReadFile(referenceDoc)
 	if err != nil {
-		t.Fatalf("could not read README.md: %v", err)
+		t.Fatalf("could not read %s: %v", referenceDoc, err)
 	}
 	content := string(data)
 	validateCmd.Flags().VisitAll(func(f *pflag.Flag) {
 		if !strings.Contains(content, "--"+f.Name) {
-			t.Errorf("flag --%s not mentioned anywhere in README.md", f.Name)
+			t.Errorf("flag --%s not mentioned anywhere in %s", f.Name, referenceDoc)
 		}
 	})
 }
 
-// The README's --fhir-version row and the comment in fhirlint.yml.example are
-// the two places the version list is not derived from validator.FHIRVersions,
-// so they are the ones that silently go stale when a release is added (#306).
-func TestFHIRVersionsDocumentedInREADME(t *testing.T) {
-	data, err := os.ReadFile("../README.md")
+// The reference's --fhir-version row and the comment in fhirlint.yml.example
+// are the two places the version list is not derived from
+// validator.FHIRVersions, so they are the ones that silently go stale when a
+// release is added (#306).
+func TestFHIRVersionsDocumentedInTheReference(t *testing.T) {
+	data, err := os.ReadFile(referenceDoc)
 	if err != nil {
-		t.Fatalf("could not read README.md: %v", err)
+		t.Fatalf("could not read %s: %v", referenceDoc, err)
 	}
 	content := string(data)
 	for _, v := range validator.FHIRVersions {
 		if !strings.Contains(content, v.ID) {
-			t.Errorf("FHIR version %s (%s) is supported but not mentioned in README.md", v.ID, v.Name)
+			t.Errorf("FHIR version %s (%s) is supported but not mentioned in %s", v.ID, v.Name, referenceDoc)
 		}
 	}
 }

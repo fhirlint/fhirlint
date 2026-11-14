@@ -18,7 +18,7 @@ type FHIRVersion struct {
 // and the fhirlint.yml schema are all derived from this table. Adding a release
 // used to mean finding eleven hardcoded copies of the same list; now it is one
 // entry here, `go run . config schema > fhirlint.schema.json`, and the
-// --fhir-version row in README.md — which is prose and cannot be derived, so a
+// --fhir-version row in docs/configuration.md — which is prose and cannot be derived, so a
 // test checks it against this table instead (#306).
 //
 // TxPath and CorePackage are spelled out rather than derived from Name,

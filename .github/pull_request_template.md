@@ -18,7 +18,7 @@
 
 - [ ] Tests added (unit tests required, integration tests for JAR-related changes)
 - [ ] New flags also configurable via `fhirlint.yml`
-- [ ] `README.md` updated if flag table or usage examples are affected
+- [ ] Docs updated if the flag table or usage examples are affected (`docs/configuration.md`, `docs/usage.md`)
 - [ ] `go test ./...` passes locally
 - [ ] `golangci-lint run` passes locally
 - [ ] `go mod tidy -diff` reports nothing
