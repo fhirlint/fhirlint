@@ -82,6 +82,15 @@ type fakeRun struct {
 // package state.
 func runFake(t *testing.T, dir string, args ...string) fakeRun {
 	t.Helper()
+	prepareFake(t)
+	return runFakeKeepEnv(t, dir, args...)
+}
+
+// prepareFake sets up the environment runFake runs in: the fake java first on
+// PATH, HOME in a temp dir, the update checks off and a JAR whose manifest
+// names 7.0.5. It returns that JAR's path.
+func prepareFake(t *testing.T) string {
+	t.Helper()
 	if fakeJavaDir == "" {
 		t.Skip("fake java could not be installed")
 	}
@@ -92,8 +101,9 @@ func runFake(t *testing.T, dir string, args ...string) fakeRun {
 	t.Setenv("PATH", fakeJavaDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv(noUpdateNotifierEnvVar, "1")
 	t.Setenv("CI", "true")
-	t.Setenv("FHIRLINT_JAR", fakeJAR(t, "7.0.5"))
-	return runFakeKeepEnv(t, dir, args...)
+	jar := fakeJAR(t, "7.0.5")
+	t.Setenv("FHIRLINT_JAR", jar)
+	return jar
 }
 
 // runFakeKeepEnv is runFake without touching the environment, for a second

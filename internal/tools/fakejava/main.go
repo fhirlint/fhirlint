@@ -19,12 +19,18 @@
 // Several inputs come back as a Bundle of OperationOutcomes, one per input in
 // order, as the real validator writes them.
 //
-// Two environment variables let a test look behind it:
+// "-jar JAR server PORT" starts the validator's HTTP service instead (#611):
+// it prints the ready banner, answers POST /validateResource with the
+// OperationOutcome of the posted resource, and exits on POST /stop.
 //
-//	FAKEJAVA_LOG     append each validation call's arguments to this file,
-//	                 one JSON array per line
-//	FAKEJAVA_REFUSE  answer "java -version" but fail every validation run,
-//	                 to prove a result came from somewhere else (the cache)
+// Environment variables let a test look behind it:
+//
+//	FAKEJAVA_LOG            append each call's arguments to this file, one
+//	                        JSON array per line
+//	FAKEJAVA_REFUSE         answer "java -version" but fail every validation
+//	                        run, to prove a result came from somewhere else
+//	FAKEJAVA_SERVER_FAIL    in server mode, exit 1 before the ready banner
+//	FAKEJAVA_SERVER_SILENT  in server mode, never print the ready banner
 package main
 
 import (
@@ -32,15 +38,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // Environment variables a test sets for the fake.
 const (
-	LogEnv    = "FAKEJAVA_LOG"
-	RefuseEnv = "FAKEJAVA_REFUSE"
+	LogEnv          = "FAKEJAVA_LOG"
+	RefuseEnv       = "FAKEJAVA_REFUSE"
+	ServerFailEnv   = "FAKEJAVA_SERVER_FAIL"
+	ServerSilentEnv = "FAKEJAVA_SERVER_SILENT"
 )
+
+// serverReady is the line the validator prints once its HTTP service accepts
+// requests; fhirlint waits for it.
+const serverReady = "FHIR Validator HTTP Service started"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, os.Getenv))
@@ -56,6 +71,9 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			_, _ = fmt.Fprintf(stderr, "fakejava: %v\n", err)
 			return 2
 		}
+	}
+	if jar := index(args, "-jar"); jar >= 0 && jar+3 < len(args) && args[jar+2] == "server" {
+		return serve(args[jar+3], stdout, stderr, getenv)
 	}
 	if getenv(RefuseEnv) != "" {
 		_, _ = fmt.Fprintln(stderr, "fakejava: validation refused")
@@ -153,4 +171,53 @@ func issue(sev, code, msg, id, expr string) map[string]any {
 			{"url": "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col", "valueInteger": 2},
 		},
 	}
+}
+
+func index(args []string, want string) int {
+	for i, a := range args {
+		if a == want {
+			return i
+		}
+	}
+	return -1
+}
+
+// serve runs the stand-in for the validator's HTTP service on port.
+func serve(port string, stdout, stderr io.Writer, getenv func(string) string) int {
+	if getenv(ServerFailEnv) != "" {
+		_, _ = fmt.Fprintln(stderr, "fakejava: server failed to start")
+		return 1
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:"+port)
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "fakejava: %v\n", err)
+		return 2
+	}
+	stop := make(chan struct{})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/validateResource", func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if bytes.Contains(body, []byte("FAKE_CRASH")) {
+			http.Error(w, "java.lang.IllegalStateException: fake crash", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/fhir+json")
+		_ = json.NewEncoder(w).Encode(outcome(string(body)))
+	})
+	mux.HandleFunc("/stop", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		close(stop)
+	})
+	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	go func() { _ = srv.Serve(ln) }()
+	if getenv(ServerSilentEnv) == "" {
+		_, _ = fmt.Fprintln(stdout, serverReady+" on port "+port)
+	}
+	<-stop
+	_ = ln.Close()
+	return 0
 }
