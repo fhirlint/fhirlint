@@ -17,7 +17,7 @@ A local run of Scorecard v5.6.0 against `main` before this change scored 7.4 out
 | Pinned-Dependencies | 9 | The `golang` and `eclipse-temurin` base images in the `Dockerfile` were pinned by tag only. | They are now pinned by digest too. Dependabot's docker ecosystem moves the digest. |
 | Vulnerabilities | 7 | GO-2026-6354, GO-2026-6355 (`x/crypto/ssh`) and GO-2026-5932 (`x/crypto/openpgp`), all in the indirect `golang.org/x/crypto` v0.55.0. fhirlint imports neither package (`x/crypto` comes in for `sha3`), so govulncheck and OSV-Scanner's call analysis don't report them. | Raised to v0.58.0, which fixes the two ssh entries. GO-2026-5932 is fixed only in v0.59.0, which was still inside the repository's seven-day Dependabot cooldown (see open items). |
 | Signed-Releases | 0 | Scorecard looks for a signature or provenance file among the release assets. The SLSA provenance from `attest-build-provenance` was only in the GitHub attestations API. | `release.yml` attaches it to each release as `fhirlint_<version>.sigstore.json` and `.intoto.jsonl`. The score rises as new releases replace the last five that Scorecard checks. |
-| Branch-Protection | 3 | The protection rules don't apply to administrators. Pull requests and reviews aren't required, and there are no code owners. | Not changed. These are repository settings; see open items. |
+| Branch-Protection | 3 | The protection rules don't apply to administrators. Pull requests and reviews aren't required, and there are no code owners. | On 2026-11-14 branch protection was extended to administrators, and a pull request is now required, with no approvals, so a single maintainer can still merge. Required reviews, stale-review dismissal and code owners stay off; see Code-Review. |
 | Code-Review | 0 | 0 of 24 recent changesets were approved by someone other than the author. | Not changed. With one active maintainer there is nobody to approve. CI, the sensitive-paths gate and the PR template are the review that exists. |
 | CII-Best-Practices | 0 | No OpenSSF Best Practices badge. | Not changed. The badge needs a maintainer to register the project at bestpractices.dev; see open items. |
 
@@ -31,9 +31,9 @@ Status: **met**, **partly met** or **open**.
 
 | Control | Status | Evidence |
 |---|---|---|
-| AC-01.01 MFA for sensitive actions | open | The organization doesn't require two-factor authentication (`two_factor_requirement_enabled: false`). Individual accounts may use it, but nothing enforces it. |
+| AC-01.01 MFA for sensitive actions | open | Both members of the organization have two-factor authentication enabled (checked on 2026-11-14), but the organization doesn't require it yet. The setting can only be changed in the organization's settings, not through the API. |
 | AC-02.01 Least privilege for new collaborators | met | The organization's default repository permission is `read`. Write and admin access is granted per person. |
-| AC-03.01 No direct commits to the primary branch | partly met | Branch protection on `main` requires six status checks, strict, so a push without green CI is rejected. It doesn't apply to administrators, and it doesn't require a pull request. |
+| AC-03.01 No direct commits to the primary branch | met | Branch protection on `main` requires a pull request and six status checks in strict mode, and it applies to administrators too. |
 | AC-03.02 Primary branch can't be deleted | met | Branch protection disallows deletion and force pushes. |
 | BR-01.01 Untrusted metadata is sanitized | met | Workflows pass event data to `run:` blocks through `env:`, never inline. zizmor, glsec and cfgaudit check for template injection on every pull request ([TESTING.md](../TESTING.md#supply-chain-and-repository-security)). |
 | BR-01.03 Untrusted code has no privileged credentials | met | Pull requests run under `pull_request`, with a read-only token and no secrets. The one `pull_request_target` workflow, [`sensitive-paths.yml`](../.github/workflows/sensitive-paths.yml), checks out `main` only and reads the pull request through the API. |
@@ -52,7 +52,7 @@ Status: **met**, **partly met** or **open**.
 | QA-05.01, QA-05.02 No generated executables or unreviewable binaries | met | None are tracked. Scorecard's Binary-Artifacts check scores 10. |
 | VM-02.01 Security contacts | met | [SECURITY.md](../SECURITY.md): private advisories reach the maintainers. |
 
-Level 1 is met apart from two repository settings: enforced two-factor authentication (AC-01.01), and branch protection for administrators (AC-03.01).
+Level 1 is met apart from one organization setting: required two-factor authentication (AC-01.01).
 
 ### Level 2
 
@@ -78,7 +78,7 @@ Level 1 is met apart from two repository settings: enforced two-factor authentic
 | VM-03.01 Private reporting | met | Private vulnerability reporting is enabled. |
 | VM-04.01 Published vulnerability data | met | Confirmed vulnerabilities are published as GitHub Security Advisories of this repository ([SECURITY.md](../SECURITY.md)). None have been published so far. |
 
-Level 2 is open in four places: GV-01.01, GV-01.02, LE-01.01 and SA-01.01, plus the two Level 1 settings.
+Level 2 is open in four places: GV-01.01, GV-01.02, LE-01.01 and SA-01.01, plus the Level 1 setting.
 
 ### Level 3
 
@@ -124,13 +124,12 @@ Open:
 
 ## Open items
 
-1. **Require two-factor authentication** in the organization settings (AC-01.01).
-2. **Apply branch protection to administrators**, and require a pull request before merging, with no approvals, so that a single maintainer can still merge (AC-03.01, Scorecard Branch-Protection).
-3. **List the members with admin rights and their roles** (GV-01.01, GV-01.02).
-4. **Decide on DCO sign-off** (LE-01.01).
-5. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
-6. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
-7. **One design document of actors and actions** (SA-01.01).
+1. **Require two-factor authentication** in the organization settings, under Authentication security (AC-01.01). The API can't change it.
+2. **List the members with admin rights and their roles** (GV-01.01, GV-01.02).
+3. **Decide on DCO sign-off** (LE-01.01).
+4. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
+5. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
+6. **One design document of actors and actions** (SA-01.01).
 
 ## Keeping this page current
 
