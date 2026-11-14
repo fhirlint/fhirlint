@@ -121,9 +121,7 @@ func TestFakeValidate_ViaServer(t *testing.T) {
 		t.Errorf("validate --server must report like a normal run:\n%s", r.stdout)
 	}
 
-	if err := srv.Stop(); err != nil {
-		t.Fatal(err)
-	}
+	_ = srv.Stop() // its exit status after the kill differs by platform
 	if r := runFakeKeepEnv(t, dir, "validate", "--server", srv.URL(), "ok.json"); r.err == nil {
 		t.Error("an unreachable --server must be an error, not a pass")
 	}
