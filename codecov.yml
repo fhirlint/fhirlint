@@ -1,0 +1,15 @@
+# The same scope as the coverage floor in .github/workflows/test.yml (#595):
+# main.go and the CI helper commands in internal/tools/ are left out, so the
+# badge shows the number the floor checks.
+ignore:
+  - "main.go"
+  - "internal/tools/**"
+
+# The floors and the patch check in test.yml are the gate. Codecov only sees
+# main, so it reports and never sets a status of its own.
+coverage:
+  status:
+    project: off
+    patch: off
+
+comment: false
