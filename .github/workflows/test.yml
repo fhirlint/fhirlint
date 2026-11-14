@@ -67,20 +67,22 @@ jobs:
 
       # Fail when the total or a guarded package drops below its floor (#545).
       # Linux only: Windows skips a few tests and sits about 0.1 points lower.
-      # Raise a floor on purpose; never lower one to make a change pass.
+      # Raise a floor on purpose; never lower one to make a change pass. The
+      # total stays at 80 or above: the OpenSSF Best Practices silver level asks
+      # for 80 percent statement coverage (#595).
       #
       # Excluded, with the reason, and nowhere else:
       #   main.go           one line that calls cmd.Execute
       #   internal/tools/   CI helper commands, run by the workflows that use them
-      # internal/jarsettings and the JAR paths in internal/validator stay in:
-      # the integration suite covers them, and the number should show that the
-      # unit tests don't.
+      # internal/jarsettings stays in: the integration suite covers it, and the
+      # number should show that the unit tests don't. The JAR paths of
+      # internal/validator and cmd run against internal/tools/fakejava (#595).
       - name: Coverage floor
         if: matrix.os == 'ubuntu-latest'
         env:
-          COVERAGE_FLOOR: "69.0"
+          COVERAGE_FLOOR: "80.0"
           # package=floor, space-separated: the public API and the core.
-          PACKAGE_FLOORS: "pkg/fhirlint=32.0 internal/validator=70.0"
+          PACKAGE_FLOORS: "pkg/fhirlint=90.9 internal/validator=75.5"
           EXCLUDE: '^github[.]com/fhirlint/fhirlint/(main[.]go|internal/tools/)'
         run: |
           awk -v ex="$EXCLUDE" '

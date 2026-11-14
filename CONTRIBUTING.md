@@ -59,6 +59,8 @@ on the newer release.
 
 ### Coverage
 
+The unit tests run `fhirlint validate` and the subcommands end to end without Java: `internal/tools/fakejava` stands in for the validator, and markers in the input (`FAKE_ERROR`, `FAKE_WARNING`, `FAKE_CRASH`) decide what it reports (#595). A change to the path from the flags to the exit code gets a test in `cmd/validate_fake_test.go` or next to it.
+
 CI fails the unit-test job when the total statement coverage, or that of `pkg/fhirlint` or `internal/validator`, falls below its floor, and when a pull request's changed lines are mostly uncovered (#545). The floors and exclusions are in `.github/workflows/test.yml`; raise a floor on purpose, never lower one to make a change pass. Locally:
 
 ```bash
