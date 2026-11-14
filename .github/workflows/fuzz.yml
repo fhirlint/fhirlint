@@ -26,6 +26,9 @@ on:
     - cron: "17 5 * * 0" # 05:17 UTC every Sunday
   workflow_dispatch:
 
+# Every job grants its own permissions; nothing is granted by default.
+permissions: {}
+
 jobs:
   fuzz:
     name: Fuzz ${{ matrix.target }}

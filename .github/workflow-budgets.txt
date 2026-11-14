@@ -21,6 +21,7 @@ lint.yml                 8        # 2m
 markdown.yml             5        # new; 1.9m
 release.yml              30       # 2.4m
 reproducible-build.yml   15       # new; 5.2m
+scorecard.yml            5        # new; about 1m
 security.yml             8        # 2m
 sensitive-paths.yml      5        # 1.4m
 test.yml                 10       # 3.6m

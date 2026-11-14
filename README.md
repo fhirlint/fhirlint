@@ -11,6 +11,7 @@
 [![Security](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml/badge.svg)](https://github.com/fhirlint/fhirlint/actions/workflows/security.yml)
 [![agent security: cfgaudit](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cfgaudit/cfgaudit/main/assets/badge/v1.json)](https://github.com/cfgaudit/cfgaudit)
 [![CI/CD security: glsec](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/glsec/glsec/main/assets/badge/v1.json)](https://github.com/glsec/glsec)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/fhirlint/fhirlint/badge)](https://scorecard.dev/viewer/?uri=github.com/fhirlint/fhirlint)
 
 A lightweight CLI for validating FHIR resources with a developer-friendly experience.
 
@@ -96,6 +97,13 @@ sha256sum --check --ignore-missing checksums.txt
 ```
 
 It covers the archives and their SBOMs, so an attested `checksums.txt` makes those tamper-evident without each needing its own attestation.
+
+Releases after 1.17.0 also carry the attestation itself, as `fhirlint_<version>.sigstore.json` (the Sigstore bundle) and `fhirlint_<version>.intoto.jsonl` (its DSSE envelope). One bundle covers every archive, SBOM and `checksums.txt`, so you can verify against the file instead of the attestations API, for example from a mirror:
+
+```bash
+gh attestation verify fhirlint_*_linux_amd64.tar.gz --repo fhirlint/fhirlint \
+  --bundle fhirlint_*.sigstore.json
+```
 
 Each archive also ships an SPDX SBOM next to it (`<archive>.sbom.json`) listing the Go modules it was built from. The SBOM files carry a provenance attestation of their own, so you can confirm one came from the release build before trusting its contents:
 

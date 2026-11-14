@@ -10,6 +10,9 @@ on:
   schedule:
     - cron: "0 6 * * 1"  # every Monday 06:00 UTC
 
+# Every job grants its own permissions; nothing is granted by default.
+permissions: {}
+
 jobs:
   govulncheck:
     name: govulncheck

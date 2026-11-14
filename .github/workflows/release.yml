@@ -114,6 +114,7 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
       - name: Attest release artifacts
+        id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
@@ -121,6 +122,24 @@ jobs:
             dist/*.zip
             dist/checksums.txt
             dist/*.sbom.json
+
+      # The attestation also lives in the GitHub attestations API. Attaching it
+      # to the release lets users verify downloads offline, and is where
+      # OpenSSF Scorecard's Signed-Releases check looks for a signature and
+      # provenance (#578).
+      - name: Attach the attestation to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          cp "$BUNDLE" "fhirlint_${version}.sigstore.json"
+          jq -c .dsseEnvelope "$BUNDLE" > "fhirlint_${version}.intoto.jsonl"
+          gh release upload "$TAG" --repo "$REPO" \
+            "fhirlint_${version}.sigstore.json" "fhirlint_${version}.intoto.jsonl"
 
       # The archives just published must be the ones the smoke test ran. The
       # build is reproducible, so a difference means something changed
