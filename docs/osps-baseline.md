@@ -31,7 +31,7 @@ Status: **met**, **partly met** or **open**.
 
 | Control | Status | Evidence |
 |---|---|---|
-| AC-01.01 MFA for sensitive actions | open | Both members of the organization have two-factor authentication enabled (checked on 2026-11-14), but the organization doesn't require it yet. The setting can only be changed in the organization's settings, not through the API. |
+| AC-01.01 MFA for sensitive actions | met | The organization requires two-factor authentication for every member, since 2026-11-14. |
 | AC-02.01 Least privilege for new collaborators | met | The organization's default repository permission is `read`. Write and admin access is granted per person. |
 | AC-03.01 No direct commits to the primary branch | met | Branch protection on `main` requires a pull request and six status checks in strict mode, and it applies to administrators too. |
 | AC-03.02 Primary branch can't be deleted | met | Branch protection disallows deletion and force pushes. |
@@ -52,7 +52,7 @@ Status: **met**, **partly met** or **open**.
 | QA-05.01, QA-05.02 No generated executables or unreviewable binaries | met | None are tracked. Scorecard's Binary-Artifacts check scores 10. |
 | VM-02.01 Security contacts | met | [SECURITY.md](../SECURITY.md): private advisories reach the maintainers. |
 
-Level 1 is met apart from one organization setting: required two-factor authentication (AC-01.01).
+Level 1 is met.
 
 ### Level 2
 
@@ -78,7 +78,7 @@ Level 1 is met apart from one organization setting: required two-factor authenti
 | VM-03.01 Private reporting | met | Private vulnerability reporting is enabled. |
 | VM-04.01 Published vulnerability data | met | Confirmed vulnerabilities are published as GitHub Security Advisories of this repository ([SECURITY.md](../SECURITY.md)). None have been published so far. |
 
-Level 2 is open in four places: GV-01.01, GV-01.02, LE-01.01 and SA-01.01, plus the Level 1 setting.
+Level 2 is open in four places: GV-01.01, GV-01.02, LE-01.01 and SA-01.01.
 
 ### Level 3
 
@@ -124,12 +124,11 @@ Open:
 
 ## Open items
 
-1. **Require two-factor authentication** in the organization settings, under Authentication security (AC-01.01). The API can't change it.
-2. **List the members with admin rights and their roles** (GV-01.01, GV-01.02).
-3. **Decide on DCO sign-off** (LE-01.01).
-4. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
-5. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
-6. **One design document of actors and actions** (SA-01.01).
+1. **List the members with admin rights and their roles** (GV-01.01, GV-01.02).
+2. **Decide on DCO sign-off** (LE-01.01).
+3. **Register at bestpractices.dev** for the Best Practices badge (Scorecard CII-Best-Practices). That is also where an OSPS Baseline self-assessment can be published.
+4. **Raise `golang.org/x/crypto` to v0.59.0** once it is past the cooldown, from 2026-11-18. That closes GO-2026-5932 for Scorecard. fhirlint doesn't import the affected package.
+5. **One design document of actors and actions** (SA-01.01).
 
 ## Keeping this page current
 
