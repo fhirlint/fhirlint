@@ -24,6 +24,11 @@
 // Several inputs come back as a Bundle of OperationOutcomes, one per input in
 // order, as the real validator writes them.
 //
+// "-jar JAR compare … -left L -right R -dest D" writes the comparison page the
+// validator writes, D/sd-<L>-<R>.html, with a Messages table (#615): no row
+// when L and R are the same, one error row when they differ, and no page at
+// all (an "Unable to resolve" line and exit 1) when either names "unresolvable".
+//
 // "-jar JAR server PORT" starts the validator's HTTP service instead (#611):
 // it prints the ready banner, answers POST /validateResource with the
 // OperationOutcome of the posted resource, and exits on POST /stop.
@@ -42,6 +47,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -81,6 +87,9 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	}
 	if jar := index(args, "-jar"); jar >= 0 && jar+3 < len(args) && args[jar+2] == "server" {
 		return serve(args[jar+3], stdout, stderr, getenv)
+	}
+	if jar := index(args, "-jar"); jar >= 0 && jar+2 < len(args) && args[jar+2] == "compare" {
+		return compare(args, stdout, stderr)
 	}
 	if getenv(RefuseEnv) != "" {
 		_, _ = fmt.Fprintln(stderr, "fakejava: validation refused")
@@ -282,4 +291,48 @@ func addTerminologyIssues(oo map[string]any, tx, text string) {
 		issues = nil
 	}
 	oo["issue"] = append(issues, found...)
+}
+
+// value returns the argument after flag, or "".
+func value(args []string, flag string) string {
+	if i := index(args, flag); i >= 0 && i+1 < len(args) {
+		return args[i+1]
+	}
+	return ""
+}
+
+// compare stands in for the validator's profile comparison.
+func compare(args []string, stdout, stderr io.Writer) int {
+	left, right, dest := value(args, "-left"), value(args, "-right"), value(args, "-dest")
+	if left == "" || right == "" || dest == "" {
+		_, _ = fmt.Fprintf(stderr, "fakejava: unsupported compare call %q\n", args)
+		return 2
+	}
+	for _, side := range []string{left, right} {
+		if strings.Contains(side, "unresolvable") {
+			_, _ = fmt.Fprintf(stdout, "Unable to resolve profile %s\n", side)
+			return 1
+		}
+	}
+	rows := ""
+	if left != right {
+		rows = "<tr><td>Error</td><td>Patient.name</td><td>Fake difference between " + html.EscapeString(left) + " and " + html.EscapeString(right) + "</td></tr>"
+	}
+	page := "<html><body><h3>Messages</h3><div><table class=\"grid\"><tr><th>Severity</th><th>Path</th><th>Description</th></tr>" +
+		rows + "</table></div><h3>Metadata</h3></body></html>"
+	name := "sd-" + safeName(left) + "-" + safeName(right) + ".html"
+	if err := os.WriteFile(dest+"/"+name, []byte(page), 0o600); err != nil { //nolint:gosec // -dest as fhirlint under test passed it
+		_, _ = fmt.Fprintf(stderr, "fakejava: %v\n", err)
+		return 2
+	}
+	return 0
+}
+
+func safeName(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			return r
+		}
+		return '_'
+	}, s)
 }
