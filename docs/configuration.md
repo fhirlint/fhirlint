@@ -4,7 +4,7 @@
 
 ## Configuration file (`fhirlint.yml`)
 
-Place a `fhirlint.yml` (or `.fhirlint.yml`) in your project root to set project-level defaults. CLI flags always take precedence over config file values.
+Place a `fhirlint.yml` (or `.fhirlint.yml`) in your project root to set project-level defaults. fhirlint looks in the working directory and up to two levels above it, and in each directory `fhirlint.yml` wins over `.fhirlint.yml`. `fhirlint config check` checks the same file a run reads. CLI flags always take precedence over config file values.
 
 A config file that exists but cannot be read (a YAML error, or a file that is a list or a single value rather than keys and values) stops every command with exit code 2 instead of running with the defaults (#646). `fhirlint config check` shows what is wrong with it.
 

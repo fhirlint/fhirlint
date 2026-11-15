@@ -181,9 +181,13 @@ func discoverConfig() string {
 		if err != nil {
 			continue
 		}
-		names := make([]string, 0, len(viper.SupportedExts))
-		for _, ext := range viper.SupportedExts {
-			names = append(names, "fhirlint."+ext)
+		// fhirlint.<ext> first, then the documented dotfile .fhirlint.<ext>,
+		// which discovery never looked for while config check did (#654).
+		names := make([]string, 0, 2*len(viper.SupportedExts))
+		for _, prefix := range []string{"fhirlint.", ".fhirlint."} {
+			for _, ext := range viper.SupportedExts {
+				names = append(names, prefix+ext)
+			}
 		}
 		// Not a bare "fhirlint": that is what the binary is called, built with
 		// go build or downloaded next to the files it checks, and it stopped
