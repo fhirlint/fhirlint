@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -241,4 +242,39 @@ func SplitUpstream(upstream string) (origin, path string) {
 		return upstream, ""
 	}
 	return u.Scheme + "://" + u.Host, u.EscapedPath()
+}
+
+// RestoreURLs rewrites the replay server's own URLs in text, a finding's
+// message say, to the servers the recording stands for (#663). The
+// validator quotes the server it talked to ("Error from http://127.0.0.1:
+// 37559/r4: …"), which under --tx-offline is the replay server on a port that
+// is new every run. Restored, a replay names the server that gave the answer
+// and reads the same every time.
+//
+// base is the URL Start returned; m the recording's manifest, nil when it
+// has none, in which case only the route and registry forms are restored.
+func RestoreURLs(text, base string, m *Manifest) string {
+	if base == "" || !strings.Contains(text, base) {
+		return text
+	}
+	// base followed by a digit is another port, not this server.
+	at := func(suffix string) *regexp.Regexp {
+		return regexp.MustCompile(regexp.QuoteMeta(base+suffix) + `([^0-9]|$)`)
+	}
+	text = regexp.MustCompile(regexp.QuoteMeta(base+routePrefix)+`([^/\s'"]+)`).ReplaceAllString(text, "https://$1")
+	ecosystem := DefaultEcosystem
+	if m != nil && m.Ecosystem != "" {
+		ecosystem = m.Ecosystem
+	}
+	text = at(registryPrefix).ReplaceAllString(text, ecosystem+"$1")
+	if m == nil || m.Upstream == "" {
+		return text
+	}
+	upstream := strings.TrimSuffix(m.Upstream, "/")
+	if m.Routing == RoutingRegistry {
+		// The validator was given base plus the upstream's path (/r4), so
+		// base itself is the upstream's origin.
+		upstream, _ = SplitUpstream(upstream)
+	}
+	return at("").ReplaceAllString(text, upstream+"$1")
 }

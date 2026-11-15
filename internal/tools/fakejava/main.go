@@ -312,7 +312,7 @@ func addTerminologyIssues(oo map[string]any, tx, text string) {
 			if resp != nil {
 				_ = resp.Body.Close()
 			}
-			found = append(found, issue("error", "exception", "Terminology server unavailable for code "+m[1], "FAKE_TX_UNAVAILABLE", "Patient"))
+			found = append(found, issue("error", "exception", "Terminology server unavailable for code "+m[1]+" (error message = Error from "+tx+": no answer)", "FAKE_TX_UNAVAILABLE", "Patient"))
 			continue
 		}
 		var params struct {

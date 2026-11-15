@@ -131,3 +131,32 @@ func TestFakeTx_AMissKeepsTheReport(t *testing.T) {
 		t.Errorf("say why the baseline is missing:\n%s", r.stderr)
 	}
 }
+
+// A replay's findings name the server the recording stands for, not the
+// local replay server, and read the same in every replay (#663).
+func TestFakeTx_FindingsNameTheRecordedServer(t *testing.T) {
+	srv, _ := fakeTxServer(t)
+	dir := t.TempDir()
+	writeFile(t, dir, "fhir/p.json", `{"resourceType":"Patient","id":"p1","a":"FAKE_TX:known"}`)
+	if r := runFake(t, dir, "tx", "warm", "--terminology-server", srv.URL+"/r4", "fhir"); r.err != nil {
+		t.Fatalf("tx warm: %v\n%s", r.err, r.stderr)
+	}
+	// A code the recording lacks: the replay answers 404 and the validator
+	// quotes the server it asked.
+	writeFile(t, dir, "fhir/p.json", `{"resourceType":"Patient","id":"p1","a":"FAKE_TX:other"}`)
+	var reports []string
+	for _, out := range []string{"a.json", "b.json"} {
+		_ = runFakeKeepEnv(t, dir, "validate", "--tx-offline", "--format", "json", "--output", out, "fhir")
+		data, err := os.ReadFile(filepath.Join(dir, out)) //nolint:gosec // test output
+		if err != nil {
+			t.Fatal(err)
+		}
+		reports = append(reports, string(data))
+	}
+	if !strings.Contains(reports[0], "Error from "+srv.URL+"/r4") {
+		t.Errorf("the finding must name the recorded server %s:\n%s", srv.URL+"/r4", reports[0])
+	}
+	if strip := func(s string) string { return s[strings.Index(s, `"files"`):] }; strip(reports[0]) != strip(reports[1]) {
+		t.Errorf("two replays must give the same findings:\n%s\n%s", reports[0], reports[1])
+	}
+}
