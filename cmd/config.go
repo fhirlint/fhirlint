@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/fhirlint/fhirlint/internal/configcheck"
-	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -60,21 +59,11 @@ func init() {
 }
 
 func runConfigCheck(_ *cobra.Command, _ []string) error {
+	// The file the run uses, found by the same discoverConfig, so config check
+	// can't check a file a run doesn't read, or miss one it does (#654). Empty
+	// when there is none, when discovery refused a symbolic link (it said so),
+	// or under --no-repo-config.
 	path := viper.ConfigFileUsed()
-	if path == "" && !noRepoConfig() {
-		// viper didn't find a config file — search explicitly so we can report
-		// errors in a file the user may have just created.
-		for _, name := range []string{"fhirlint.yml", ".fhirlint.yml"} {
-			if _, err := os.Stat(name); err == nil {
-				if !input.Inside(".", name) {
-					// Checking it would quote the target (#500).
-					return fmt.Errorf("%s is a symbolic link that leads outside the working directory; pass it with --config to check it anyway", name)
-				}
-				path = name
-				break
-			}
-		}
-	}
 	if path == "" {
 		fmt.Fprintln(os.Stderr, "No fhirlint.yml found in the current directory.")
 		fmt.Fprintln(os.Stderr, "Run: fhirlint init")
