@@ -109,13 +109,16 @@ func runAudit(_ *cobra.Command, _ []string) error {
 	igIssues := printIGTerminal(igReport, igSrc, igErr)
 
 	fmt.Println()
-	switch auditExitCode(jarIssues, igIssues) {
+	// The exit code travels as an exitErr rather than os.Exit, so the run
+	// unwinds and can be tested in-process (#613). errValidationFailed keeps
+	// Execute from printing a second "Error:" line under the count.
+	switch code := auditExitCode(jarIssues, igIssues); code {
 	case exitJARIssue:
 		fmt.Fprintf(os.Stderr, "%d issue(s) found.\n", jarIssues+igIssues)
-		os.Exit(exitJARIssue)
+		return &exitErr{code: code, err: errValidationFailed}
 	case exitIGIssue:
 		fmt.Fprintf(os.Stderr, "%d IG package issue(s) found.\n", igIssues)
-		os.Exit(exitIGIssue)
+		return &exitErr{code: code, err: errValidationFailed}
 	}
 	fmt.Println("No issues found.")
 	return nil
