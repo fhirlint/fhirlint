@@ -181,11 +181,14 @@ func discoverConfig() string {
 		if err != nil {
 			continue
 		}
-		names := make([]string, 0, len(viper.SupportedExts)+1)
+		names := make([]string, 0, len(viper.SupportedExts))
 		for _, ext := range viper.SupportedExts {
 			names = append(names, "fhirlint."+ext)
 		}
-		for _, name := range append(names, "fhirlint") {
+		// Not a bare "fhirlint": that is what the binary is called, built with
+		// go build or downloaded next to the files it checks, and it stopped
+		// every command once an unreadable config did (#653).
+		for _, name := range names {
 			p := filepath.Join(abs, name)
 			if st, err := os.Stat(p); err != nil || st.IsDir() {
 				continue
