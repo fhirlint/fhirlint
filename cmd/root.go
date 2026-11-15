@@ -29,6 +29,34 @@ It wraps the official HL7 FHIR Validator with a better developer experience:
 Configuration can be stored in fhirlint.yml or .fhirlint.yml in the project root.
 
 HL7® FHIR® is a registered trademark of Health Level Seven International.`,
+	PersistentPreRunE: requireReadableConfig,
+}
+
+// configErr is why the config file initConfig found could not be read: a YAML
+// error, or a root that is not a mapping. Nil when there is none, or no
+// config at all.
+var configErr error
+
+// commandsWithoutConfig run with a config that cannot be read: config reports
+// what is wrong with it, init writes one, and the rest never read it.
+var commandsWithoutConfig = map[string]bool{
+	"config": true, "init": true, "version": true, "help": true,
+	"completion": true, cobra.ShellCompRequestCmd: true, cobra.ShellCompNoDescRequestCmd: true,
+}
+
+// requireReadableConfig stops a command when the config exists but cannot be
+// read. Running on with the defaults would drop every setting in it, fail-on
+// and suppress included, without a word (#646).
+func requireReadableConfig(cmd *cobra.Command, _ []string) error {
+	if configErr == nil {
+		return nil
+	}
+	for c := cmd; c != nil; c = c.Parent() {
+		if commandsWithoutConfig[c.Name()] {
+			return nil
+		}
+	}
+	return &exitErr{code: 2, err: configErr}
 }
 
 // exitErr lets a command request a specific process exit code from its RunE.
@@ -95,6 +123,7 @@ func bindRootConfig() {
 }
 
 func initConfig() {
+	configErr = nil
 	viper.SetConfigType("yaml")
 	// No viper.AutomaticEnv: without a prefix it would answer every config key
 	// from an environment variable of the same name, so URL, SERVER, OUTPUT or
@@ -117,9 +146,11 @@ func initConfig() {
 		viper.SetConfigFile(found)
 	}
 
-	// Silently ignore an unreadable config here; `fhirlint config check`
-	// reports what is wrong with it.
-	_ = viper.ReadInConfig()
+	// An unreadable config is kept for requireReadableConfig, which stops the
+	// command; `fhirlint config check` reports the details.
+	if err := viper.ReadInConfig(); err != nil {
+		configErr = fmt.Errorf("%s cannot be read, so none of its settings would apply: %w\nRun 'fhirlint config check' for details", viper.ConfigFileUsed(), err)
+	}
 }
 
 // noRepoConfig reports --no-repo-config: the checked directory is someone

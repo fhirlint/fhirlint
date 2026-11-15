@@ -172,6 +172,11 @@ func Check(path string) ([]Issue, error) {
 	}
 
 	root := doc.Content[0]
+	if root.Kind != yaml.MappingNode {
+		// checkMapping would find no keys and call the file valid, while
+		// fhirlint cannot read it at all (#646).
+		return []Issue{{Line: root.Line, Message: "the config must be a mapping of keys to values, not a list or a single value"}}, nil
+	}
 	return checkMapping(root, topLevelKeys), nil
 }
 
