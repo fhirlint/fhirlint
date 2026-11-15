@@ -51,7 +51,7 @@ func ChangedSince(ref, dir string) ([]string, error) {
 			return nil, fmt.Errorf("--since: git %s failed: %w", args[0], err)
 		}
 		for _, rel := range splitNUL(out) {
-			abs := filepath.Join(root, filepath.FromSlash(rel))
+			abs := CanonicalPath(filepath.Join(root, filepath.FromSlash(rel)))
 			if seen[abs] {
 				continue
 			}
@@ -87,4 +87,23 @@ func gitOutput(dir string, args ...string) (string, error) {
 		return "", err
 	}
 	return strings.TrimRight(string(out), "\n"), nil
+}
+
+// CanonicalPath is p as an absolute path with symlinks resolved, and on
+// Windows with short (8.3) names expanded: the one spelling two paths to the
+// same file share. git reports the repository root resolved, while a path
+// from the command line keeps the spelling of the working directory, so
+// --since compared /private/var/… with /var/… on macOS and validated nothing
+// (#681). When p can't be resolved (it is gone, say) the plain absolute path
+// is returned, so a resolution problem means validating too much, not too
+// little.
+func CanonicalPath(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return p
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return resolved
+	}
+	return abs
 }
