@@ -20,6 +20,13 @@
 //	                an error FAKE_TX_UNKNOWN when it answers result false, and
 //	                FAKE_TX_UNAVAILABLE when it doesn't answer 200 (#612)
 //
+//	FAKE_ONLY_IN:<s>     an error FAKE_ONLY_ID, only when the -jar path contains <s>
+//	FAKE_GONE_IN:<s>     an error FAKE_GONE_ID, except when the -jar path contains <s>
+//	FAKE_RENAMED_IN:<s>  a warning at Patient.gender: FAKE_OLD_ID, or FAKE_NEW_ID with
+//	                     a reworded text when the -jar path contains <s>
+//
+// The last three let two validator releases disagree, for upgrade-check (#629).
+//
 // An input without a marker gets the validator's "All OK" information issue.
 // Several inputs come back as a Bundle of OperationOutcomes, one per input in
 // order, as the real validator writes them.
@@ -129,7 +136,7 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash`)
 			return 1
 		}
-		oo := outcome(string(data))
+		oo := outcome(string(data), args[jar+1])
 		if tx != "" {
 			addTerminologyIssues(oo, tx, string(data))
 		}
@@ -167,8 +174,24 @@ func appendCall(log string, args []string) error {
 	return err
 }
 
-func outcome(text string) map[string]any {
+// versionMarker matches the markers whose finding depends on the JAR.
+var versionMarker = regexp.MustCompile(`FAKE_(ONLY|GONE|RENAMED)_IN:([A-Za-z0-9.]+)`)
+
+func outcome(text, jar string) map[string]any {
 	var issues []map[string]any
+	for _, m := range versionMarker.FindAllStringSubmatch(text, -1) {
+		in := strings.Contains(jar, m[2])
+		switch {
+		case m[1] == "ONLY" && in:
+			issues = append(issues, issue("error", "invalid", "Fake error of the new release", "FAKE_ONLY_ID", "Patient.birthDate"))
+		case m[1] == "GONE" && !in:
+			issues = append(issues, issue("error", "invalid", "Fake error of the old release", "FAKE_GONE_ID", "Patient.active"))
+		case m[1] == "RENAMED" && in:
+			issues = append(issues, issue("warning", "code-invalid", "The gender code is not in the value set here", "FAKE_NEW_ID", "Patient.gender"))
+		case m[1] == "RENAMED":
+			issues = append(issues, issue("warning", "code-invalid", "The gender code is not in the value set", "FAKE_OLD_ID", "Patient.gender"))
+		}
+	}
 	if strings.Contains(text, "FAKE_ERROR") {
 		issues = append(issues, issue("error", "invalid", "Fake error found", "FAKE_ERROR_ID", "Patient.name"))
 	}
@@ -228,7 +251,7 @@ func serve(port string, stdout, stderr io.Writer, getenv func(string) string) in
 			return
 		}
 		w.Header().Set("Content-Type", "application/fhir+json")
-		_ = json.NewEncoder(w).Encode(outcome(string(body)))
+		_ = json.NewEncoder(w).Encode(outcome(string(body), "")) // one release: the markers by JAR stay off
 	})
 	mux.HandleFunc("/stop", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
