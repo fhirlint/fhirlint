@@ -17,9 +17,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -106,11 +108,69 @@ func Fingerprint(path string) (string, error) {
 // Key identifies an interaction by what the validator asked for. Query
 // parameters are sorted and the request body is canonicalised, so the same
 // logical request keys identically across runs regardless of map ordering.
+//
+// Ids the validator makes up per run are left out (#652): it gives the value
+// sets it builds at runtime, for BCP-47 languages or MIME types, a fresh
+// urn:uuid on every start, and inline copies of a value set a fresh uuid id.
+// Keyed as sent, such a request could never be replayed. What the request is
+// about, its url, compose, system and code, stays in the key.
 func Key(method, path, rawQuery string, body []byte) string {
 	h := sha256.New()
-	_, _ = fmt.Fprintf(h, "%s\n%s\n%s\n", strings.ToUpper(method), path, canonicalQuery(rawQuery))
-	h.Write(canonicalJSON(body))
+	_, _ = fmt.Fprintf(h, "%s\n%s\n%s\n", strings.ToUpper(method), path, canonicalQuery(maskQuery(rawQuery)))
+	h.Write(keyJSON(body))
 	return hex.EncodeToString(h.Sum(nil))[:32]
+}
+
+// perRunUUID is a urn:uuid, in any case, as text or URL-encoded.
+var perRunUUID = regexp.MustCompile(`(?i)urn(:|%3A)uuid(:|%3A)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+// bareUUID is an id that is nothing but a uuid.
+var bareUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+const maskedID = "urn:uuid:-"
+
+func maskQuery(raw string) string {
+	return perRunUUID.ReplaceAllString(raw, maskedID)
+}
+
+// keyJSON is canonicalJSON with the per-run ids masked: every urn:uuid
+// string, and the id of a resource when it is a bare uuid.
+func keyJSON(body []byte) []byte {
+	if len(body) == 0 {
+		return nil
+	}
+	var v interface{}
+	if err := json.Unmarshal(body, &v); err != nil {
+		return body
+	}
+	out, err := json.Marshal(maskIDs(v))
+	if err != nil {
+		return body
+	}
+	return out
+}
+
+func maskIDs(v interface{}) interface{} {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		_, isResource := x["resourceType"].(string)
+		for k, child := range x {
+			if id, ok := child.(string); ok && k == "id" && isResource && bareUUID.MatchString(id) {
+				x[k] = maskedID
+				continue
+			}
+			x[k] = maskIDs(child)
+		}
+		return x
+	case []interface{}:
+		for i := range x {
+			x[i] = maskIDs(x[i])
+		}
+		return x
+	case string:
+		return perRunUUID.ReplaceAllString(x, maskedID)
+	}
+	return v
 }
 
 // queryEscaper re-escapes what would make the joined canonical form ambiguous:
@@ -170,12 +230,16 @@ func canonicalJSON(body []byte) []byte {
 type Store struct {
 	dir     string
 	entries map[string]*Interaction
+	// rekeyed maps the key a recording has under today's Key to the file it
+	// was stored as, when the two differ: a recording made before #652 is
+	// filed under a key with the validator's per-run ids in it.
+	rekeyed map[string]string
 }
 
 // Open reads a recording directory. A directory that does not exist yields an
 // empty store, which is what recording into a fresh path needs.
 func Open(dir string) (*Store, error) {
-	s := &Store{dir: dir, entries: make(map[string]*Interaction)}
+	s := &Store{dir: dir, entries: make(map[string]*Interaction), rekeyed: make(map[string]string)}
 	names, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		return s, nil
@@ -196,7 +260,16 @@ func Open(dir string) (*Store, error) {
 		if err := json.Unmarshal(data, &in); err != nil {
 			return nil, fmt.Errorf("terminology recording %s is corrupt: %w", name, err)
 		}
-		s.entries[strings.TrimSuffix(name, ".json")] = &in
+		fileKey := strings.TrimSuffix(name, ".json")
+		s.entries[fileKey] = &in
+		// The stored request is what the key is computed from, so a recording
+		// keyed by an older Key still replays. Only when it was kept: a body
+		// that wasn't JSON isn't stored, and then the file name stands.
+		if len(in.Request) > 0 || strings.EqualFold(in.Method, http.MethodGet) {
+			if k := Key(in.Method, in.Path, in.Query, in.Request); k != fileKey {
+				s.rekeyed[k] = fileKey
+			}
+		}
 	}
 	return s, nil
 }
@@ -206,7 +279,11 @@ func (s *Store) Len() int { return len(s.entries) }
 
 // Lookup finds a recorded response, or reports false when nothing matches.
 func (s *Store) Lookup(method, path, rawQuery string, body []byte) (*Interaction, bool) {
-	in, ok := s.entries[Key(method, path, rawQuery, body)]
+	key := Key(method, path, rawQuery, body)
+	if in, ok := s.entries[key]; ok {
+		return in, true
+	}
+	in, ok := s.entries[s.rekeyed[key]]
 	return in, ok
 }
 
