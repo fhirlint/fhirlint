@@ -28,9 +28,9 @@ func serveRelease(t *testing.T, tag string) *atomic.Int32 {
 	}))
 	t.Cleanup(srv.Close)
 
-	orig := apiBase
-	apiBase = srv.URL
-	t.Cleanup(func() { apiBase = orig })
+	orig := APIBase
+	APIBase = srv.URL
+	t.Cleanup(func() { APIBase = orig })
 	return &calls
 }
 
@@ -153,9 +153,9 @@ func TestLatest_UnreadableCacheStillWorks(t *testing.T) {
 
 func TestLatest_NetworkFailureIsSilent(t *testing.T) {
 	isolate(t)
-	orig := apiBase
-	apiBase = "http://127.0.0.1:9" // discard port: refuses immediately
-	t.Cleanup(func() { apiBase = orig })
+	orig := APIBase
+	APIBase = "http://127.0.0.1:9" // discard port: refuses immediately
+	t.Cleanup(func() { APIBase = orig })
 
 	if got := Latest("owner/repo"); got != "" {
 		t.Errorf("Latest() = %q, want empty on a network failure", got)
@@ -180,9 +180,9 @@ func TestFetchLatest_SendsTokenWhenPresent(t *testing.T) {
 		fmt.Fprint(w, `{"tag_name":"v1.0.0"}`)
 	}))
 	defer srv.Close()
-	orig := apiBase
-	apiBase = srv.URL
-	t.Cleanup(func() { apiBase = orig })
+	orig := APIBase
+	APIBase = srv.URL
+	t.Cleanup(func() { APIBase = orig })
 
 	t.Setenv("GITHUB_TOKEN", "secret")
 	if _, err := FetchLatest("owner/repo"); err != nil {
@@ -194,7 +194,7 @@ func TestFetchLatest_SendsTokenWhenPresent(t *testing.T) {
 }
 
 func TestAPIURL(t *testing.T) {
-	if got := apiURL("owner/repo"); got != apiBase+"/repos/owner/repo/releases/latest" {
+	if got := apiURL("owner/repo"); got != APIBase+"/repos/owner/repo/releases/latest" {
 		t.Errorf("apiURL() = %q", got)
 	}
 }

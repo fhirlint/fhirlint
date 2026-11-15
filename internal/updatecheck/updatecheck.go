@@ -151,11 +151,13 @@ func FetchLatest(repo string) (string, error) {
 	return release.TagName, nil
 }
 
-// apiBase is a var so tests can point the lookup at a local server.
-var apiBase = "https://api.github.com"
+// APIBase is the GitHub API every fhirlint lookup goes to: releases here, and
+// the validator's security advisories in internal/validator. A var so tests,
+// in this package and in cmd, can point it at a local server (#613).
+var APIBase = "https://api.github.com"
 
 func apiURL(repo string) string {
-	return apiBase + "/repos/" + repo + "/releases/latest"
+	return APIBase + "/repos/" + repo + "/releases/latest"
 }
 
 // readCache loads the whole file. A missing or unparseable file reads as empty
