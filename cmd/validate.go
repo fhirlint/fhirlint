@@ -922,10 +922,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// A replay miss must fail the run. The JAR treats some terminology failures
 	// as warnings and carries on, so a silently incomplete recording would
 	// otherwise produce a green result that skipped real terminology checks.
+	// It fails the run at the end, not here: the reports of every file are
+	// still written, so one miss doesn't cost the findings of all (#659).
+	var txMissErr error
 	if txPlayer != nil {
-		if err := txMissError(txPlayer.Misses(), txRecordingDir(flagTxDir), arg); err != nil {
-			return err
-		}
+		txMissErr = txMissError(txPlayer.Misses(), txRecordingDir(flagTxDir), arg)
 	}
 
 	// Say so explicitly: an empty run and a run that found nothing wrong both
@@ -1018,8 +1019,14 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Generate (or update) the baseline from the current active issues.
-	if flagGenerateBaseline != "" {
+	// Generate (or update) the baseline from the current active issues. Not
+	// from a run with replay misses: its terminology findings are incomplete,
+	// and a baseline would carry that gap into every later run.
+	// The run still reports, and fails at the end with the misses.
+	if flagGenerateBaseline != "" && txMissErr != nil {
+		fmt.Fprintf(os.Stderr, "Not writing the baseline %s: the terminology recording is incomplete\n", flagGenerateBaseline)
+	}
+	if flagGenerateBaseline != "" && txMissErr == nil {
 		bf := baseline.Generate(results)
 		if werr := baseline.Write(flagGenerateBaseline, bf); werr != nil {
 			return fmt.Errorf("writing baseline %s: %w", flagGenerateBaseline, werr)
@@ -1134,6 +1141,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	warnBaselineIDDrift(os.Stderr, driftedBaselineEntries)
 	if staleBaselineEntries > 0 {
 		fmt.Fprintf(os.Stderr, "warn: %d baseline occurrence(s) no longer found — run --generate-baseline to update\n", staleBaselineEntries)
+	}
+
+	if txMissErr != nil {
+		return txMissErr
 	}
 
 	// When generating a baseline the build always succeeds: the point is to

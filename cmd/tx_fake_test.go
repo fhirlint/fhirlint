@@ -103,3 +103,31 @@ func TestFakeTx_UsageErrors(t *testing.T) {
 		t.Errorf("--tx-offline without a recording must say how to make one, got %v", r.err)
 	}
 }
+
+// A miss still fails the run, but after every report is written (#659): one
+// file's missing terminology answer must not cost the findings of the others.
+func TestFakeTx_AMissKeepsTheReport(t *testing.T) {
+	srv, _ := fakeTxServer(t)
+	dir := t.TempDir()
+	writeFile(t, dir, "fhir/a.json", `{"resourceType":"Patient","id":"a","x":"FAKE_TX:known"}`)
+	writeFile(t, dir, "fhir/b.json", errPatient)
+	if r := runFake(t, dir, "tx", "warm", "--terminology-server", srv.URL+"/r4", "fhir"); r.err != nil {
+		t.Fatalf("tx warm: %v\n%s", r.err, r.stderr)
+	}
+	writeFile(t, dir, "fhir/a.json", `{"resourceType":"Patient","id":"a","x":"FAKE_TX:other"}`)
+
+	r := runFakeKeepEnv(t, dir, "validate", "--tx-offline", "--format", "json", "--output", "rep.json", "--generate-baseline", "base.json", "fhir")
+	if r.err == nil || !strings.Contains(r.err.Error(), "not in the recording") {
+		t.Fatalf("the miss must still fail the run, got %v", r.err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "rep.json")) //nolint:gosec // test output
+	if err != nil || !strings.Contains(string(data), "a.json") || !strings.Contains(string(data), "FAKE_ERROR_ID") {
+		t.Errorf("the report must be written with every file's findings: %v\n%s", err, data)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "base.json")); !os.IsNotExist(err) {
+		t.Errorf("no baseline from an incomplete recording: %v", err)
+	}
+	if !strings.Contains(r.stderr, "Not writing the baseline") {
+		t.Errorf("say why the baseline is missing:\n%s", r.stderr)
+	}
+}
