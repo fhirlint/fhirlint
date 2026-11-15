@@ -96,10 +96,10 @@ func TestFakeCache_UnwritableDirectoryWarns(t *testing.T) {
 	dir, cacheDir := t.TempDir(), t.TempDir()
 	writeFile(t, dir, "a.json", cleanPatient)
 	writeFile(t, dir, "b.json", cleanPatient)
-	if err := os.Chmod(cacheDir, 0o500); err != nil {
+	if err := os.Chmod(cacheDir, 0o500); err != nil { //nolint:gosec // a directory needs x; read-only on purpose
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(cacheDir, 0o700) })
+	t.Cleanup(func() { _ = os.Chmod(cacheDir, 0o700) }) //nolint:gosec // restore the directory for TempDir cleanup
 	r := runFakeKeepEnv(t, dir, "validate", "--cache", "--cache-dir", cacheDir, "a.json", "b.json")
 	mustPass(t, r)
 	if n := strings.Count(r.stderr, "results could not be written"); n != 1 {
