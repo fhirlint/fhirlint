@@ -214,7 +214,7 @@ jobs:
             # only say "exit status 1"; rerun the package to show which test.
             out=$(gobco -branch -test -short "./$pkg") || {
               echo "$out"
-              gobco -branch -test -short -verbose "./$pkg" 2>&1 | grep -E -- '--- FAIL|_test\.go:[0-9]+:|^panic' || true
+              gobco -branch -test -short -verbose "./$pkg" 2>&1 | grep -E -v '^(=== |--- PASS|--- SKIP|go: downloading)' | grep -E -B2 -A12 -- '--- FAIL|^panic|^FAIL|exit status' | head -80 || true
               exit 1
             }
             echo "$out" | sed -n "s|^Branch coverage: \([0-9]*\)/\([0-9]*\)$|$pkg\t\1\t\2|p"
