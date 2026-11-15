@@ -61,6 +61,7 @@
 //	                        run, to prove a result came from somewhere else
 //	FAKEJAVA_SERVER_FAIL    in server mode, exit 1 before the ready banner
 //	FAKEJAVA_SERVER_SILENT  in server mode, never print the ready banner
+//	FAKEJAVA_WATCH_EXIT     in watch mode, the exit code (default 0)
 package main
 
 import (
@@ -84,6 +85,7 @@ const (
 	RefuseEnv       = "FAKEJAVA_REFUSE"
 	ServerFailEnv   = "FAKEJAVA_SERVER_FAIL"
 	ServerSilentEnv = "FAKEJAVA_SERVER_SILENT"
+	WatchExitEnv    = "FAKEJAVA_WATCH_EXIT"
 )
 
 // serverReady is the line the validator prints once its HTTP service accepts
@@ -117,6 +119,9 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	if getenv(RefuseEnv) != "" {
 		_, _ = fmt.Fprintln(stderr, "fakejava: validation refused")
 		return 3
+	}
+	if w := index(args, "-watch-mode"); w >= 0 {
+		return watch(args, w, stdout, getenv)
 	}
 	jar, ver, out, tx := -1, -1, "", ""
 	for i, a := range args {
@@ -445,4 +450,47 @@ func fhirpath(expr, file string, stdout io.Writer) int {
 	_, _ = fmt.Fprintln(stdout, strings.Join(out, ","))
 	_, _ = fmt.Fprintln(stdout, colour("Done. Times: Loading: 00:00.001. Max Memory = 1Gb"))
 	return 0
+}
+
+// watch stands in for the validator's -watch-mode (#665): the real one
+// validates, then keeps watching until it is killed. The fake validates once,
+// prints what it found the way the validator does, and exits, so a test sees
+// one round and gets control back.
+func watch(args []string, w int, stdout io.Writer, getenv func(string) string) int {
+	mode := ""
+	if w+1 < len(args) {
+		mode = args[w+1]
+	}
+	_, _ = fmt.Fprintf(stdout, "Watching for changes (mode %s, scan delay %s, settle time %s)\n",
+		mode, valueAfter(args, "-watch-scan-delay"), valueAfter(args, "-watch-settle-time"))
+	jar := index(args, "-jar")
+	for _, in := range args[jar+2:] {
+		if strings.HasPrefix(in, "-") {
+			break
+		}
+		data, err := os.ReadFile(in) //nolint:gosec // inputs named by fhirlint under test
+		if err != nil {
+			continue
+		}
+		errors := 0
+		for _, i := range outcome(string(data), args[jar+1])["issue"].([]map[string]any) {
+			if i["severity"] == "error" {
+				errors++
+			}
+		}
+		_, _ = fmt.Fprintf(stdout, "  Validate %s: %d error(s)\n", in, errors)
+	}
+	if code := getenv(WatchExitEnv); code != "" {
+		n := 0
+		_, _ = fmt.Sscanf(code, "%d", &n)
+		return n
+	}
+	return 0
+}
+
+func valueAfter(args []string, flag string) string {
+	if i := index(args, flag); i >= 0 && i+1 < len(args) {
+		return args[i+1]
+	}
+	return "default"
 }
