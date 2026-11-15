@@ -660,6 +660,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// responses. The JAR cannot do this itself — its own -txCache still needs a
 	// reachable server for the capability statement it fetches at startup.
 	var txPlayer *txreplay.Server
+	// The replay server's URL and the recording's manifest, so findings can
+	// name the server the recording stands for instead (#663).
+	var txReplayBase string
+	var txReplayManifest *txreplay.Manifest
 	if flagTxOffline {
 		switch {
 		case flagNoTerminologyServer:
@@ -690,6 +694,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		if perr != nil {
 			return perr
 		}
+		txReplayBase, txReplayManifest = baseURL, manifest
 		if routed {
 			// The recording holds the registry's answers too: replay them, so
 			// the routing is the recorded one (#465). Needs 7.0.4+, which the
@@ -927,6 +932,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	var txMissErr error
 	if txPlayer != nil {
 		txMissErr = txMissError(txPlayer.Misses(), txRecordingDir(flagTxDir), arg)
+		// Before suppression and every report, so both see the message a live
+		// run would give, the same in every replay.
+		restoreReplayURLs(results, txReplayBase, txReplayManifest)
 	}
 
 	// Say so explicitly: an empty run and a run that found nothing wrong both
@@ -3612,4 +3620,17 @@ func applyInsecureTxExemption(opts *validator.Options, validatorArgs []string, w
 func withoutDuration(r validator.Result) validator.Result {
 	r.DurationMs = 0
 	return r
+}
+
+// restoreReplayURLs names, in every finding, the terminology server a replay
+// stands for instead of the local replay server and its port (#663).
+func restoreReplayURLs(results []*validator.Result, base string, m *txreplay.Manifest) {
+	for _, r := range results {
+		if r == nil {
+			continue
+		}
+		for i := range r.Issues {
+			r.Issues[i].Message = txreplay.RestoreURLs(r.Issues[i].Message, base, m)
+		}
+	}
 }
