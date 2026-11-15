@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -90,7 +91,7 @@ func TestFakeDotfileConfigIsRead(t *testing.T) {
 	if r := runFakeKeepEnv(t, dir, "validate", "w.json"); r.err != nil {
 		t.Errorf("fhirlint.yml wins over .fhirlint.yml: %v", r.err)
 	}
-	if r := runFakeKeepEnv(t, dir, "config", "check"); r.err != nil || !strings.Contains(r.stdout+r.stderr, "/fhirlint.yml") {
+	if r := runFakeKeepEnv(t, dir, "config", "check"); r.err != nil || !strings.Contains(r.stdout+r.stderr, string(filepath.Separator)+"fhirlint.yml") {
 		t.Errorf("config check checks the file the run reads: %v\n%s%s", r.err, r.stdout, r.stderr)
 	}
 }
