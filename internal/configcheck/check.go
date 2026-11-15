@@ -138,8 +138,10 @@ var overrideKeys = map[string]keySpec{
 	"profile":       {kind: kindStringList},
 	"best-practice": {kind: kindEnum, values: []string{"ignore", "hint", "warning", "error"}},
 	"severity":      {kind: kindEnum, values: []string{"information", "warning", "error", "fatal"}},
-	"fail-on":       {kind: kindEnum, values: []string{"error", "warning", "information", "never"}},
-	"suppress":      {kind: kindSuppressList},
+	// Only "never" does anything in an override: the threshold is the run's
+	// own --fail-on (#672).
+	"fail-on":  {kind: kindEnum, values: []string{"never"}},
+	"suppress": {kind: kindSuppressList},
 }
 
 var suppressKeys = map[string]struct{}{

@@ -68,3 +68,26 @@ func TestCheck_AcceptedForms(t *testing.T) {
 		}
 	}
 }
+
+// An override's fail-on only acts on never, so config check takes nothing
+// else (#672).
+func TestCheck_OverrideFailOnIsNeverOnly(t *testing.T) {
+	for y, want := range map[string]string{
+		"overrides:\n  - files: ['a/**']\n    fail-on: never\n":   "",
+		"overrides:\n  - files: ['a/**']\n    fail-on: warning\n": `invalid value "warning" for "fail-on" (allowed: never)`,
+		"overrides:\n  - files: ['a/**']\n    fail-on: nevr\n":    `invalid value "nevr"`,
+	} {
+		issues, err := configcheck.Check(writeConfig(t, y))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var all []string
+		for _, i := range issues {
+			all = append(all, i.String())
+		}
+		got := strings.Join(all, "\n")
+		if (want == "" && got != "") || !strings.Contains(got, want) {
+			t.Errorf("%q: want %q, got %q", y, want, got)
+		}
+	}
+}
