@@ -7,6 +7,7 @@ package validator
 
 import (
 	"archive/zip"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -47,7 +48,11 @@ func loggedArgs(t *testing.T, log string) [][]string {
 	}
 	var calls [][]string
 	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		calls = append(calls, strings.Fields(strings.NewReplacer(`[`, "", `]`, "", `"`, "", ",", " ").Replace(line)))
+		var call []string
+		if err := json.Unmarshal([]byte(line), &call); err != nil {
+			t.Fatal(err)
+		}
+		calls = append(calls, call)
 	}
 	return calls
 }
@@ -69,7 +74,10 @@ func TestFakeRunWatch_PassesTheWatchSettings(t *testing.T) {
 		t.Errorf("the validator's watch output goes to stdout as it is:\n%s", out)
 	}
 	call := loggedArgs(t, log)[0]
-	if i := slices.Index(call, "-watch-mode"); i < 0 || call[i+1] != "all" || !slices.Contains(call, p) {
+	// By base name: on Windows the logged path can carry the 8.3 short form of
+	// the temp directory (RUNNER~1) where p has the long one.
+	hasInput := slices.ContainsFunc(call, func(a string) bool { return filepath.Base(a) == filepath.Base(p) })
+	if i := slices.Index(call, "-watch-mode"); i < 0 || call[i+1] != "all" || !hasInput {
 		t.Errorf("the JAR must get -watch-mode all and the input: %v", call)
 	}
 
