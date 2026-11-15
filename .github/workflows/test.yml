@@ -210,7 +210,13 @@ jobs:
         run: |
           for dir in $(go list -f '{{.Dir}}' ./... | grep -Ev "$EXCLUDE"); do
             pkg=${dir#"$PWD"}; pkg=${pkg#/}; [ -n "$pkg" ] || pkg=.
-            out=$(gobco -branch -test -short "./$pkg") || { echo "$out"; exit 1; }
+            # Without -verbose gobco shows no test output, so a failure would
+            # only say "exit status 1"; rerun the package to show which test.
+            out=$(gobco -branch -test -short "./$pkg") || {
+              echo "$out"
+              gobco -branch -test -short -verbose "./$pkg" 2>&1 | grep -E -- '--- FAIL|_test\.go:[0-9]+:|^panic' || true
+              exit 1
+            }
             echo "$out" | sed -n "s|^Branch coverage: \([0-9]*\)/\([0-9]*\)$|$pkg\t\1\t\2|p"
           done > branches.tsv
 
