@@ -253,11 +253,11 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request, body []byte, ta
 }
 
 // keep stores an answer worth replaying. An infrastructure failure is passed
-// to the validator unstored: a 404 from a misconfigured endpoint would
+// to the validator unstored: an HTML 404 from a misconfigured endpoint would
 // otherwise be replayed forever as if it were the server's real answer. It
 // reports false when it has already answered the validator.
 func (s *Server) keep(w http.ResponseWriter, in *Interaction, body []byte) bool {
-	if !recordable(in.Status) {
+	if !recordable(in) {
 		writeInteraction(w, in)
 		return false
 	}
@@ -271,11 +271,37 @@ func (s *Server) keep(w http.ResponseWriter, in *Interaction, body []byte) bool 
 	return true
 }
 
-// recordable reports whether a response is an answer worth keeping. Terminology
-// servers answer "this code is not valid" with 200 and a Parameters body, or
-// with 422; anything else is a transport or configuration problem.
-func recordable(status int) bool {
-	return (status >= 200 && status < 300) || status == http.StatusUnprocessableEntity
+// recordable reports whether a response is an answer worth keeping.
+//
+// Terminology servers answer "this code is not valid" with 200 and a
+// Parameters body, or with 422. They answer other questions with error
+// statuses too, and those answers are as deterministic: 404 with an
+// OperationOutcome from $lookup for an unknown code, 500 with one from
+// tx.fhir.org for a code system it only knows another server holds, 400 from
+// the tx registry for a local value set. Not storing them made every replay
+// of such a question a miss (#661). So an error status is kept when the body
+// is a JSON object, the server's statement about the question, and passed
+// through unstored when it isn't (an HTML error page, an empty body), or when
+// it is a gateway error, which is about the way to the server, not the
+// question.
+func recordable(in *Interaction) bool {
+	status := in.Status
+	switch {
+	case status >= 200 && status < 300, status == http.StatusUnprocessableEntity:
+		return true
+	case status == http.StatusBadGateway, status == http.StatusServiceUnavailable, status == http.StatusGatewayTimeout:
+		return false
+	case status >= 400 && status < 600:
+		return isJSONObject(in.Response)
+	}
+	return false
+}
+
+// isJSONObject reports whether b, already known to be valid JSON, is an
+// object rather than an array or a bare value.
+func isJSONObject(b []byte) bool {
+	t := strings.TrimLeft(string(b), " \t\r\n")
+	return strings.HasPrefix(t, "{")
 }
 
 func writeInteraction(w http.ResponseWriter, in *Interaction) {

@@ -79,6 +79,10 @@ type Manifest struct {
 	ExpansionParameters string   `json:"expansionParameters,omitempty"`
 	Recorded            string   `json:"recorded"`
 	Entries             int      `json:"entries"`
+	// ErrorAnswers counts the entries the server answered with an error
+	// status, a 404 for an unknown code say (#661), so a reviewer of a
+	// committed recording sees them.
+	ErrorAnswers int `json:"errorAnswers,omitempty"`
 }
 
 // RoutingSingleServer is Manifest.Routing for a recording in which every
@@ -308,6 +312,12 @@ func (s *Store) Put(in *Interaction, body []byte) error {
 // humans reviewing a committed recording, not something replay depends on.
 func (s *Store) WriteManifest(m Manifest) error {
 	m.Entries = len(s.entries)
+	m.ErrorAnswers = 0
+	for _, in := range s.entries {
+		if in.Status >= 400 {
+			m.ErrorAnswers++
+		}
+	}
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encoding terminology manifest: %w", err)

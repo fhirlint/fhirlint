@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -65,24 +66,55 @@ func recordingThrough(t *testing.T, upstream http.HandlerFunc) (string, *Store) 
 	return base, store
 }
 
-// A server error is passed to the validator as it is, and never recorded: it
-// would be replayed forever as the server's answer. A 422 is an answer.
+// Which answers are kept (#661): every answer the server states as FHIR or
+// registry JSON, whatever its status, and none that is about the way to the
+// server (a gateway error) or isn't an answer at all (an HTML error page).
 func TestRecorder_KeepsAnswersNotFailures(t *testing.T) {
-	base, store := recordingThrough(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/r4/broken":
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, `{"resourceType":"OperationOutcome"}`)
-		default:
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = io.WriteString(w, `{"resourceType":"OperationOutcome","id":"invalid"}`)
-		}
-	})
-	if status, _ := get(t, base, "/r4/broken"); status != http.StatusInternalServerError || store.Len() != 0 {
-		t.Errorf("a 500 is passed through, not kept: status %d, %d recorded", status, store.Len())
+	type answer struct {
+		status int
+		ct     string
+		body   string
 	}
-	if status, _ := get(t, base, "/r4/ValueSet/x"); status != http.StatusUnprocessableEntity || store.Len() != 1 {
-		t.Errorf("a 422 is an answer and is kept: status %d, %d recorded", status, store.Len())
+	answers := map[string]answer{
+		"/r4/CodeSystem/$lookup": {404, "application/fhir+json", `{"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"not-found","details":{"text":"Unknown code 'LP7386-4'"}}]}`},
+		"/r4/ValueSet/$expand":   {500, "application/fhir+json", `{"resourceType":"OperationOutcome","issue":[{"severity":"error","code":"exception","details":{"text":"ops|2026 is not held on this server"}}]}`},
+		"/tx-reg/resolve":        {400, "application/json", `{"error":"Invalid value set URL format"}`},
+		"/r4/ValueSet/x":         {422, "application/fhir+json", `{"resourceType":"OperationOutcome","id":"invalid"}`},
+		"/r4/busy":               {503, "application/fhir+json", `{"resourceType":"OperationOutcome"}`},
+		"/r4/misconfigured":      {404, "text/html", `<html><body>Not Found</body></html>`},
+		"/r4/broken":             {500, "text/plain", `oops`},
+	}
+	base, store := recordingThrough(t, func(w http.ResponseWriter, r *http.Request) {
+		a := answers[r.URL.Path]
+		w.Header().Set("Content-Type", a.ct)
+		w.WriteHeader(a.status)
+		_, _ = io.WriteString(w, a.body)
+	})
+	for path, a := range answers {
+		if status, _ := get(t, base, path); status != a.status {
+			t.Errorf("%s: recording passes %d through, got %d", path, a.status, status)
+		}
+	}
+	if store.Len() != 4 {
+		t.Errorf("want the 404, 500, 400 and 422 answers kept, and the 503, HTML and text ones not: %d recorded", store.Len())
+	}
+
+	player := NewPlayer(store)
+	pbase, err := player.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = player.Stop() }()
+	for _, path := range []string{"/r4/CodeSystem/$lookup", "/r4/ValueSet/$expand", "/tx-reg/resolve", "/r4/ValueSet/x"} {
+		if status, body := get(t, pbase, path); status != answers[path].status || !strings.Contains(body, strings.Split(answers[path].body, `"`)[1]) {
+			t.Errorf("%s: replayed %d %s, want %d", path, status, body, answers[path].status)
+		}
+	}
+	for _, path := range []string{"/r4/busy", "/r4/misconfigured", "/r4/broken"} {
+		_, _ = get(t, pbase, path)
+	}
+	if n := len(player.Misses()); n != 3 {
+		t.Errorf("the unstored answers are misses on replay, want 3, got %d", n)
 	}
 }
 
@@ -148,5 +180,29 @@ func TestReplay_DefaultsForSparseRecordings(t *testing.T) {
 func TestStopBeforeStart(t *testing.T) {
 	if err := NewPlayer(nil).Stop(); err != nil {
 		t.Errorf("stopping a server that never started: %v", err)
+	}
+}
+
+func TestManifestCountsErrorAnswers(t *testing.T) {
+	dir := t.TempDir()
+	store, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, status := range []int{200, 404, 500, 422} {
+		in := &Interaction{Method: "GET", Path: "/r4/x", Query: strconv.Itoa(i), Status: status, Response: []byte(`{"resourceType":"OperationOutcome"}`)}
+		if err := store.Put(in, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := store.WriteManifest(Manifest{Upstream: "https://tx.example.org"}); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m := reopened.ReadManifest(); m == nil || m.Entries != 4 || m.ErrorAnswers != 3 {
+		t.Errorf("manifest: %+v", m)
 	}
 }
