@@ -16,6 +16,7 @@ import (
 
 	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/updatecheck"
+	"github.com/mattn/go-isatty"
 	"time"
 )
 
@@ -283,24 +284,62 @@ func versionFromJARManifest(jarPath string) string {
 }
 
 // progressWriter wraps a destination writer and prints download progress to out.
+//
+// On a terminal it redraws one line with \r, but only when the figure changes:
+// once per write, a 190 MB download is about 9,000 redraws. Anywhere else, a
+// CI log, a file or a pipe, every redraw would stay, so it prints a plain line
+// at a quarter, half and three quarters instead (#650).
 type progressWriter struct {
 	dest    io.Writer
 	out     io.Writer
 	total   int64
 	written int64
+	tty     bool  // out is a terminal
+	shown   int64 // the last step printed: a percentage, or MiB without a total
 }
+
+// untotalledStep is how often progress is printed without a known size: every
+// MiB on a terminal, every 50 MiB elsewhere.
+const untotalledStep = 1 << 20
 
 func (p *progressWriter) Write(b []byte) (int, error) {
 	n, err := p.dest.Write(b)
 	p.written += int64(n)
-	if p.total > 0 {
-		pct := int(100 * p.written / p.total)
-		_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s / %s)... %d%%",
-			formatBytes(p.written), formatBytes(p.total), pct)
-	} else {
-		_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s)...", formatBytes(p.written))
+	switch {
+	case p.total > 0:
+		pct := 100 * p.written / p.total
+		if p.tty && pct != p.shown {
+			_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s / %s)... %d%%",
+				formatBytes(p.written), formatBytes(p.total), pct)
+		}
+		if !p.tty && pct/25 > p.shown/25 && pct < 100 {
+			_, _ = fmt.Fprintf(p.out, "Downloading validator_cli.jar: %d%% (%s / %s)\n",
+				pct/25*25, formatBytes(p.written), formatBytes(p.total))
+		}
+		p.shown = pct
+	default:
+		step := p.written / untotalledStep
+		if !p.tty {
+			step = p.written / (50 * untotalledStep)
+		}
+		if step != p.shown {
+			if p.tty {
+				_, _ = fmt.Fprintf(p.out, "\rDownloading validator_cli.jar (%s)...", formatBytes(p.written))
+			} else {
+				_, _ = fmt.Fprintf(p.out, "Downloading validator_cli.jar: %s so far\n", formatBytes(p.written))
+			}
+		}
+		p.shown = step
 	}
 	return n, err
+}
+
+// done ends the progress line a terminal redraws; elsewhere every line already
+// ended.
+func (p *progressWriter) done() {
+	if p.tty {
+		_, _ = fmt.Fprintln(p.out)
+	}
 }
 
 func formatBytes(n int64) string {
@@ -373,12 +412,13 @@ func fetchJAR(url, dest, pinned string, install bool) error {
 		_ = f.Close()
 		_ = os.Remove(tmp) // no-op once the rename below has succeeded
 	}()
-	pw := &progressWriter{dest: f, out: os.Stderr, total: resp.ContentLength}
-	if _, err = io.Copy(pw, resp.Body); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr)
+	pw := &progressWriter{dest: f, out: os.Stderr, total: resp.ContentLength,
+		tty: isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())}
+	_, err = io.Copy(pw, resp.Body)
+	pw.done()
+	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintln(os.Stderr)
 	if err := f.Close(); err != nil {
 		return err
 	}

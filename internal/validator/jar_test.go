@@ -537,3 +537,57 @@ func TestEnsureSideJAR_RejectsNonReleases(t *testing.T) {
 		}
 	}
 }
+
+// Off a terminal, progress is a handful of plain lines, not one \r redraw per
+// write (#650): a 190 MB download used to leave about 9,000 in a CI log.
+func TestProgressWriter_OffATerminalPrintsQuarters(t *testing.T) {
+	var dest, out bytes.Buffer
+	pw := &progressWriter{dest: &dest, out: &out, total: 1 << 20}
+	chunk := bytes.Repeat([]byte("x"), 1<<10)
+	for range 1 << 10 {
+		_, _ = pw.Write(chunk)
+	}
+	pw.done()
+	got := out.String()
+	if strings.Contains(got, "\r") {
+		t.Errorf("no carriage returns off a terminal: %q", got)
+	}
+	lines := strings.Split(strings.TrimSpace(got), "\n")
+	if len(lines) != 3 || !strings.Contains(lines[0], "25%") || !strings.Contains(lines[2], "75%") {
+		t.Errorf("want a line at 25, 50 and 75%%, got %q", lines)
+	}
+}
+
+func TestProgressWriter_OnATerminalRedrawsOncePerPercent(t *testing.T) {
+	var dest, out bytes.Buffer
+	pw := &progressWriter{dest: &dest, out: &out, total: 1 << 20, tty: true}
+	chunk := bytes.Repeat([]byte("x"), 1<<10)
+	for range 1 << 10 {
+		_, _ = pw.Write(chunk)
+	}
+	pw.done()
+	if n := strings.Count(out.String(), "\r"); n != 100 {
+		t.Errorf("one redraw per percent, want 100, got %d", n)
+	}
+	if !strings.HasSuffix(out.String(), "100%\n") {
+		t.Errorf("the line ends at 100%% and a newline: %q", out.String()[max(0, out.Len()-40):])
+	}
+}
+
+func TestProgressWriter_WithoutATotal(t *testing.T) {
+	for _, tc := range []struct {
+		tty  bool
+		want int
+	}{{false, 2}, {true, 120}} { // 120 MiB: every 50 MiB, or every MiB
+		var dest, out bytes.Buffer
+		pw := &progressWriter{dest: &dest, out: &out, total: -1, tty: tc.tty}
+		chunk := bytes.Repeat([]byte("x"), 1<<20)
+		for range 120 {
+			_, _ = pw.Write(chunk)
+		}
+		got := strings.Count(out.String(), "\r") + strings.Count(out.String(), "\n")
+		if got != tc.want {
+			t.Errorf("tty=%v: %d progress lines, want %d", tc.tty, got, tc.want)
+		}
+	}
+}
