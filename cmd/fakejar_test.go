@@ -36,20 +36,26 @@ const (
 // fakeJavaDir holds the "java" executable; empty when it could not be built.
 var fakeJavaDir string
 
-func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "fhirlint-fakejava-")
-	if err == nil {
-		if err = buildFakeJava(dir); err == nil {
-			fakeJavaDir = dir
-		} else {
+func init() {
+	var dir string
+	setUpTests = func() error {
+		var err error
+		dir, err = os.MkdirTemp("", "fhirlint-fakejava-")
+		if err != nil {
+			return nil //nolint:nilerr // the fake's tests skip; the rest still run
+		}
+		if err := buildFakeJava(dir); err != nil {
 			fmt.Fprintf(os.Stderr, "fake java not built, its tests are skipped: %v\n", err)
+			return nil
+		}
+		fakeJavaDir = dir
+		return nil
+	}
+	tearDownTests = func(int) {
+		if dir != "" {
+			_ = os.RemoveAll(dir)
 		}
 	}
-	code := m.Run()
-	if dir != "" {
-		_ = os.RemoveAll(dir)
-	}
-	os.Exit(code)
 }
 
 // buildFakeJava builds internal/tools/fakejava into dir as java (java.exe on

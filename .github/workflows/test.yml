@@ -176,6 +176,60 @@ jobs:
           use_oidc: true
           fail_ci_if_error: false
 
+  # go test -cover counts statements only; gobco counts each branch, so an
+  # untested else or early return shows up here (#617). Same rule as the
+  # statement floor: raise BRANCH_FLOOR on purpose, never lower it.
+  #
+  # Left out, with the reason:
+  #   internal/tools/        CI helper commands, as for the statement floor
+  #   internal/resultcache   its owner_unix.go and owner_other.go both define
+  #                          ownedByCurrentUser for different platforms, and
+  #                          gobco type-checks every file regardless of build
+  #                          tags (rillig/gobco, "Honor build constraints")
+  branch-coverage:
+    name: Branch coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # new; about 4m locally for all packages
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - run: go install github.com/rillig/gobco@v1.3.4
+
+      - name: Branch coverage
+        env:
+          BRANCH_FLOOR: "73.1"
+          EXCLUDE: '/internal/tools/|/internal/resultcache$'
+        run: |
+          for dir in $(go list -f '{{.Dir}}' ./... | grep -Ev "$EXCLUDE"); do
+            pkg=${dir#"$PWD"}; pkg=${pkg#/}; [ -n "$pkg" ] || pkg=.
+            out=$(gobco -branch -test -short "./$pkg") || { echo "$out"; exit 1; }
+            echo "$out" | sed -n "s|^Branch coverage: \([0-9]*\)/\([0-9]*\)$|$pkg\t\1\t\2|p"
+          done > branches.tsv
+
+          read -r covered total < <(awk -F'\t' '{ c += $2; t += $3 } END { print c, t }' branches.tsv)
+          pct=$(awk -v c="$covered" -v t="$total" 'BEGIN { printf "%.1f", 100 * c / t }')
+          {
+            echo "### Branch coverage: ${pct}% (${covered}/${total}, floor ${BRANCH_FLOOR}%)"
+            echo
+            echo "| Package | Branches covered |"
+            echo "|---|---|"
+            awk -F'\t' '$3 > 0 { printf "| `%s` | %d/%d (%.1f%%) |\n", $1, $2, $3, 100 * $2 / $3 }' branches.tsv
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if ! awk -v p="$pct" -v f="$BRANCH_FLOOR" 'BEGIN { exit !(p + 0 >= f + 0) }'; then
+            echo "::error::branch coverage ${pct}% is below the floor of ${BRANCH_FLOOR}%"
+            exit 1
+          fi
+          echo "branch coverage ${pct}% (floor ${BRANCH_FLOOR}%)"
+
   # Branch protection on main requires the check context "Unit tests" verbatim,
   # and a matrix appends the OS to the job name, so the required context would
   # never appear again and every PR would block. This job carries that name and

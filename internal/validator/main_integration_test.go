@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"testing"
 )
 
 // A pin reaches EnsureJAR as part of a download URL and a cache file name, so
@@ -27,22 +26,23 @@ var pinnedVersionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za
 // FHIRLINT_VALIDATOR_VERSION is the same variable the CLI honours. Unset leaves
 // the cache as it is, so a runner without a cached JAR gets latest — which is
 // what the weekly canary run wants.
-func TestMain(m *testing.M) {
-	pinned := os.Getenv("FHIRLINT_VALIDATOR_VERSION")
-	if pinned != "" && !pinnedVersionPattern.MatchString(pinned) {
-		fmt.Fprintf(os.Stderr, "integration tests: FHIRLINT_VALIDATOR_VERSION=%q is not a release tag\n", pinned)
-		os.Exit(1)
+func init() {
+	setUpTests = func() error {
+		pinned := os.Getenv("FHIRLINT_VALIDATOR_VERSION")
+		if pinned != "" && !pinnedVersionPattern.MatchString(pinned) {
+			return fmt.Errorf("integration tests: FHIRLINT_VALIDATOR_VERSION=%q is not a release tag", pinned)
+		}
+		if _, err := EnsureJAR("", pinned); err != nil {
+			return fmt.Errorf("integration tests: preparing the validator JAR: %w", err)
+		}
+		// Printed before and after so a failure buried in test output still
+		// has the version next to it.
+		fmt.Fprintf(os.Stderr, "integration tests: running against validator %s\n", ValidatorVersion())
+		return nil
 	}
-	if _, err := EnsureJAR("", pinned); err != nil {
-		fmt.Fprintf(os.Stderr, "integration tests: preparing the validator JAR: %v\n", err)
-		os.Exit(1)
+	tearDownTests = func(code int) {
+		if code != 0 {
+			fmt.Fprintf(os.Stderr, "integration tests: failed against validator %s\n", ValidatorVersion())
+		}
 	}
-	// Printed before and after so a failure buried in test output still has the
-	// version next to it.
-	fmt.Fprintf(os.Stderr, "integration tests: running against validator %s\n", ValidatorVersion())
-	code := m.Run()
-	if code != 0 {
-		fmt.Fprintf(os.Stderr, "integration tests: failed against validator %s\n", ValidatorVersion())
-	}
-	os.Exit(code)
 }
