@@ -1416,6 +1416,11 @@ func loadOverrides() ([]configOverride, error) {
 			ov.Severity = v
 		}
 		if v, ok := m["fail-on"].(string); ok {
+			// Only "never" acts in an override; any other value would be read
+			// and then ignored, a typo included (#672).
+			if v != "never" {
+				return nil, fmt.Errorf("overrides: fail-on %q has no effect: an override only takes \"never\", which keeps its files from failing the run; the threshold is the run's own --fail-on", v)
+			}
 			ov.FailOn = v
 		}
 		if v, ok := m["suppress"]; ok {
