@@ -11,6 +11,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/rules/fhirpath"
 	"github.com/fhirlint/fhirlint/internal/validator"
 )
@@ -186,7 +187,7 @@ func resolveProfileEntries(filePath string, pm profileMapping) []appliedProfile 
 	}
 	sort.Strings(globs)
 	for _, k := range globs {
-		if matchesExclude(relSlash, k) {
+		if input.MatchesExclude(relSlash, k) {
 			for _, e := range pm[k] {
 				matches = append(matches, match{k, e})
 			}

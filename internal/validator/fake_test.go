@@ -276,3 +276,24 @@ func TestFakeRunCompare(t *testing.T) {
 		t.Error("an empty side must be rejected")
 	}
 }
+
+func TestFakeRunFHIRPath(t *testing.T) {
+	opts, dir := fakeSetup(t)
+	fo := FHIRPathOptions{FHIRVersion: "4.0.1", JARPath: opts.JARPath, Timeout: time.Minute}
+	p := put(t, dir, "p.json", `{"resourceType":"Patient","name":[{"given":["Anna","Lena"]}]}`)
+
+	res, err := RunFHIRPath("Patient.name.given", p, fo)
+	if err != nil || strings.Join(res.Items, "|") != "Anna|Lena" {
+		t.Errorf("items: %+v %v", res, err)
+	}
+	if res, err := RunFHIRPath("Patient.birthDate", p, fo); err != nil || !res.Empty() {
+		t.Errorf("no match must be an empty result, not an error: %+v %v", res, err)
+	}
+	if _, err := RunFHIRPath("Patient.name.(", p, fo); err == nil || !strings.Contains(err.Error(), "Expression terminated unexpectedly") || strings.Contains(err.Error(), "FHIRLexerException") {
+		t.Errorf("a parse error, without the exception class: %v", err)
+	}
+	crash := put(t, dir, "crash.json", `{"resourceType":"Patient","note":"FAKE_CRASH"}`)
+	if _, err := RunFHIRPath("Patient.name", crash, fo); err == nil || !strings.Contains(err.Error(), "fake crash before evaluation") {
+		t.Errorf("a failure before evaluation: %v", err)
+	}
+}

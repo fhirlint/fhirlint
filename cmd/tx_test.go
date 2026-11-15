@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/fhirlint/fhirlint/internal/input"
 	"github.com/fhirlint/fhirlint/internal/txreplay"
 )
 
@@ -40,10 +41,10 @@ func TestTxRecordingExcludes_KeepsRecordingOutOfTheInputSet(t *testing.T) {
 	}
 	// The pattern has to actually match what lands under the recording dir,
 	// otherwise recordings get validated as if they were FHIR resources.
-	if !matchesExclude(txreplay.DefaultDir+"/abc123.json", got[0]) {
+	if !input.MatchesExclude(txreplay.DefaultDir+"/abc123.json", got[0]) {
 		t.Errorf("pattern %q does not match a recording file", got[0])
 	}
-	if matchesExclude("fhir/patient.json", got[0]) {
+	if input.MatchesExclude("fhir/patient.json", got[0]) {
 		t.Errorf("pattern %q must not match ordinary resources", got[0])
 	}
 }
