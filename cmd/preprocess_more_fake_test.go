@@ -84,7 +84,7 @@ func TestFakeValidate_CheckReferencesIndexesFilesSinceLeftOut(t *testing.T) {
 	writeFile(t, dir, "fhir/o.json", `{"resourceType":"Observation","id":"o1","status":"final","code":{"text":"x"},"subject":{"reference":"Patient/p1"}}`)
 	git := func(args ...string) {
 		t.Helper()
-		c := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.org", "-c", "commit.gpgsign=false"}, args...)...)
+		c := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.org", "-c", "commit.gpgsign=false"}, args...)...) //nolint:gosec // git with the test's own fixed arguments
 		if out, err := c.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
