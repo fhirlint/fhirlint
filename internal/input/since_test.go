@@ -212,3 +212,24 @@ func TestChangedSince_NotAGitRepo(t *testing.T) {
 		t.Errorf("error should say a repository is required, got: %v", err)
 	}
 }
+
+func TestCanonicalPath(t *testing.T) {
+	real := t.TempDir()
+	resolved, err := filepath.EvalSymlinks(real)
+	if err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "l")
+	if err := os.Symlink(real, link); err == nil {
+		if got := CanonicalPath(link); got != resolved {
+			t.Errorf("a symlink resolves to its target: %q, want %q", got, resolved)
+		}
+	}
+	gone := filepath.Join(real, "gone.json")
+	if got := CanonicalPath(gone); got != gone && got != filepath.Join(resolved, "gone.json") {
+		t.Errorf("a path that can't be resolved stays absolute: %q", got)
+	}
+	if got := CanonicalPath("rel.json"); !filepath.IsAbs(got) {
+		t.Errorf("a relative path becomes absolute: %q", got)
+	}
+}

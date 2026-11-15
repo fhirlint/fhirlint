@@ -1901,7 +1901,9 @@ func filterSincePaths(paths []string) []string {
 			kept = append(kept, p)
 			continue
 		}
-		if sinceChanged[abs] {
+		// The spelling git's paths have, so a symlink or a short name on the
+		// way to the repository doesn't hide every file (#681).
+		if sinceChanged[input.CanonicalPath(abs)] {
 			kept = append(kept, p)
 			continue
 		}
