@@ -18,7 +18,16 @@ var (
 	tearDownTests = func(code int) {}
 )
 
+// runCLIEnv makes the test binary run the fhirlint CLI instead of the tests.
+// upgrade-check runs its own binary twice (os.Executable), which in a test is
+// this one (#629).
+const runCLIEnv = "FHIRLINT_TEST_RUN_CLI"
+
 func TestMain(m *testing.M) {
+	if os.Getenv(runCLIEnv) == "1" {
+		Execute() // exits itself on an error
+		os.Exit(0)
+	}
 	if err := setUpTests(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

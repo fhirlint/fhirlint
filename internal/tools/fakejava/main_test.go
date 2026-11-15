@@ -249,3 +249,22 @@ func TestCompareMode(t *testing.T) {
 		t.Errorf("an incomplete compare call: %d", code)
 	}
 }
+
+func TestMarkersByJAR(t *testing.T) {
+	ids := func(oo map[string]any) []string {
+		var out []string
+		for _, i := range oo["issue"].([]map[string]any) {
+			if ext, ok := i["extension"].([]map[string]any); ok {
+				out = append(out, ext[0]["valueCode"].(string))
+			}
+		}
+		return out
+	}
+	text := "FAKE_ONLY_IN:7.0.6 FAKE_GONE_IN:7.0.6 FAKE_RENAMED_IN:7.0.6"
+	if got := strings.Join(ids(outcome(text, "/c/validators/7.0.5/validator_cli.jar")), " "); got != "FAKE_GONE_ID FAKE_OLD_ID" {
+		t.Errorf("old release: %s", got)
+	}
+	if got := strings.Join(ids(outcome(text, "/c/validators/7.0.6/validator_cli.jar")), " "); got != "FAKE_ONLY_ID FAKE_NEW_ID" {
+		t.Errorf("new release: %s", got)
+	}
+}
