@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -1286,7 +1285,7 @@ func collectFHIRPaths(in *input.Input, excludePatterns []string) ([]string, erro
 		}
 		relSlash := filepath.ToSlash(rel)
 		for _, pat := range excludePatterns {
-			if matchesExclude(relSlash, pat) {
+			if input.MatchesExclude(relSlash, pat) {
 				if d.IsDir() {
 					return filepath.SkipDir
 				}
@@ -1341,35 +1340,6 @@ func collectPathsFromArgs(args []string, excludePatterns []string) ([]string, er
 		}
 	}
 	return paths, nil
-}
-
-// matchesExclude reports whether relPath (forward-slash, relative to walk root)
-// matches the given gitignore-style pattern.
-func matchesExclude(relPath, pattern string) bool {
-	pattern = filepath.ToSlash(strings.TrimSpace(pattern))
-	if pattern == "" {
-		return false
-	}
-	// Trailing "/" or "/**" → directory prefix match
-	if strings.HasSuffix(pattern, "/**") {
-		dir := strings.TrimSuffix(pattern, "/**")
-		return relPath == dir || strings.HasPrefix(relPath, dir+"/")
-	}
-	if strings.HasSuffix(pattern, "/") {
-		dir := strings.TrimSuffix(pattern, "/")
-		return relPath == dir || strings.HasPrefix(relPath, dir+"/")
-	}
-	// Try matching the full relative path
-	if matched, _ := path.Match(pattern, relPath); matched {
-		return true
-	}
-	// Patterns without "/" are matched against the basename only
-	if !strings.Contains(pattern, "/") {
-		if matched, _ := path.Match(pattern, path.Base(relPath)); matched {
-			return true
-		}
-	}
-	return false
 }
 
 // loadProfileMap parses the profile-map config key.
@@ -1473,7 +1443,7 @@ func matchingOverrides(filePath string, overrides []configOverride) []configOver
 	var matched []configOverride
 	for _, ov := range overrides {
 		for _, pattern := range ov.Files {
-			if matchesExclude(relSlash, pattern) {
+			if input.MatchesExclude(relSlash, pattern) {
 				matched = append(matched, ov)
 				break
 			}

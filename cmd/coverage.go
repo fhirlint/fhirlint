@@ -74,7 +74,7 @@ func init() {
 	coverageCmd.Flags().BoolVar(&flagCoverageVerbose, "verbose", false,
 		"List every unpopulated element instead of the first few")
 	coverageCmd.Flags().StringArrayVar(&flagCoverageExclude, "exclude", nil,
-		"Glob pattern to exclude (repeatable)")
+		"Exclude files or directories matching pattern (repeatable, gitignore-style, as for validate)")
 	coverageCmd.Flags().BoolVar(&flagCoverageOffline, "offline", false,
 		"Never contact the package registry — fail if an IG package is not already cached")
 
