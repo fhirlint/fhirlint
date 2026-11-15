@@ -16,6 +16,11 @@
 //	FAKE_CRASH    the JAR throws while validating that input: a Java
 //	              exception after its "Validate" line, exit 1, no output (#632)
 //	FAKE_CRASH_LOADING  the same, but while loading, before any input
+//	FAKE_OOM      the JVM runs out of heap while loading: OutOfMemoryError, exit 1
+//	FAKE_TX_DOWN  the terminology server's capability statement can't be fetched,
+//	              exit 1, as the validator stops when it can't reach -tx
+//	FAKE_BAD_OUTPUT  -output is written, but isn't JSON
+//	FAKE_SLOW     that input takes 3 seconds, for --timeout (#686)
 //
 //	FAKE_TX:<code>  with -tx URL, ask that terminology server about <code>
 //	                (GET <tx>/CodeSystem/$validate-code?system=http://example.org/cs&code=<code>):
@@ -162,12 +167,23 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash while loading`)
 			return 1
 		}
+		if bytes.Contains(data, []byte("FAKE_OOM")) {
+			_, _ = fmt.Fprintln(stderr, `Exception in thread "main" java.lang.OutOfMemoryError: Java heap space`)
+			return 1
+		}
+		if bytes.Contains(data, []byte("FAKE_TX_DOWN")) {
+			_, _ = fmt.Fprintln(stdout, "Error fetching the server's capability statement: Connection refused")
+			return 1
+		}
 		datas[i] = data
 	}
 	oos := make([]map[string]any, 0, len(inputs))
 	for i, in := range inputs {
 		data := datas[i]
 		_, _ = fmt.Fprintf(stdout, "  Validate %s\n", in)
+		if bytes.Contains(data, []byte("FAKE_SLOW")) {
+			time.Sleep(3 * time.Second)
+		}
 		if bytes.Contains(data, []byte("FAKE_CRASH")) {
 			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash`)
 			return 1
@@ -188,6 +204,11 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		doc = map[string]any{"resourceType": "Bundle", "type": "collection", "entry": entries}
 	}
 	b, err := json.Marshal(doc)
+	for _, data := range datas {
+		if bytes.Contains(data, []byte("FAKE_BAD_OUTPUT")) {
+			b = []byte("not json")
+		}
+	}
 	if err == nil {
 		err = os.WriteFile(out, b, 0o600) //nolint:gosec // -output as fhirlint under test passed it
 	}
