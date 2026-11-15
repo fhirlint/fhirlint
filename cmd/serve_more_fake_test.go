@@ -21,9 +21,9 @@ import (
 // serve with --tx-offline, --offline, credentials and a server that dies
 // (#666), against the fake validator's server mode.
 
-// startServe runs serve in the background and returns its base URL and a
+// startFakeServe runs serve in the background and returns its base URL and a
 // channel with its result.
-func startServe(t *testing.T, dir string, args ...string) (string, chan fakeRun) {
+func startFakeServe(t *testing.T, dir string, args ...string) (string, chan fakeRun) {
 	t.Helper()
 	port := freeServerPort(t)
 	done := make(chan fakeRun, 1)
@@ -68,7 +68,7 @@ func TestFakeServe_TxOfflineReportsMissesAtShutdown(t *testing.T) {
 	}
 	tx.Close() // from here on only the recording answers
 
-	base, done := startServe(t, dir, "--tx-offline")
+	base, done := startFakeServe(t, dir, "--tx-offline")
 	if out := post(t, base+"/validateResource", `{"resourceType":"Patient","a":"FAKE_TX:known"}`); strings.Contains(out, "FAKE_TX") {
 		t.Errorf("a recorded code is answered from the recording: %s", out)
 	}
@@ -92,7 +92,7 @@ func TestFakeServe_Offline(t *testing.T) {
 	prepareFake(t)
 	log := filepath.Join(t.TempDir(), "calls.jsonl")
 	t.Setenv(fakeJavaLogEnv, log)
-	base, done := startServe(t, t.TempDir(), "--offline")
+	base, done := startFakeServe(t, t.TempDir(), "--offline")
 	_ = post(t, base+"/stop", "")
 	if r := waitServe(t, done); r.err != nil {
 		t.Fatalf("serve --offline: %v\n%s", r.err, r.stderr)
@@ -120,7 +120,7 @@ func TestFakeServe_CredentialsOverPlainHTTPAreRefused(t *testing.T) {
 // The server dying on its own ends serve with exit 2, not a clean return.
 func TestFakeServe_AServerThatDiesExits2(t *testing.T) {
 	prepareFake(t)
-	base, done := startServe(t, t.TempDir(), "--no-terminology-server")
+	base, done := startFakeServe(t, t.TempDir(), "--no-terminology-server")
 	_ = post(t, base+"/crash", "")
 	r := waitServe(t, done)
 	var ee *exitErr
