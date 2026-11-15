@@ -150,7 +150,7 @@ func TestFakeConfigKeysReachTheRun(t *testing.T) {
 			}
 		}},
 		{name: "slowest", yaml: "slowest: 1", args: []string{"w.json"}, check: func(t *testing.T, _ string, r fakeRun) {
-			if !strings.Contains(r.stdout, "No validation times") {
+			if !strings.Contains(r.stdout, "Slowest files") {
 				t.Errorf("slowest must add its section:\n%s", r.stdout)
 			}
 		}},

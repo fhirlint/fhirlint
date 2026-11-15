@@ -134,14 +134,15 @@ func TestFakeRunMultiple_MapsResultsToInputsInOrder(t *testing.T) {
 func TestFakeRunMultiple_ACrashIsNotAPass(t *testing.T) {
 	opts, dir := fakeSetup(t)
 	a := put(t, dir, "a.json", `{"resourceType":"Patient"}`)
-	c := put(t, dir, "c.json", `{"resourceType":"Patient","note":"FAKE_CRASH"}`)
-	// An exception fhirlint doesn't recognise fails the run and quotes what
-	// the JAR printed, instead of reporting the files as valid.
+	c := put(t, dir, "c.json", `{"resourceType":"Patient","note":"FAKE_CRASH_LOADING"}`)
+	// A crash fhirlint can't pin on a file (while loading, before any
+	// "Validate" line) fails the run and quotes what the JAR printed, instead
+	// of reporting the files as valid.
 	rs, err := RunMultiple([]string{a, c}, opts)
 	if err == nil {
 		t.Fatalf("an unrecognised crash must fail the run, got %+v", rs)
 	}
-	for _, want := range []string{"validator produced no result", "c.json", "IllegalStateException: fake crash"} {
+	for _, want := range []string{"validator produced no result", "c.json", "IllegalStateException: fake crash while loading"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error lacks %q: %v", want, err)
 		}

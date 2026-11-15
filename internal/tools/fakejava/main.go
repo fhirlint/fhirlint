@@ -13,7 +13,9 @@
 //
 //	FAKE_ERROR    an error, message id FAKE_ERROR_ID, at Patient.name, line 1
 //	FAKE_WARNING  a warning, message id FAKE_WARNING_ID, at Patient, line 1
-//	FAKE_CRASH    the JAR prints a Java exception and exits 1 without output
+//	FAKE_CRASH    the JAR throws while validating that input: a Java
+//	              exception after its "Validate" line, exit 1, no output (#632)
+//	FAKE_CRASH_LOADING  the same, but while loading, before any input
 //
 //	FAKE_TX:<code>  with -tx URL, ask that terminology server about <code>
 //	                (GET <tx>/CodeSystem/$validate-code?system=http://example.org/cs&code=<code>):
@@ -28,6 +30,9 @@
 // The last three let two validator releases disagree, for upgrade-check (#629).
 //
 // An input without a marker gets the validator's "All OK" information issue.
+// Each input is logged as the validator logs it: "  Validate <path>" before,
+// its time (" 00:00.012") after, which fhirlint reads for --slowest and to
+// tell which file a crash happened on.
 // Several inputs come back as a Bundle of OperationOutcomes, one per input in
 // order, as the real validator writes them.
 //
@@ -136,13 +141,23 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		_, _ = fmt.Fprintln(stderr, "fakejava: no inputs")
 		return 2
 	}
-	oos := make([]map[string]any, 0, len(inputs))
-	for _, in := range inputs {
+	datas := make([][]byte, len(inputs))
+	for i, in := range inputs {
 		data, err := os.ReadFile(in) //nolint:gosec // inputs named by fhirlint under test
 		if err != nil {
 			_, _ = fmt.Fprintf(stderr, "fakejava: %v\n", err)
 			return 2
 		}
+		if bytes.Contains(data, []byte("FAKE_CRASH_LOADING")) {
+			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash while loading`)
+			return 1
+		}
+		datas[i] = data
+	}
+	oos := make([]map[string]any, 0, len(inputs))
+	for i, in := range inputs {
+		data := datas[i]
+		_, _ = fmt.Fprintf(stdout, "  Validate %s\n", in)
 		if bytes.Contains(data, []byte("FAKE_CRASH")) {
 			_, _ = fmt.Fprintln(stdout, `Exception in thread "main" java.lang.IllegalStateException: fake crash`)
 			return 1
@@ -152,6 +167,7 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 			addTerminologyIssues(oo, tx, string(data))
 		}
 		oos = append(oos, oo)
+		_, _ = fmt.Fprintf(stdout, " 00:00.%03d\n", 10+i)
 	}
 	var doc any = oos[0]
 	if len(oos) > 1 {
