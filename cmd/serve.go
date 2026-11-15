@@ -86,6 +86,8 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	// Offline terminology: stand in for the terminology server for the whole
 	// lifetime of the validator server.
 	var txPlayer *txreplay.Server
+	var replayBase string
+	var replayManifest *txreplay.Manifest
 	txServer := flagServeTerminologyServer
 	txCache := flagServeTxCache
 	txSettings := ""
@@ -114,6 +116,7 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
+		replayBase, replayManifest = baseURL, store.ReadManifest()
 		if routed {
 			txEcosystem = baseURL + "/tx-reg"
 		}
@@ -167,14 +170,40 @@ func runServe(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "Starting validator server on port %d (FHIR %s)…\n", cfg.Port, cfg.FHIRVersion)
+	// Under --tx-offline the validator sits behind a proxy on the requested
+	// port, which names the recorded terminology server in the findings
+	// instead of the local replay server (#684).
+	publicPort := cfg.Port
+	if txPlayer != nil {
+		if publicPort <= 0 {
+			return &exitErr{code: 2, err: fmt.Errorf("server port must be positive, got %d", publicPort)}
+		}
+		internal, perr := freeLoopbackPort()
+		if perr != nil {
+			return &exitErr{code: 2, err: perr}
+		}
+		cfg.Port = internal
+	}
+
+	fmt.Fprintf(os.Stderr, "Starting validator server on port %d (FHIR %s)…\n", publicPort, cfg.FHIRVersion)
 	srv, err := validator.StartServer(cfg, os.Stderr, serverStartupTimeout)
 	if err != nil {
 		return &exitErr{code: 2, err: err}
 	}
 
-	fmt.Printf("fhirlint validator server ready at %s\n", srv.URL())
-	fmt.Printf("Validate against it with:  fhirlint validate <path> --server %s\n", srv.URL())
+	serverURL := srv.URL()
+	if txPlayer != nil {
+		proxyURL, stopProxy, perr := startRestoringProxy(publicPort, srv.URL(), replayBase, replayManifest)
+		if perr != nil {
+			_ = srv.Stop()
+			return &exitErr{code: 2, err: perr}
+		}
+		defer func() { _ = stopProxy() }()
+		serverURL = proxyURL
+	}
+
+	fmt.Printf("fhirlint validator server ready at %s\n", serverURL)
+	fmt.Printf("Validate against it with:  fhirlint validate <path> --server %s\n", serverURL)
 	fmt.Fprintln(os.Stderr, "Press Ctrl-C to stop.")
 
 	// Wait for a signal or for the server to exit on its own.

@@ -128,3 +128,27 @@ func TestFakeServe_AServerThatDiesExits2(t *testing.T) {
 		t.Errorf("want exit 2 saying the server exited, got %v", r.err)
 	}
 }
+
+// Through serve --tx-offline, a finding names the server the recording stands
+// for, not the local replay server and its port (#684).
+func TestFakeServe_TxOfflineFindingsNameTheRecordedServer(t *testing.T) {
+	tx, _ := fakeTxServer(t)
+	upstream := tx.URL + "/r4"
+	dir := t.TempDir()
+	writeFile(t, dir, "fhir/p.json", `{"resourceType":"Patient","id":"p1","a":"FAKE_TX:known"}`)
+	prepareFake(t)
+	if r := runFakeKeepEnv(t, dir, "tx", "warm", "--terminology-server", upstream, "fhir"); r.err != nil {
+		t.Fatalf("tx warm: %v\n%s", r.err, r.stderr)
+	}
+	tx.Close()
+
+	base, done := startFakeServe(t, dir, "--tx-offline")
+	out := post(t, base+"/validateResource", `{"resourceType":"Patient","a":"FAKE_TX:other"}`)
+	if !strings.Contains(out, "Error from "+upstream+":") {
+		t.Errorf("the finding must name the recorded server %s:\n%s", upstream, out)
+	}
+	_ = post(t, base+"/stop", "")
+	if r := waitServe(t, done); r.err != nil {
+		t.Fatalf("serve: %v\n%s", r.err, r.stderr)
+	}
+}
