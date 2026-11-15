@@ -194,10 +194,7 @@
           },
           "fail-on": {
             "enum": [
-              "error",
-              "information",
-              "never",
-              "warning"
+              "never"
             ],
             "type": "string"
           },
