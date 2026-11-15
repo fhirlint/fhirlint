@@ -262,9 +262,6 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 	}
 
 	walk := func(path string) {
-		if isExcluded(path, exclude) {
-			return
-		}
 		if ft, known := input.LookupFileType(path); known && ft.Kind == input.KindValidatorOnly {
 			skipped = append(skipped, SkippedFile{Path: path,
 				Reason: ft.Parser + " input is not supported by coverage"})
@@ -303,6 +300,15 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 		if err != nil {
 			return err
 		}
+		// Excludes match like validate's: gitignore-style, on the path relative
+		// to root. Never on the absolute path, where a pattern could match the
+		// directory the input lives in and exclude everything (#642).
+		if path != root && isExcluded(root, path, exclude) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
 			if strings.HasPrefix(d.Name(), ".") && path != root {
 				return filepath.SkipDir
@@ -326,12 +332,14 @@ func LoadResources(root string, exclude []string) ([]Resource, []SkippedFile, er
 	return resources, skipped, nil
 }
 
-func isExcluded(path string, patterns []string) bool {
+func isExcluded(root, path string, patterns []string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+	rel = filepath.ToSlash(rel)
 	for _, p := range patterns {
-		if ok, _ := filepath.Match(p, filepath.Base(path)); ok {
-			return true
-		}
-		if strings.Contains(filepath.ToSlash(path), strings.TrimSuffix(p, "/")+"/") {
+		if input.MatchesExclude(rel, p) {
 			return true
 		}
 	}
