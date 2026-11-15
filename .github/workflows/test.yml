@@ -212,9 +212,10 @@ jobs:
             pkg=${dir#"$PWD"}; pkg=${pkg#/}; [ -n "$pkg" ] || pkg=.
             # Without -verbose gobco shows no test output, so a failure would
             # only say "exit status 1"; rerun the package to show which test.
+            # The loop's stdout is branches.tsv, so the diagnosis goes to stderr.
             out=$(gobco -branch -test -short "./$pkg") || {
-              echo "$out"
-              gobco -branch -test -short -verbose "./$pkg" 2>&1 | grep -E -v '^(=== |--- PASS|--- SKIP|go: downloading)' | grep -E -B2 -A12 -- '--- FAIL|^panic|^FAIL|exit status' | head -80 || true
+              echo "$out" >&2
+              gobco -branch -test -short -verbose "./$pkg" 2>&1 | grep -E -v '^(=== |--- PASS|--- SKIP|go: downloading)' | grep -E -B2 -A12 -- '--- FAIL|^panic|^FAIL|exit status' | head -80 >&2 || true
               exit 1
             }
             echo "$out" | sed -n "s|^Branch coverage: \([0-9]*\)/\([0-9]*\)$|$pkg\t\1\t\2|p"
