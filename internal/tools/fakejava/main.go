@@ -36,6 +36,14 @@
 // when L and R are the same, one error row when they differ, and no page at
 // all (an "Unable to resolve" line and exit 1) when either names "unresolvable".
 //
+// "-jar JAR fhirpath EXPR FILE …" evaluates a dotted path the way the
+// validator prints it (#630): the log, " ...evaluating EXPR", the items joined
+// by commas (an empty line for none), "Done.", all coloured as 6.10 colours
+// them. EXPR is a plain path from the resource type (Patient.name.given);
+// one ending in "(" is a parse error, a FILE that isn't JSON a resource
+// error, both as the validator's error block, and FAKE_CRASH in FILE a crash
+// before evaluation.
+//
 // "-jar JAR server PORT" starts the validator's HTTP service instead (#611):
 // it prints the ready banner, answers POST /validateResource with the
 // OperationOutcome of the posted resource, and exits on POST /stop.
@@ -94,6 +102,9 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	}
 	if jar := index(args, "-jar"); jar >= 0 && jar+3 < len(args) && args[jar+2] == "server" {
 		return serve(args[jar+3], stdout, stderr, getenv)
+	}
+	if jar := index(args, "-jar"); jar >= 0 && jar+4 < len(args) && args[jar+2] == "fhirpath" {
+		return fhirpath(args[jar+3], args[jar+4], stdout)
 	}
 	if jar := index(args, "-jar"); jar >= 0 && jar+2 < len(args) && args[jar+2] == "compare" {
 		return compare(args, stdout, stderr)
@@ -358,4 +369,64 @@ func safeName(s string) string {
 		}
 		return '_'
 	}, s)
+}
+
+// fhirpath answers the validator's fhirpath mode; see the package comment.
+func fhirpath(expr, file string, stdout io.Writer) int {
+	colour := func(s string) string { return "\x1b[32m" + s + "\x1b[0m" }
+	_, _ = fmt.Fprintln(stdout, colour("FHIR Validation tool Version 7.0.5 (fake)"))
+	data, err := os.ReadFile(file) //nolint:gosec // the file fhirlint under test passed
+	if err != nil || bytes.Contains(data, []byte("FAKE_CRASH")) {
+		_, _ = fmt.Fprintln(stdout, "Error: fake crash before evaluation")
+		return 1
+	}
+	_, _ = fmt.Fprintln(stdout, colour(" ...evaluating "+expr))
+	fail := func(msg string) int {
+		_, _ = fmt.Fprintln(stdout, "Error evaluating FHIRPath expression.")
+		_, _ = fmt.Fprintln(stdout, msg)
+		_, _ = fmt.Fprintln(stdout, "\tat org.hl7.fhir.r5.fhirpath.FHIRPathEngine.parse(FHIRPathEngine.java:1)")
+		_, _ = fmt.Fprintln(stdout, colour("Done. Times: Loading: 00:00.001. Max Memory = 1Gb"))
+		return 1
+	}
+	if strings.HasSuffix(expr, "(") {
+		return fail("org.hl7.fhir.r5.fhirpath.FHIRLexer$FHIRLexerException: Error @1, " + fmt.Sprint(len(expr)+1) + ": Expression terminated unexpectedly")
+	}
+	var doc any
+	if json.Unmarshal(data, &doc) != nil {
+		return fail("java.io.IOException: Error parsing JSON source: JSON syntax error")
+	}
+	parts := strings.Split(expr, ".")
+	if m, ok := doc.(map[string]any); ok && len(parts) > 0 && m["resourceType"] == parts[0] {
+		parts = parts[1:]
+	}
+	items := []any{doc}
+	for _, p := range parts {
+		var next []any
+		for _, it := range items {
+			m, ok := it.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch v := m[p].(type) {
+			case nil:
+			case []any:
+				next = append(next, v...)
+			default:
+				next = append(next, v)
+			}
+		}
+		items = next
+	}
+	out := make([]string, len(items))
+	for i, it := range items {
+		if s, ok := it.(string); ok {
+			out[i] = s
+		} else {
+			b, _ := json.Marshal(it)
+			out[i] = string(b)
+		}
+	}
+	_, _ = fmt.Fprintln(stdout, strings.Join(out, ","))
+	_, _ = fmt.Fprintln(stdout, colour("Done. Times: Loading: 00:00.001. Max Memory = 1Gb"))
+	return 0
 }
