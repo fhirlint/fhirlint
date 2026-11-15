@@ -22,8 +22,8 @@ import (
 // of bug #597 was.
 //
 // Each case was checked against an empty fhirlint.yml: none passes without its
-// key. Not here, on purpose: watch, watch-interval and watch-settle-time (a
-// watch run doesn't end), no-color (test output is no terminal, so it is plain
+// key. Not here, on purpose: watch, watch-interval and watch-settle-time
+// (TestFakeWatch_FromConfig covers them), no-color (test output is no terminal, so it is plain
 // either way) and package-baseline (it needs an IG with a published QA
 // baseline in the package cache).
 
