@@ -51,7 +51,8 @@
 //
 // "-jar JAR server PORT" starts the validator's HTTP service instead (#611):
 // it prints the ready banner, answers POST /validateResource with the
-// OperationOutcome of the posted resource, and exits on POST /stop.
+// OperationOutcome of the posted resource (asking -tx about FAKE_TX codes, as
+// a validation run does), exits on POST /stop, and exits 1 on POST /crash.
 //
 // Environment variables let a test look behind it:
 //
@@ -108,7 +109,11 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		}
 	}
 	if jar := index(args, "-jar"); jar >= 0 && jar+3 < len(args) && args[jar+2] == "server" {
-		return serve(args[jar+3], stdout, stderr, getenv)
+		tx := ""
+		if i := index(args, "-tx"); i >= 0 && i+1 < len(args) && args[i+1] != "n/a" {
+			tx = strings.TrimRight(args[i+1], "/")
+		}
+		return serve(args[jar+3], tx, stdout, stderr, getenv)
 	}
 	if jar := index(args, "-jar"); jar >= 0 && jar+4 < len(args) && args[jar+2] == "fhirpath" {
 		return fhirpath(args[jar+3], args[jar+4], stdout)
@@ -260,7 +265,7 @@ func index(args []string, want string) int {
 }
 
 // serve runs the stand-in for the validator's HTTP service on port.
-func serve(port string, stdout, stderr io.Writer, getenv func(string) string) int {
+func serve(port, tx string, stdout, stderr io.Writer, getenv func(string) string) int {
 	if getenv(ServerFailEnv) != "" {
 		_, _ = fmt.Fprintln(stderr, "fakejava: server failed to start")
 		return 1
@@ -282,21 +287,36 @@ func serve(port string, stdout, stderr io.Writer, getenv func(string) string) in
 			http.Error(w, "java.lang.IllegalStateException: fake crash", http.StatusInternalServerError)
 			return
 		}
+		oo := outcome(string(body), "") // one release: the markers by JAR stay off
+		if tx != "" {
+			addTerminologyIssues(oo, tx, string(body))
+		}
 		w.Header().Set("Content-Type", "application/fhir+json")
-		_ = json.NewEncoder(w).Encode(outcome(string(body), "")) // one release: the markers by JAR stay off
+		_ = json.NewEncoder(w).Encode(oo)
 	})
 	mux.HandleFunc("/stop", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		close(stop)
+	})
+	crashed := make(chan struct{})
+	mux.HandleFunc("/crash", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		close(crashed)
 	})
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	go func() { _ = srv.Serve(ln) }()
 	if getenv(ServerSilentEnv) == "" {
 		_, _ = fmt.Fprintln(stdout, serverReady+" on port "+port)
 	}
-	<-stop
-	_ = ln.Close()
-	return 0
+	select {
+	case <-stop:
+		_ = ln.Close()
+		return 0
+	case <-crashed:
+		_ = ln.Close()
+		_, _ = fmt.Fprintln(stderr, "java.lang.OutOfMemoryError: fake crash of the server")
+		return 1
+	}
 }
 
 var txCode = regexp.MustCompile(`FAKE_TX:([A-Za-z0-9-]+)`)
