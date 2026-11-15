@@ -89,6 +89,14 @@ This is deliberate and it is the point of the feature. The validator downgrades 
 
 Long lists are truncated to the first ten with a count of the rest.
 
+The reports are still written before the run fails (#659), so a miss in one file does not cost the findings of the others. A run with misses writes no `--generate-baseline` file.
+
+## What is recorded
+
+Every answer the terminology server or the tx registry gives as a JSON object is recorded, whatever its status: a 200, a 422 for an invalid code, and also a 404 for an unknown code from `$lookup`, a 400 from the registry, or a 500 with an OperationOutcome (#661). Those are answers the server will give again, so the replay gives them too. `manifest.json` counts them as `errorAnswers`.
+
+Passed through to the validator but not recorded: gateway errors (502, 503, 504), and answers that aren't JSON objects, such as an HTML error page from a misconfigured endpoint. Replaying those forever would turn a passing hiccup into a permanent answer; a replay that needs one fails as a miss, and `tx warm` again fixes it.
+
 ## What a recording looks like
 
 One pretty-printed JSON file per interaction, plus a `manifest.json` recording where and when it came from:
