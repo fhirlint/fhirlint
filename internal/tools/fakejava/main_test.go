@@ -268,3 +268,25 @@ func TestMarkersByJAR(t *testing.T) {
 		t.Errorf("new release: %s", got)
 	}
 }
+
+func TestFHIRPathMode(t *testing.T) {
+	dir := t.TempDir()
+	res := filepath.Join(dir, "p.json")
+	if err := os.WriteFile(res, []byte(`{"resourceType":"Patient","name":[{"given":["Anna","Lena"]},{"given":["Eva"]}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		expr, want string
+		code       int
+	}{
+		{"Patient.name.given", "Anna,Lena,Eva\n", 0},
+		{"Patient.birthDate", "\n\x1b[32mDone.", 0},
+		{"Patient.name.(", "Error evaluating FHIRPath expression.\norg.hl7.fhir.r5.fhirpath.FHIRLexer$FHIRLexerException: Error @1, 15:", 1},
+	} {
+		var out bytes.Buffer
+		code := run([]string{"-jar", "v.jar", "fhirpath", tc.expr, res, "-version", "4.0.1", "-tx", "n/a"}, &out, io.Discard, func(string) string { return "" })
+		if code != tc.code || !strings.Contains(out.String(), " ...evaluating "+tc.expr) || !strings.Contains(out.String(), tc.want) {
+			t.Errorf("%s: exit %d\n%q", tc.expr, code, out.String())
+		}
+	}
+}
