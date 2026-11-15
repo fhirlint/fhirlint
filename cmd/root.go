@@ -96,7 +96,12 @@ func bindRootConfig() {
 
 func initConfig() {
 	viper.SetConfigType("yaml")
-	viper.AutomaticEnv()
+	// No viper.AutomaticEnv: without a prefix it would answer every config key
+	// from an environment variable of the same name, so URL, SERVER, OUTPUT or
+	// EXCLUDE set for something else would silently change the run (#639).
+	// The variables fhirlint reads are FHIRLINT_*, bound in bindRootConfig or
+	// read with os.Getenv. A prefix is no way out either: FHIRLINT_CACHE_DIR
+	// names the JAR cache and would also set the cache-dir key.
 
 	if cfgFile, _ := rootCmd.PersistentFlags().GetString("config"); cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
