@@ -396,10 +396,11 @@ func TestFakeValidate_GroupQuietSlowest(t *testing.T) {
 	if strings.Count(r.stdout, "Fake error found") != 1 || !strings.Contains(r.stdout, "2 files") {
 		t.Errorf("--group must show the repeated finding once, with its count:\n%s", r.stdout)
 	}
-	// The fake validator logs no per-file times, and --slowest says so rather
-	// than printing an empty list.
-	if !strings.Contains(r.stdout, "No validation times") {
-		t.Errorf("--slowest without timings must say so:\n%s", r.stdout)
+	// The fake validator logs 10, 11 and 12 ms for the three files in turn:
+	// --slowest 2 lists c.json, then b.json, and leaves a.json out.
+	_, slowest, ok := strings.Cut(r.stdout, "Slowest files")
+	if !ok || strings.Index(slowest, "c.json") > strings.Index(slowest, "b.json") || !strings.Contains(slowest, "b.json") || strings.Contains(slowest, "a.json") {
+		t.Errorf("--slowest 2 must list the two slowest files, slowest first:\n%s", r.stdout)
 	}
 }
 
