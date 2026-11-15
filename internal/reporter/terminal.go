@@ -51,7 +51,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 
 	// Under --quiet, skip files with no active issues (including those with only
 	// suppressed issues). The summary line is always printed by TerminalSummary.
-	if quiet && len(filtered) == 0 {
+	if quiet && (len(filtered) == 0 || onlyAllOK(filtered)) {
 		return
 	}
 
@@ -187,6 +187,14 @@ func TerminalSummary(results []*validator.Result, minSeverity string) int {
 			unresolvedCodeSystems)))
 	}
 	return total
+}
+
+// onlyAllOK reports whether issues is just the marker the validator returns
+// for a resource without findings: one information issue with no location
+// ("All OK", localised by -locale, so the text can't be matched). Under
+// --quiet such a file is a valid file and is skipped (#635).
+func onlyAllOK(issues []validator.Issue) bool {
+	return len(issues) == 1 && issues[0].Severity == "information" && issues[0].Location == ""
 }
 
 func filterIssues(issues []validator.Issue, minSeverity string) []validator.Issue {

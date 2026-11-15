@@ -279,3 +279,33 @@ func TestTerminalSummary_NoSkippedChecksNoLine(t *testing.T) {
 		t.Errorf("summary = %q, want no skipped-checks line", out)
 	}
 }
+
+// The validator never returns no issues for a valid resource: it returns one
+// information issue without a location, "All OK" or its translation (#635).
+func TestTerminal_QuietSkipsTheAllOKMarker(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		issues []validator.Issue
+		shown  bool
+	}{
+		{"All OK", []validator.Issue{{Severity: "information", Message: "All OK"}}, false},
+		{"localised", []validator.Issue{{Severity: "information", Message: "Alles OK"}}, false},
+		{"information with a location", []validator.Issue{{Severity: "information", Message: "note", Location: "Patient.name"}}, true},
+		{"a warning without a location", []validator.Issue{{Severity: "warning", Message: "w"}}, true},
+		{"two location-less notes", []validator.Issue{{Severity: "information", Message: "a"}, {Severity: "information", Message: "b"}}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			old := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			Terminal(&validator.Result{Valid: true, Label: "p.json", Issues: tc.issues}, "information", false, true, false)
+			_ = w.Close()
+			os.Stdout = old
+			var buf strings.Builder
+			_, _ = io.Copy(&buf, r)
+			if got := strings.Contains(buf.String(), "p.json"); got != tc.shown {
+				t.Errorf("shown = %v, want %v:\n%s", got, tc.shown, buf.String())
+			}
+		})
+	}
+}
