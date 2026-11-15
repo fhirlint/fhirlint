@@ -205,8 +205,13 @@ func (s *Server) forward(w http.ResponseWriter, r *http.Request, body []byte, ta
 		return nil, false
 	}
 	// Carry the negotiation headers through: the terminology server keys its
-	// response format and FHIR version off them.
-	for _, h := range []string{"Accept", "Content-Type", "Accept-Charset", "Accept-Language"} {
+	// response format and FHIR version off them. And the validator's
+	// terminology session: it opens one with $cache-control, sends the IG's
+	// value sets once, and later asks about them by URL only, under
+	// X-Cache-Id. Dropped, the server can't find them and answers 422 "value
+	// set not found", which the recording then keeps (#673). The key leaves it
+	// out: the id is new every run, and a replay doesn't need it.
+	for _, h := range []string{"Accept", "Content-Type", "Accept-Charset", "Accept-Language", "X-Cache-Id"} {
 		if v := r.Header.Get(h); v != "" {
 			req.Header.Set(h, v)
 		}
