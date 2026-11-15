@@ -80,9 +80,9 @@ jobs:
       - name: Coverage floor
         if: matrix.os == 'ubuntu-latest'
         env:
-          COVERAGE_FLOOR: "88.8"
+          COVERAGE_FLOOR: "89.9"
           # package=floor, space-separated: the public API and the core.
-          PACKAGE_FLOORS: "pkg/fhirlint=90.9 internal/validator=89.4"
+          PACKAGE_FLOORS: "pkg/fhirlint=90.9 internal/validator=89.6"
           EXCLUDE: '^github[.]com/fhirlint/fhirlint/(main[.]go|internal/tools/)'
         run: |
           awk -v ex="$EXCLUDE" '
@@ -205,7 +205,7 @@ jobs:
 
       - name: Branch coverage
         env:
-          BRANCH_FLOOR: "80.6"
+          BRANCH_FLOOR: "82.0"
           EXCLUDE: '/internal/tools/|/internal/resultcache$'
         run: |
           for dir in $(go list -f '{{.Dir}}' ./... | grep -Ev "$EXCLUDE"); do
