@@ -79,6 +79,11 @@ func runPackages() error {
 	pkgs, err := fhirpkg.List(withSizes)
 	if err != nil {
 		if errors.Is(err, fhirpkg.ErrNoCache) {
+			// --json promises JSON on stdout, so a missing cache is the same
+			// empty document as an empty one; the hint is for people (#706).
+			if flagPackagesJSON {
+				return json.NewEncoder(os.Stdout).Encode(packagesJSON(nil))
+			}
 			fmt.Printf("No FHIR package cache yet.\n" +
 				"It is created the first time a validation resolves an IG package.\n")
 			return nil
