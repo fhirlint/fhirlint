@@ -45,6 +45,9 @@
 // validator writes, D/sd-<L>-<R>.html, with a Messages table (#615): no row
 // when L and R are the same, one error row when they differ, and no page at
 // all (an "Unable to resolve" line and exit 1) when either names "unresolvable".
+// A left profile naming "oom" runs out of heap, "slow" takes 3 seconds,
+// "silent" exits 1 with no page and nothing on stdout, and "empty" exits 0
+// without writing a page (#704).
 //
 // "-jar JAR fhirpath EXPR FILE …" evaluates a dotted path the way the
 // validator prints it (#630): the log, " ...evaluating EXPR", the items joined
@@ -403,6 +406,17 @@ func compare(args []string, stdout, stderr io.Writer) int {
 	if left == "" || right == "" || dest == "" {
 		_, _ = fmt.Fprintf(stderr, "fakejava: unsupported compare call %q\n", args)
 		return 2
+	}
+	switch {
+	case strings.Contains(left, "oom"):
+		_, _ = fmt.Fprintln(stderr, `Exception in thread "main" java.lang.OutOfMemoryError: Java heap space`)
+		return 1
+	case strings.Contains(left, "slow"):
+		time.Sleep(3 * time.Second)
+	case strings.Contains(left, "silent"):
+		return 1
+	case strings.Contains(left, "empty"):
+		return 0
 	}
 	for _, side := range []string{left, right} {
 		if strings.Contains(side, "unresolvable") {

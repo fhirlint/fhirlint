@@ -80,12 +80,11 @@ func LoadSuite(dir string) ([]Case, error) {
 		if d.IsDir() || !isCaseFile(p) || input.LinkLeaves(dir, p, d) {
 			return nil
 		}
+		// A FHIR file without a companion expectation is skipped, not an
+		// error. Inside covers that case too: a missing file does not
+		// resolve, so it is not inside.
 		expPath := expectedPath(p)
 		if !input.Inside(dir, expPath) {
-			return nil
-		}
-		if _, statErr := os.Stat(expPath); statErr != nil {
-			// A FHIR file without a companion expectation is skipped, not an error.
 			return nil
 		}
 		exp, err := readExpectedOS(expPath)
