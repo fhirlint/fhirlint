@@ -201,6 +201,11 @@ func configFileLabel() string {
 	return "the config"
 }
 
+// newIGAuditClient makes the registry client the IG half of the audit asks. A
+// variable so tests can point it at a local registry, as updatecheck.APIBase
+// does for the GitHub half (#690).
+var newIGAuditClient = igaudit.NewClient
+
 // auditIGPackages checks each package in the resolved source against the
 // registry. Finding no source at all is not an error: the JAR half of the audit
 // is still worth running.
@@ -216,7 +221,7 @@ func auditIGPackages() (igaudit.Report, igSource, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), igAuditTimeout)
 	defer cancel()
 
-	return igaudit.Audit(ctx, igaudit.NewClient(), src.IDs), src, nil
+	return igaudit.Audit(ctx, newIGAuditClient(), src.IDs), src, nil
 }
 
 // printJARTerminal renders the JAR half of the audit and returns how many
