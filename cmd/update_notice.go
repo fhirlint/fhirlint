@@ -152,7 +152,13 @@ func updateNoticeSuppressed() bool {
 	// The notice goes to stderr, so that is what has to be a terminal — not
 	// stdout. Redirecting a report to a file while watching the run should
 	// still show the notice.
-	return !isatty.IsTerminal(os.Stderr.Fd()) && !isatty.IsCygwinTerminal(os.Stderr.Fd())
+	return !stderrIsTerminal()
+}
+
+// stderrIsTerminal is a variable because `go test` never has a terminal on
+// stderr, so without it no test could see the update rows at all (#690).
+var stderrIsTerminal = func() bool {
+	return isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())
 }
 
 // fhirlintUpdate reports whether a newer fhirlint release exists.

@@ -169,3 +169,57 @@ func TestFakeInit_WritesTheAnswers(t *testing.T) {
 		t.Errorf("init must not overwrite an existing fhirlint.yml without --force, got %v", r.err)
 	}
 }
+
+// Ranges, an unorderable range, --depth and --json of packages tree (#690).
+func TestFakePackagesTree_RangesDepthAndJSON(t *testing.T) {
+	dir := t.TempDir()
+	mustPass(t, runFake(t, dir, "packages", "--json"))
+	cachePackage(t, "top.pkg", "1.0.0", map[string]string{"range.pkg": "1.5.x", "amb.pkg": "2.x"})
+	cachePackage(t, "range.pkg", "1.5.0", nil)
+	cachePackage(t, "range.pkg", "1.5.3", map[string]string{"leaf.pkg": "1.0.0"})
+	cachePackage(t, "leaf.pkg", "1.0.0", nil)
+	// "2.Q1" has no numeric order against "2.0.0", so the pick is a guess.
+	cachePackage(t, "amb.pkg", "2.0.0", nil)
+	cachePackage(t, "amb.pkg", "2.Q1", nil)
+
+	r := runFakeKeepEnv(t, dir, "packages", "tree", "top.pkg#1.0.0")
+	mustPass(t, r)
+	for _, want := range []string{
+		"top.pkg#1.0.0\n",
+		"├── amb.pkg#",
+		"(declared 2.x, ambiguous)",
+		"└── range.pkg#1.5.3   (declared 1.5.x)",
+		"    └── leaf.pkg#1.0.0",
+		"All dependencies are in the cache.",
+		"2 declared as a version range",
+		"1 could not be ordered against the other installed versions",
+	} {
+		if !strings.Contains(r.stdout, want) {
+			t.Errorf("tree lacks %q:\n%s", want, r.stdout)
+		}
+	}
+
+	r = runFakeKeepEnv(t, dir, "packages", "tree", "top.pkg#1.0.0", "--depth", "1")
+	mustPass(t, r)
+	if !strings.Contains(r.stdout, "range.pkg#1.5.3   (declared 1.5.x)   …") ||
+		strings.Contains(r.stdout, "leaf.pkg") || !strings.Contains(r.stdout, "Stopped at --depth 1") {
+		t.Errorf("--depth 1 cuts below the first level and says so:\n%s", r.stdout)
+	}
+
+	r = runFakeKeepEnv(t, dir, "packages", "tree", "top.pkg#1.0.0", "--json")
+	mustPass(t, r)
+	var root struct {
+		Name     string `json:"name"`
+		Children []struct {
+			Name      string `json:"name"`
+			Ambiguous bool   `json:"ambiguous"`
+		} `json:"children"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &root); err != nil || root.Name != "top.pkg" || len(root.Children) != 2 || !root.Children[0].Ambiguous {
+		t.Errorf("--json: %v %+v\n%s", err, root, r.stdout)
+	}
+
+	if r := runFakeKeepEnv(t, dir, "packages", "tree", "absent.pkg#1.0.0"); r.err == nil || !strings.Contains(r.err.Error(), "not in the FHIR package cache") {
+		t.Errorf("a package not in the cache must be an error: %v", r.err)
+	}
+}
