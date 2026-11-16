@@ -20,7 +20,10 @@ func TestOpen_UnreadableRecordings(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Open(file); err == nil || !strings.Contains(err.Error(), "reading terminology recording") {
+	// Not on Windows: there reading a file as a directory reports it as not
+	// existing, so Open gives an empty store, and validate then stops with
+	// "no terminology recording … record one first" anyway.
+	if _, err := Open(file); runtime.GOOS != "windows" && (err == nil || !strings.Contains(err.Error(), "reading terminology recording")) {
 		t.Errorf("a recording path that is a file: %v", err)
 	}
 	if runtime.GOOS != "windows" {

@@ -33,7 +33,9 @@ func TestPut_CacheDirBelowAFile(t *testing.T) {
 		t.Error("a cache dir that can't be created must fail")
 	}
 	// CheckDir reports such a path instead of reading it as "not there yet".
-	if err := CheckDir(filepath.Join(file, "cache")); err == nil {
+	// Not on Windows: there a path below a file stats as not existing, which
+	// CheckDir rightly reads as a cache that isn't created yet.
+	if err := CheckDir(filepath.Join(file, "cache")); err == nil && runtime.GOOS != "windows" {
 		t.Error("CheckDir must report a path it can't look at")
 	}
 	if err := CheckDir(file); err == nil || !strings.Contains(err.Error(), "is not a directory") {
