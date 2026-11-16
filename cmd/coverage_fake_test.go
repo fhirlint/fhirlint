@@ -24,7 +24,11 @@ func cacheCoverageIG(t *testing.T) {
 	t.Helper()
 	dir := filepath.Join(os.Getenv("HOME"), ".fhir", "packages", "example.cov#1.0.0", "package")
 	writeFile(t, dir, "package.json", `{"name":"example.cov","version":"1.0.0","fhirVersions":["4.0.1"]}`)
-	writeFile(t, dir, "StructureDefinition-CovPatient.json", `{
+	writeFile(t, dir, "StructureDefinition-CovPatient.json", covProfileSD)
+}
+
+// covProfileSD is CovPatient with a snapshot and three must-support elements.
+const covProfileSD = `{
   "resourceType": "StructureDefinition", "url": "`+coverageProfileURL+`",
   "name": "CovPatient", "id": "CovPatient", "type": "Patient", "kind": "resource",
   "derivation": "constraint", "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
@@ -34,8 +38,7 @@ func cacheCoverageIG(t *testing.T) {
     {"id": "Patient.birthDate", "path": "Patient.birthDate", "mustSupport": true},
     {"id": "Patient.gender", "path": "Patient.gender", "mustSupport": true}
   ]}
-}`)
-}
+}`
 
 const (
 	covClaimed   = `{"resourceType":"Patient","meta":{"profile":["` + coverageProfileURL + `"]},"identifier":[{"value":"1"}],"birthDate":"1990-01-01"}`
