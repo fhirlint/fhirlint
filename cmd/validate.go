@@ -809,7 +809,16 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	var (
 		results []*validator.Result
 		err     error
+		// tempInputs removes the files a URL or --extract-each run validated.
+		// Not before the end of the run: the rules and the reference check read
+		// them after validation, and skip a file that is gone (#695).
+		tempInputs func()
 	)
+	defer func() {
+		if tempInputs != nil {
+			tempInputs()
+		}
+	}()
 
 	if len(flagURLs) > 0 {
 		if arg != "" {
@@ -829,9 +838,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 					return err
 				}
 			}
-			results, err = extractEachAndValidate(in, opts)
+			results, tempInputs, err = extractEachAndValidate(in, opts)
 		} else {
-			results, err = validateURLs(flagURLs, opts, urlTimeout)
+			results, tempInputs, err = validateURLs(flagURLs, opts, urlTimeout)
 		}
 	} else if len(args) > 1 {
 		// Several files and/or directories: expand them into one path list so
@@ -863,7 +872,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 					return err
 				}
 			}
-			results, err = extractEachAndValidate(in, opts)
+			results, tempInputs, err = extractEachAndValidate(in, opts)
 		} else if ndjson.IsNDJSON(in.Path) {
 			if flagExtractEach != "" {
 				return fmt.Errorf("--extract-each is not supported for NDJSON input")
@@ -1995,18 +2004,28 @@ func loadIgnoreFile(filename string) ([]string, error) {
 
 // validateURLs fetches all URLs, applies --extract/--ignore to each response, and validates
 // them in a single JVM invocation.
-func validateURLs(urls []string, opts validator.Options, httpTimeout time.Duration) ([]*validator.Result, error) {
+//
+// The downloads outlive the call: the results name them, and the rules and the
+// reference check read them after validation (#695). The caller runs the
+// returned cleanup when it is done with the results; on an error the downloads
+// are already gone.
+func validateURLs(urls []string, opts validator.Options, httpTimeout time.Duration) (_ []*validator.Result, _ func(), err error) {
 	ins := make([]*input.Input, 0, len(urls))
-	defer func() {
+	remove := func() {
 		for _, in := range ins {
 			in.Cleanup()
+		}
+	}
+	defer func() {
+		if err != nil {
+			remove()
 		}
 	}()
 
 	for _, u := range urls {
 		in, err := input.Resolve("", u, httpTimeout)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		ins = append(ins, in)
 	}
@@ -2014,7 +2033,7 @@ func validateURLs(urls []string, opts validator.Options, httpTimeout time.Durati
 	if flagExtract != "" || len(flagIgnore) > 0 {
 		for _, in := range ins {
 			if err := preprocessJSON(in); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -2026,7 +2045,7 @@ func validateURLs(urls []string, opts validator.Options, httpTimeout time.Durati
 
 	results, err := runValidation(paths, opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for i, r := range results {
@@ -2034,7 +2053,7 @@ func validateURLs(urls []string, opts validator.Options, httpTimeout time.Durati
 			r.Label = ins[i].Label
 		}
 	}
-	return results, nil
+	return results, remove, nil
 }
 
 // extractEachElements reads the input file, extracts the array at jsonPath, and writes
@@ -2098,16 +2117,19 @@ func extractEachElements(in *input.Input, jsonPath string) ([]*input.Input, erro
 
 // extractEachAndValidate extracts array elements from in, validates them in one JVM call,
 // and sets each result's label to the element label (filename[i] or filename[i] (Type/id)).
-func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validator.Result, error) {
+//
+// The element files outlive the call, for the same reason as validateURLs':
+// the caller runs the returned cleanup when it is done with the results (#695).
+func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validator.Result, func(), error) {
 	ins, err := extractEachElements(in, flagExtractEach)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer func() {
+	cleanup := func() {
 		for _, t := range ins {
 			t.Cleanup()
 		}
-	}()
+	}
 
 	paths := make([]string, len(ins))
 	for i, t := range ins {
@@ -2116,14 +2138,15 @@ func extractEachAndValidate(in *input.Input, opts validator.Options) ([]*validat
 
 	results, err := runValidation(paths, opts)
 	if err != nil {
-		return nil, err
+		cleanup()
+		return nil, nil, err
 	}
 	for i, r := range results {
 		if i < len(ins) {
 			r.Label = ins[i].Label
 		}
 	}
-	return results, nil
+	return results, cleanup, nil
 }
 
 // timeNow is a variable so tests can override it.
