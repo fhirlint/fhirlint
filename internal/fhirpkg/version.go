@@ -17,6 +17,9 @@ import (
 // integers, with an optional pre-release suffix. Everything else is reported as
 // incomparable and the caller says "differs" instead of "outdated".
 //
+// Build metadata (everything after '+') is ignored per SemVer 2.0.0 §10, so
+// versions differing only in build metadata compare as equal.
+//
 // The two-segment floor is what keeps a scheme change from being read as a
 // version bump: "2025-Q1" would otherwise parse as core 2025 with pre-release
 // Q1 and rank above "1.0.0", turning "this publisher started versioning by
