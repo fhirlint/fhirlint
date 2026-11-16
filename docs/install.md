@@ -43,7 +43,7 @@ go install github.com/fhirlint/fhirlint@latest
 docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint validate /work/fhir/
 
 # Pin to a specific version
-docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.17.0 validate /work/fhir/
+docker run --rm -v $(pwd):/work ghcr.io/fhirlint/fhirlint:1.17.1 validate /work/fhir/
 ```
 
 The image includes a JRE — no separate Java installation required.
