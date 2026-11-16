@@ -186,6 +186,10 @@ func loadCoverageRegistry(igs []string) (*coverage.Registry, []string, error) {
 	return reg, requested, nil
 }
 
+// newCoverageDownloader makes the registry client downloadPackage uses. A
+// variable so tests can point it at a local registry (#690).
+var newCoverageDownloader = coverage.NewDownloader
+
 // downloadPackage fetches a package the cache does not hold yet.
 //
 // Progress goes to stderr rather than stdout: the report is what stdout is for,
@@ -196,7 +200,7 @@ func downloadPackage(cacheRoot, name, version string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), coveragePackageTimeout)
 	defer cancel()
 
-	warnings, err := coverage.NewDownloader().Fetch(ctx, cacheRoot, name, version)
+	warnings, err := newCoverageDownloader().Fetch(ctx, cacheRoot, name, version)
 	for _, w := range warnings {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
