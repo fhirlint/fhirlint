@@ -261,6 +261,13 @@ func TestFakeRunCompare(t *testing.T) {
 		t.Errorf("differing profiles: %+v", res)
 	}
 	co.DestDir = t.TempDir()
+	// --output names the destination, and a name with glob characters must
+	// still find the page the JAR wrote (#705).
+	bracketed := co
+	bracketed.DestDir = filepath.Join(t.TempDir(), "out[1]")
+	if res, err := RunCompare("http://x/A", "http://x/B", bracketed); err != nil || !res.Differs() {
+		t.Errorf("destination %q: %v %+v", bracketed.DestDir, err, res)
+	}
 	if res, err := RunCompare("http://x/A", "http://x/A", co); err != nil || res.Differs() {
 		t.Errorf("a profile against itself: %+v %v", res, err)
 	}

@@ -118,3 +118,35 @@ func TestCompareFailure(t *testing.T) {
 		t.Errorf("err = %v, want the resolve failure surfaced", err)
 	}
 }
+
+// The destination comes from --output, so its name is the user's: glob
+// characters in it must not turn it into a pattern (#705).
+func TestFindComparisonHTML_DirectoryNameWithGlobCharacters(t *testing.T) {
+	for _, name := range []string{"out[1]", "results [v2]", "a[b", "star*dir", "q?"} {
+		dir := filepath.Join(t.TempDir(), name)
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			t.Logf("skipping %q, which this file system does not allow (Windows: * and ?): %v", name, err)
+			continue
+		}
+		if err := os.WriteFile(filepath.Join(dir, "sd+1-aaa-bbb.html"), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := findComparisonHTML(dir); got != filepath.Join(dir, "sd+1-aaa-bbb.html") {
+			t.Errorf("in %q: got %q, want the comparison page", name, got)
+		}
+	}
+}
+
+// A directory that happens to match the name pattern is not the page.
+func TestFindComparisonHTML_SkipsDirectories(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sd-dir.html"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if got := findComparisonHTML(dir); got != "" {
+		t.Errorf("got %q, want no page", got)
+	}
+	if got := findComparisonHTML(filepath.Join(dir, "absent")); got != "" {
+		t.Errorf("a destination that is not there: got %q", got)
+	}
+}

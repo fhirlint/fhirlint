@@ -119,17 +119,23 @@ func RunCompare(left, right string, opts CompareOptions) (*CompareResult, error)
 // findComparisonHTML returns the path to the main side-by-side comparison file
 // the JAR writes (sd+N-<uuid>-<uuid>.html), excluding the -union/-intersection
 // variants. Returns "" when no comparison was produced.
+//
+// Only the file name is matched: destDir comes from --output, and a directory
+// named like "out[1]" must not be read as a pattern (#705).
 func findComparisonHTML(destDir string) string {
-	matches, err := filepath.Glob(filepath.Join(destDir, "sd*.html"))
+	entries, err := os.ReadDir(destDir)
 	if err != nil {
 		return ""
 	}
-	for _, m := range matches {
-		base := filepath.Base(m)
-		if strings.Contains(base, "-union.") || strings.Contains(base, "-intersection.") {
+	for _, e := range entries {
+		name := e.Name()
+		if ok, _ := filepath.Match("sd*.html", name); !ok || e.IsDir() {
 			continue
 		}
-		return m
+		if strings.Contains(name, "-union.") || strings.Contains(name, "-intersection.") {
+			continue
+		}
+		return filepath.Join(destDir, name)
 	}
 	return ""
 }
