@@ -407,7 +407,6 @@ func TestAuditSplitArtifactsDoNotTriggerThePreReleaseCase(t *testing.T) {
 	mustEqualVersions(t, "kbv.pkg", p.UntaggedNewer, nil)
 }
 
-
 // Versions that CompareVersions ranks as equal but whose spelling differs must
 // not make UntaggedNewer depend on map iteration order: with the comparator
 // returning false both ways, sort.Slice leaves them in input order, which
@@ -423,7 +422,6 @@ func TestAuditUntaggedNewerEqualVersionsSortDeterministically(t *testing.T) {
 		mustEqualVersions(t, "build.pkg", p.UntaggedNewer, []string{"2.0.0", "2.00.0"})
 	}
 }
-
 
 func mustEqualVersions(t *testing.T, name string, got, want []string) {
 	t.Helper()
