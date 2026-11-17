@@ -23,6 +23,9 @@ func TestCompareVersions(t *testing.T) {
 		{"2.0.0-alpha", "2.0.0-beta", -1, true},
 		{"2.0.0-beta", "2.0.0-alpha", 1, true},
 		{"1.1.0-ballot", "1.0.0", 1, true}, // the core version decides first
+		{"2.0.0+build", "2.0.0", 0, true},  // build metadata is ignored
+		{"2.0.0-ballot+x", "2.0.0-ballot", 0, true},
+		{"2.0.0+a", "2.0.0+b", 0, true},
 		{"1", "1.0.0", 0, false},
 		{"1.0.0", "1", 0, false},
 		{"1.x.0", "1.0.0", 0, false},

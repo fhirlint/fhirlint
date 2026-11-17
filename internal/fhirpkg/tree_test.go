@@ -314,6 +314,31 @@ func TestList_SortsVersionsNumerically(t *testing.T) {
 	}
 }
 
+// List sorts versions with build metadata: versions differing only in build
+// metadata compare equal, so the fallback string comparison gives a fixed order.
+func TestList_SortsBuildMetadataVersions(t *testing.T) {
+	root := fakeCache(t)
+	install(t, root, "p#2.0.0+b", Manifest{}, 0)
+	install(t, root, "p#2.0.0+a", Manifest{}, 0)
+
+	pkgs, err := List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range pkgs {
+		got = append(got, p.Version)
+	}
+	// When CompareVersions returns equal (build metadata ignored), the sort
+	// falls back to string comparison, giving deterministic order.
+	want := []string{"2.0.0+a", "2.0.0+b"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("List order = %v, want %v", got, want)
+		}
+	}
+}
+
 // Grouped takes its display name from the newest entry, so a mixed-case package
 // whose newest version is double-digit must still name the newer spelling.
 func TestGrouped_NamesTheNewestSpellingWithDoubleDigits(t *testing.T) {

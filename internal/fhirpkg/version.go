@@ -17,6 +17,9 @@ import (
 // integers, with an optional pre-release suffix. Everything else is reported as
 // incomparable and the caller says "differs" instead of "outdated".
 //
+// Build metadata (everything after '+') is ignored per SemVer 2.0.0 §10, so
+// versions differing only in build metadata compare as equal.
+//
 // The two-segment floor is what keeps a scheme change from being read as a
 // version bump: "2025-Q1" would otherwise parse as core 2025 with pre-release
 // Q1 and rank above "1.0.0", turning "this publisher started versioning by
@@ -30,6 +33,9 @@ import (
 // different pre-releases of the same core version are ordered lexically, which
 // is an approximation and part of why this returns an ok flag at all.
 func CompareVersions(a, b string) (int, bool) {
+	// SemVer §10: build metadata is ignored when determining precedence.
+	a = stripBuild(a)
+	b = stripBuild(b)
 	aCore, aPre := splitPreRelease(a)
 	bCore, bPre := splitPreRelease(b)
 
@@ -89,6 +95,14 @@ func splitPreRelease(v string) (core, pre string) {
 		return v[:i], v[i+1:]
 	}
 	return v, ""
+}
+
+// stripBuild removes build metadata (everything from the first '+') per SemVer §10.
+func stripBuild(v string) string {
+	if i := strings.IndexByte(v, '+'); i >= 0 {
+		return v[:i]
+	}
+	return v
 }
 
 // minVersionSegments is the two-segment floor described on CompareVersions.

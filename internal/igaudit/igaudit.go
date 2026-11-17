@@ -317,7 +317,7 @@ func (p packument) untaggedNewer(version, latest string, latestIsPreRelease bool
 		newer = append(newer, v)
 	}
 	sort.Slice(newer, func(i, j int) bool {
-		if cmp, ok := fhirpkg.CompareVersions(newer[i], newer[j]); ok {
+		if cmp, ok := fhirpkg.CompareVersions(newer[i], newer[j]); ok && cmp != 0 {
 			return cmp < 0
 		}
 		return newer[i] < newer[j]

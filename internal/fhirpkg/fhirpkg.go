@@ -137,7 +137,7 @@ func List(withSizes bool) ([]Package, error) {
 		if a, b := foldName(pkgs[i].Name), foldName(pkgs[j].Name); a != b {
 			return a < b
 		}
-		if cmp, ok := CompareVersions(pkgs[i].Version, pkgs[j].Version); ok {
+		if cmp, ok := CompareVersions(pkgs[i].Version, pkgs[j].Version); ok && cmp != 0 {
 			return cmp < 0
 		}
 		// Unorderable against each other; fall back to something stable.
