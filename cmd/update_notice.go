@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/viper"
@@ -50,20 +51,9 @@ func printUpdateNotice() {
 		return
 	}
 
-	// Align the arrows so two rows read as a table rather than as prose.
-	nameWidth, versionWidth := 0, 0
-	for _, p := range pending {
-		nameWidth = max(nameWidth, len(p.name))
-		versionWidth = max(versionWidth, len(p.current+" → "+p.latest))
-	}
-
 	var b strings.Builder
 	if len(pending) > 0 {
-		b.WriteString("\nUpdates available:\n")
-		for _, p := range pending {
-			versions := p.current + " → " + p.latest
-			fmt.Fprintf(&b, "  %-*s  %-*s  %s\n", nameWidth, p.name, versionWidth, versions, p.action)
-		}
+		b.WriteString(updateRows(pending))
 	}
 	// Its own block, not a column on the validator row. Being behind and being
 	// exposed are different things, and the advisory line has to appear even
@@ -72,6 +62,28 @@ func printUpdateNotice() {
 		b.WriteString("\n" + advisory + "\n")
 	}
 	fmt.Fprint(os.Stderr, b.String())
+}
+
+// updateRows renders the pending updates as a table.
+//
+// The column widths are counted in characters, not bytes: the arrow is one
+// character but three bytes, and fmt pads a string in characters, so a width
+// taken from len() leaves the action column two characters too far right
+// (#717).
+func updateRows(pending []pendingUpdate) string {
+	nameWidth, versionWidth := 0, 0
+	for _, p := range pending {
+		nameWidth = max(nameWidth, utf8.RuneCountInString(p.name))
+		versionWidth = max(versionWidth, utf8.RuneCountInString(p.current+" → "+p.latest))
+	}
+
+	var b strings.Builder
+	b.WriteString("\nUpdates available:\n")
+	for _, p := range pending {
+		versions := p.current + " → " + p.latest
+		fmt.Fprintf(&b, "  %-*s  %-*s  %s\n", nameWidth, p.name, versionWidth, versions, p.action)
+	}
+	return b.String()
 }
 
 // collectPendingUpdates gathers the components that have a newer release.
