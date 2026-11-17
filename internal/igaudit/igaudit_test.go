@@ -407,6 +407,24 @@ func TestAuditSplitArtifactsDoNotTriggerThePreReleaseCase(t *testing.T) {
 	mustEqualVersions(t, "kbv.pkg", p.UntaggedNewer, nil)
 }
 
+
+// Versions that CompareVersions ranks as equal but whose spelling differs must
+// not make UntaggedNewer depend on map iteration order: with the comparator
+// returning false both ways, sort.Slice leaves them in input order, which
+// changes from run to run. Calling Audit repeatedly must always yield them in
+// a fixed order.
+func TestAuditUntaggedNewerEqualVersionsSortDeterministically(t *testing.T) {
+	for i := 0; i < 20; i++ {
+		c := registry(t, map[string]string{
+			"build.pkg": packument("1.0.0", "1.0.0", "2.0.0", "2.00.0"),
+		})
+		r := igaudit.Audit(context.Background(), c, []string{"build.pkg#1.0.0"})
+		p := findPackage(t, r, "build.pkg#1.0.0")
+		mustEqualVersions(t, "build.pkg", p.UntaggedNewer, []string{"2.0.0", "2.00.0"})
+	}
+}
+
+
 func mustEqualVersions(t *testing.T, name string, got, want []string) {
 	t.Helper()
 	if !slices.Equal(got, want) {
