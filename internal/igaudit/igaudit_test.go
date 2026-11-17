@@ -423,6 +423,27 @@ func TestAuditUntaggedNewerEqualVersionsSortDeterministically(t *testing.T) {
 	}
 }
 
+// A pin that carries build metadata is the same version as the tag, so it is
+// not outdated. Semver 2.0.0 section 10 says the build metadata does not
+// figure into precedence (#718).
+//
+// The comparator rows in #720 prove the comparison. This proves the finding:
+// before the fix, the pin was reported as outdated and the reader was told to
+// move to a version it already had.
+func TestAuditBuildMetadataIsNotOutdated(t *testing.T) {
+	c := registry(t, map[string]string{
+		"build.pkg": packument("2.0.0", "2.0.0", "2.0.0+build"),
+	})
+
+	r := igaudit.Audit(context.Background(), c, []string{"build.pkg#2.0.0+build"})
+
+	p := findPackage(t, r, "build.pkg#2.0.0+build")
+	if p.Outdated || p.Differs || p.Ahead || p.IsProblem() {
+		t.Errorf("build.pkg: got outdated=%v differs=%v ahead=%v problem=%v, want all false — the build metadata does not make the pin older",
+			p.Outdated, p.Differs, p.Ahead, p.IsProblem())
+	}
+}
+
 func mustEqualVersions(t *testing.T, name string, got, want []string) {
 	t.Helper()
 	if !slices.Equal(got, want) {
