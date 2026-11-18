@@ -4,13 +4,14 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 
 	"github.com/fhirlint/fhirlint/internal/cache"
 	"github.com/fhirlint/fhirlint/internal/updatecheck"
 	"github.com/spf13/viper"
-	"strings"
-	"time"
 )
 
 // clearNoticeEnv removes every ambient reason to suppress the notice, so each
@@ -185,5 +186,45 @@ func TestAdvisoryNoticeSuppressed_ByOffline(t *testing.T) {
 	viper.Set("offline", true)
 	if !advisoryNoticeSuppressed() {
 		t.Error("offline forbids the lookup the advisory line needs")
+	}
+}
+
+// The version column holds a "→": one character, three bytes. A width taken
+// from len() counts the bytes, so the column is two characters wider than the
+// text in it and the action starts later than it needs to (#717).
+func TestUpdateRows_VersionColumnIsMeasuredInCharacters(t *testing.T) {
+	pending := []pendingUpdate{
+		{name: "fhirlint", current: "v1.0.0", latest: "v1.2.0", action: "releases"},
+		{name: "validator", current: "7.0.5", latest: "7.0.6", action: "update"},
+	}
+
+	rows := updateRows(pending)
+
+	// The action column starts after the name column, two spaces, the version
+	// column and two more spaces.
+	wantColumn := 2 + utf8.RuneCountInString("validator") + 2 +
+		utf8.RuneCountInString("v1.0.0 → v1.2.0") + 2
+
+	var columns []int
+	var rowLines []string
+	for _, line := range strings.Split(rows, "\n") {
+		if strings.Contains(line, " → ") {
+			rowLines = append(rowLines, line)
+		}
+	}
+	if len(rowLines) != len(pending) {
+		t.Fatalf("got %d rows, want %d:\n%s", len(rowLines), len(pending), rows)
+	}
+	for i, line := range rowLines {
+		j := strings.Index(line, pending[i].action)
+		if j < 0 {
+			t.Fatalf("no action %q in %q", pending[i].action, line)
+		}
+		columns = append(columns, utf8.RuneCountInString(line[:j]))
+	}
+	for i, got := range columns {
+		if got != wantColumn {
+			t.Errorf("row %d: action column at character %d, want %d:\n%s", i, got, wantColumn, rows)
+		}
 	}
 }
