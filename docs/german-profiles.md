@@ -13,6 +13,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [Combining profiles](#combining-profiles)
 - [Version pinning](#version-pinning)
 - [Using a specific profile URL](#using-a-specific-profile-url)
+- [Large runs: the timeout](#large-runs-the-timeout)
 - [fhirlint.yml for German projects](#fhirlintyml-for-german-projects)
 
 ---
@@ -305,6 +306,35 @@ If the resource already has the correct `meta.profile` set, the HL7 validator wi
 
 ---
 
+## Large runs: the timeout
+
+The German IGs on this page are large: ISiK carries 178 profiles across 39 resource types, and the `mii` alias loads all 16 MII packages. Validating a whole implementation guide — its examples, not one resource — therefore takes longer than the default `--timeout` of `5m` allows, and the timeout kills the Java process, so the run fails without a result.
+
+Give such a run more time:
+
+```bash
+fhirlint validate ./fhir/ --profile isik --timeout 15m
+```
+
+Or set it for the project in `fhirlint.yml`:
+
+```yaml
+timeout: 15m
+```
+
+The default stays at `5m`: it fits single files and a CI job that validates only the changed files.
+
+To keep repeated runs fast, record the terminology once and replay it, so the validator does not wait for the server on every run:
+
+```bash
+fhirlint tx warm ./fhir/ --profile isik
+fhirlint validate ./fhir/ --profile isik --tx-offline
+```
+
+See [Offline terminology](terminology-offline.md) for the recording.
+
+---
+
 ## `fhirlint.yml` for German projects
 
 A typical `fhirlint.yml` for a German FHIR project:
@@ -320,6 +350,9 @@ ig:
 
 # Cache terminology responses — KBV code systems can be slow to resolve
 tx-cache: .fhirlint-tx-cache/
+
+# Whole-IG runs take longer than the 5m default
+timeout: 15m
 
 # German locale for validation messages
 locale: de

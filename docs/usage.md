@@ -143,6 +143,33 @@ fhirlint validate prescription.json \
 
 `--codesystem` and `--valueset` bundle the given files into a minimal temporary IG package so the validator can resolve codes without requiring a published `.tgz`.
 
+### Validating a whole implementation guide
+
+A whole implementation guide is a different job from a single file: the validator loads the IG package with all its profiles, records the terminology for the codes it meets, and then checks every example. That takes longer than the default `--timeout` of `5m` allows, and the timeout kills the Java process, so the run fails without a result.
+
+Give such a run more time:
+
+```bash
+fhirlint validate ./fhir/ --ig hl7.fhir.us.core#9.0.0 --timeout 15m
+```
+
+Or set it for the whole project in `fhirlint.yml`:
+
+```yaml
+timeout: 15m
+```
+
+The default stays at `5m`: it fits single files and a CI job that validates only the changed files.
+
+A larger timeout is only a ceiling. To make repeated runs fast, record the terminology once and replay it, so the validator does not wait for the server on every run:
+
+```bash
+fhirlint tx warm ./fhir/ --ig hl7.fhir.us.core#9.0.0
+fhirlint validate ./fhir/ --ig hl7.fhir.us.core#9.0.0 --tx-offline
+```
+
+See [Offline terminology](terminology-offline.md) for the recording, and [Server mode (warm validator)](#server-mode-warm-validator) for a validator that stays loaded between runs.
+
 ### Choosing profiles by content
 
 `profile-map:` in `fhirlint.yml` adds profiles to files by resource type or filename glob. An entry can also carry a FHIRPath condition under `when`, so that only matching resources get the profile. For example, only an Observation whose code is a LOINC vital sign gets the vital-signs profile:
