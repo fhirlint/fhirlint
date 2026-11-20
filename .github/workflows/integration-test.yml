@@ -20,7 +20,7 @@ on:
 
 # Two jobs, because this workflow answers two different questions:
 #
-#   integration — does *this commit* work against a known validator? Pinned, so
+#   integration — does *this commit* work against known validators? Pinned, so
 #     a push never goes red because upstream shipped a release that morning.
 #   canary      — does the *latest* validator still work? Uncached, weekly, so
 #     upstream drift surfaces within a week instead of whenever an unrelated
@@ -45,12 +45,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        # The pin. Moving it is a deliberate, reviewable commit; the cache key
-        # below tracks it, so a bump re-downloads instead of silently reusing
-        # the old JAR. In the job name so a failure names the version it ran
-        # against. Bump when the canary job below has been green on a newer
-        # release.
-        validator: ['6.10.4']
+        # The pins. Moving one is a deliberate, reviewable commit; the cache key
+        # below tracks the version, so a bump re-downloads instead of silently
+        # reusing the old JAR, and the two legs never share one. In the job
+        # name so a failure names the version it ran against.
+        #
+        # 6.10.4 for the users who pin the 6 line; 7.0.6 because it is what an
+        # unpinned fhirlint downloads (latest since 2026-11-13, #713). Bump the
+        # 7 leg when the canary job below has been green on a newer release.
+        validator: ['6.10.4', '7.0.6']
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
