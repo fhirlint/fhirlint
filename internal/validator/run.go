@@ -799,14 +799,12 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 			break
 		}
 
-		if len(out.json) > 0 {
-			rs, err := parseOutputWith(out.json, paths, out.diagnostics(), catalog)
-			if err != nil {
-				return nil, err
-			}
-			attachSnapshotFailures(rs, snapshotFailures(out.stdout, paths))
-			attachDurations(rs, fileDurations(out.stdout, paths))
-			attachImplicitPackages(rs, implicitPackages(out.stdout, paths))
+		read, err := readRun(out, paths, opts, catalog)
+		if err != nil {
+			return nil, err
+		}
+
+		if rs := read.results; rs != nil {
 			if crashes == 0 {
 				return rs, nil
 			}
@@ -819,26 +817,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 			break
 		}
 
-		// The recognisers look at both streams: which one carries a given
-		// message is the JAR's business and has changed between releases.
-		combined := out.stderr + "\n" + out.stdout
-		if err := oomError(combined); err != nil {
-			return nil, err
-		}
-		if err := txUnreachableError(combined, opts); err != nil {
-			return nil, err
-		}
-
-		j, exception, ok := crashedFile(out.stdout, paths)
-		if !ok || !out.failed {
-			// Nothing recognised. Say the validator produced no result — which
-			// is what we know — rather than asserting a crash, and show what
-			// it did say instead of leaving the user with an empty stderr.
-			return nil, fmt.Errorf("validator produced no result\nfiles: %v\n%s", paths, out.diagnostics())
-		}
-
+		j := read.crashed
 		crashed := pending[j]
-		results[crashed] = crashResult(inputPaths[crashed], exception)
+		results[crashed] = crashResult(inputPaths[crashed], read.exception)
 		crashes++
 		pending = append(pending[:j:j], pending[j+1:]...)
 
@@ -852,6 +833,51 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		}
 	}
 	return results, nil
+}
+
+// runReading is what one validator process means for the files it was given:
+// either their results, or the file it crashed on.
+type runReading struct {
+	results   []*Result // the JAR wrote output; one per path
+	crashed   int       // otherwise: the index in paths of the file it threw on
+	exception string    // and the first line it logged after that file
+}
+
+// readRun interprets what one validator process left behind. It is everything
+// between the process and the re-run loop in RunMultiple, kept apart so that
+// the recordings of real JAR runs in testdata/validator-output go through the
+// same code a live run does (#715). It does not handle a timeout: that is
+// decided before there is output to read.
+func readRun(out jarRun, paths []string, opts Options, catalog *messageCatalog) (runReading, error) {
+	if len(out.json) > 0 {
+		rs, err := parseOutputWith(out.json, paths, out.diagnostics(), catalog)
+		if err != nil {
+			return runReading{}, err
+		}
+		attachSnapshotFailures(rs, snapshotFailures(out.stdout, paths))
+		attachDurations(rs, fileDurations(out.stdout, paths))
+		attachImplicitPackages(rs, implicitPackages(out.stdout, paths))
+		return runReading{results: rs}, nil
+	}
+
+	// The recognisers look at both streams: which one carries a given
+	// message is the JAR's business and has changed between releases.
+	combined := out.stderr + "\n" + out.stdout
+	if err := oomError(combined); err != nil {
+		return runReading{}, err
+	}
+	if err := txUnreachableError(combined, opts); err != nil {
+		return runReading{}, err
+	}
+
+	j, exception, ok := crashedFile(out.stdout, paths)
+	if !ok || !out.failed {
+		// Nothing recognised. Say the validator produced no result — which
+		// is what we know — rather than asserting a crash, and show what
+		// it did say instead of leaving the user with an empty stderr.
+		return runReading{}, fmt.Errorf("validator produced no result\nfiles: %v\n%s", paths, out.diagnostics())
+	}
+	return runReading{crashed: j, exception: exception}, nil
 }
 
 // markNotValidated gives every file in pending that has no result yet one

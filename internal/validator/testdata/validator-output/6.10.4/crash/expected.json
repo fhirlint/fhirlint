@@ -1,0 +1,6 @@
+{
+  "crash": {
+    "file": "in/bodystructure.json",
+    "exception": "Exception generating snapshot for http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure|4.0.1: StructureDefinition http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure at Extension.extension.extension.extension.value[x]: invalid constrained type CodeableReference(http://hl7.org/fhir/StructureDefinition/Device) from base64Binary, bool…"
+  }
+}

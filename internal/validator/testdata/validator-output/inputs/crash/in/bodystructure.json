@@ -1,0 +1,18 @@
+{
+  "resourceType": "BodyStructure",
+  "id": "xver-included-structure",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure",
+      "extension": [
+        {
+          "url": "structure",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "http://snomed.info/sct", "code": "80891009" }]
+          }
+        }
+      ]
+    }
+  ],
+  "patient": { "reference": "Patient/example" }
+}

@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "file": "in/medication.json",
+      "valid": true,
+      "durationMs": 100,
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "A definition for CodeSystem 'http://fhir.de/CodeSystem/ifa/pzn' version '0.2' could not be found, so the code cannot be validated. No versions of this code system are known",
+          "location": "Medication.code.coding[0].system (line 4, col 4)",
+          "messageId": "UNKNOWN_CODESYSTEM_VERSION_NONE"
+        },
+        {
+          "severity": "warning",
+          "message": "A definition for CodeSystem 'https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM' version '1.15' could not be found, so the code cannot be validated. No versions of this code system are known",
+          "location": "Medication.form.coding[0].system (line 14, col 4)",
+          "messageId": "UNKNOWN_CODESYSTEM_VERSION_NONE"
+        },
+        {
+          "severity": "warning",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "location": "Medication (line 1, col 2)",
+          "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"
+        }
+      ]
+    }
+  ]
+}
