@@ -10,9 +10,10 @@ SPDX-FileCopyrightText = "The fhirlint Authors"
 SPDX-License-Identifier = "Apache-2.0"
 
 # An excerpt of the validator's Messages.properties, kept verbatim for the
-# message id inference tests (#449). It is part of hapifhir/org.hl7.fhir.core.
+# message id inference tests (#449), and the whole bundle of each recorded
+# validator version (#715). It is part of hapifhir/org.hl7.fhir.core.
 [[annotations]]
-path = "internal/validator/testdata/messages-7.0.1-excerpt.properties"
+path = ["internal/validator/testdata/messages-7.0.1-excerpt.properties", "internal/validator/testdata/validator-output/*/Messages.properties.gz"]
 precedence = "override"
 SPDX-FileCopyrightText = "The HL7 FHIR core contributors (hapifhir/org.hl7.fhir.core)"
 SPDX-License-Identifier = "Apache-2.0"
@@ -20,7 +21,7 @@ SPDX-License-Identifier = "Apache-2.0"
 # Output of the HL7 FHIR Validator, captured as fixtures for the output parser:
 # its message texts come from the validator.
 [[annotations]]
-path = ["internal/validator/testdata/oo-*.json", "internal/validator/testdata/stdout-*.txt", "internal/validator/testdata/profile-fetch-errors.json"]
+path = ["internal/validator/testdata/oo-*.json", "internal/validator/testdata/stdout-*.txt", "internal/validator/testdata/profile-fetch-errors.json", "internal/validator/testdata/validator-output/*/*/stdout.txt", "internal/validator/testdata/validator-output/*/*/stderr.txt", "internal/validator/testdata/validator-output/*/*/output.json", "internal/validator/testdata/validator-output/*/*/expected.json"]
 precedence = "override"
 SPDX-FileCopyrightText = ["The fhirlint Authors", "The HL7 FHIR core contributors (hapifhir/org.hl7.fhir.core)"]
 SPDX-License-Identifier = "Apache-2.0"

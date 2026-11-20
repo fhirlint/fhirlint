@@ -1,0 +1,83 @@
+FHIR Validation tool Version 7.0.6 (Git# 86bf796ddc97). Built 2026-11-13T23:28:34.381Z (1 days old)
+  Java:   <java> from /usr/lib/jvm on amd64 (64bit). 1000MB available
+  Paths:  Current = /work, Package Cache = /home/user/.fhir/packages
+  Params: in/patient.json in/bodystructure.json -version 4.0.1 -output-style json -output out.json -tx n/a -txCache /work/tx-cache
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v4.0.1 from hl7.fhir.r4.core#4.0.1
+  Load hl7.terminology.r4#6.2.0 - 4288 resources (00:00.100)
+  Load hl7.fhir.uv.extensions.r4#5.2.0 - 759 resources (00:00.100)
+  Loaded FHIR - 8265 resources (00:00.100)
+  Terminology Cache at /work/tx-cache
+  Terminology server null - Version n/a: No Terminology Server (00:00.100)
+  Load hl7.terminology#7.5.0 - 4190 resources (00:00.100)
+  Load hl7.terminology.r5#7.5.0 - 4190 resources (00:00.100)
+  Load hl7.fhir.uv.extensions#5.4.0 - 885 resources (00:00.100)
+  Package Summary: [hl7.fhir.r4.core#4.0.1, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r4#6.2.0, hl7.fhir.uv.extensions.r4#5.2.0, hl7.terminology#7.5.0, hl7.terminology.r5#7.5.0, hl7.fhir.uv.extensions#5.4.0]
+  Get set... 
+  ...go! (00:00.100)
+Cached new session. Cache size = 1
+Sources to validate: in/patient.jsonin/bodystructure.json
+Validating
+  Validate in/patient.json
+ 00:00.100
+  Validate in/bodystructure.json
+Exception generating snapshot for http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure|4.0.1: StructureDefinition http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure at Extension.extension.extension.extension.value[x]: invalid constrained type CodeableReference(http://hl7.org/fhir/StructureDefinition/Device) from base64Binary, boolean, canonical, code, date, dateTime, decimal, id, instant, integer, markdown, oid, positiveInt, string, time, unsignedInt, uri, url, uuid, Address, Age, Annotation, Attachment, CodeableConcept, Coding, ContactPoint, Count, Distance, Duration, HumanName, Identifier, Money, Period, Quantity, Range, Ratio, Reference, SampledData, Signature, Timing, ContactDetail, Contributor, DataRequirement, Expression, ParameterDefinition, RelatedArtifact, TriggerDefinition, UsageContext, Dosage, Meta in http://hl7.org/fhir/StructureDefinition/Extension
+Validation Infrastructure fail validating org.hl7.fhir.validation.ValidatorUtils$SourceFile@76334a3a: StructureDefinition http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure at Extension.extension.extension.extension.value[x]: invalid constrained type CodeableReference(http://hl7.org/fhir/StructureDefinition/Device) from base64Binary, boolean, canonical, code, date, dateTime, decimal, id, instant, integer, markdown, oid, positiveInt, string, time, unsignedInt, uri, url, uuid, Address, Age, Annotation, Attachment, CodeableConcept, Coding, ContactPoint, Count, Distance, Duration, HumanName, Identifier, Money, Period, Quantity, Range, Ratio, Reference, SampledData, Signature, Timing, ContactDetail, Contributor, DataRequirement, Expression, ParameterDefinition, RelatedArtifact, TriggerDefinition, UsageContext, Dosage, Meta in http://hl7.org/fhir/StructureDefinition/Extension
+Encountered an exception during validation
+org.hl7.fhir.exceptions.FHIRException: org.hl7.fhir.exceptions.DefinitionException: StructureDefinition http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure at Extension.extension.extension.extension.value[x]: invalid constrained type CodeableReference(http://hl7.org/fhir/StructureDefinition/Device) from base64Binary, boolean, canonical, code, date, dateTime, decimal, id, instant, integer, markdown, oid, positiveInt, string, time, unsignedInt, uri, url, uuid, Address, Age, Annotation, Attachment, CodeableConcept, Coding, ContactPoint, Count, Distance, Duration, HumanName, Identifier, Money, Period, Quantity, Range, Ratio, Reference, SampledData, Signature, Timing, ContactDetail, Contributor, DataRequirement, Expression, ParameterDefinition, RelatedArtifact, TriggerDefinition, UsageContext, Dosage, Meta in http://hl7.org/fhir/StructureDefinition/Extension
+	at org.hl7.fhir.validation.ValidationEngine.validate(ValidationEngine.java:711)
+	at org.hl7.fhir.validation.service.ValidationService.validateSources(ValidationService.java:342)
+	at org.hl7.fhir.validation.cli.picocli.commands.ValidateCommand.call(ValidateCommand.java:150)
+	at org.hl7.fhir.validation.cli.picocli.commands.ValidationEngineCommand.call(ValidationEngineCommand.java:76)
+	at org.hl7.fhir.validation.cli.picocli.commands.ValidationEngineCommand.call(ValidationEngineCommand.java:19)
+	at picocli.CommandLine.executeUserObject(CommandLine.java:2031)
+	at picocli.CommandLine.access$1500(CommandLine.java:148)
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2469)
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2461)
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2423)
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2277)
+	at picocli.CommandLine$RunLast.execute(CommandLine.java:2425)
+	at org.hl7.fhir.validation.cli.picocli.CLI.parseArgsAndExecuteCommand(CLI.java:70)
+	at org.hl7.fhir.validation.cli.ValidatorCli.main(ValidatorCli.java:98)
+Caused by: org.hl7.fhir.exceptions.DefinitionException: StructureDefinition http://hl7.org/fhir/5.0/StructureDefinition/extension-BodyStructure.includedStructure at Extension.extension.extension.extension.value[x]: invalid constrained type CodeableReference(http://hl7.org/fhir/StructureDefinition/Device) from base64Binary, boolean, canonical, code, date, dateTime, decimal, id, instant, integer, markdown, oid, positiveInt, string, time, unsignedInt, uri, url, uuid, Address, Age, Annotation, Attachment, CodeableConcept, Coding, ContactPoint, Count, Distance, Duration, HumanName, Identifier, Money, Period, Quantity, Range, Ratio, Reference, SampledData, Signature, Timing, ContactDetail, Contributor, DataRequirement, Expression, ParameterDefinition, RelatedArtifact, TriggerDefinition, UsageContext, Dosage, Meta in http://hl7.org/fhir/StructureDefinition/Extension
+	at org.hl7.fhir.services.conformance.profile.ProfileUtilities.checkTypeDerivation(ProfileUtilities.java:3660)
+	at org.hl7.fhir.services.conformance.profile.ProfileUtilities.updateFromDefinition(ProfileUtilities.java:3396)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processSimplePathWithOneMatchingElementInDifferential(ProfilePathProcessor.java:936)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processSimplePath(ProfilePathProcessor.java:307)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:210)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processNewSlice(ProfilePathProcessor.java:1817)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBaseDefault(ProfilePathProcessor.java:1649)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBase(ProfilePathProcessor.java:1476)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:215)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processNewSlice(ProfilePathProcessor.java:1817)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBaseDefault(ProfilePathProcessor.java:1649)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBase(ProfilePathProcessor.java:1476)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:215)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processNewSlice(ProfilePathProcessor.java:1817)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBaseDefault(ProfilePathProcessor.java:1649)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPathWithSlicedBase(ProfilePathProcessor.java:1476)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:215)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processSimplePathWithEmptyDiffMatches(ProfilePathProcessor.java:1345)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processSimplePath(ProfilePathProcessor.java:304)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:210)
+	at org.hl7.fhir.services.conformance.profile.ProfilePathProcessor.processPaths(ProfilePathProcessor.java:182)
+	at org.hl7.fhir.services.conformance.profile.ProfileUtilities.generateSnapshot(ProfileUtilities.java:815)
+	at org.hl7.fhir.services.context.ContextUtilities.generateSnapshot(ContextUtilities.java:288)
+	at org.hl7.fhir.services.conformance.profile.ProfileUtilities.findProfile(ProfileUtilities.java:4521)
+	at org.hl7.fhir.services.conformance.profile.ProfileUtilities.findProfileStr(ProfileUtilities.java:4461)
+	at org.hl7.fhir.validation.instance.InstanceValidator.getExtensionDefinition(InstanceValidator.java:2730)
+	at org.hl7.fhir.validation.instance.InstanceValidator.checkExtension(InstanceValidator.java:2638)
+	at org.hl7.fhir.validation.instance.InstanceValidator.checkChildByDefinition(InstanceValidator.java:8178)
+	at org.hl7.fhir.validation.instance.InstanceValidator.checkChild(InstanceValidator.java:7968)
+	at org.hl7.fhir.validation.instance.InstanceValidator.validateElement(InstanceValidator.java:7845)
+	at org.hl7.fhir.validation.instance.InstanceValidator.startInner(InstanceValidator.java:7246)
+	at org.hl7.fhir.validation.instance.InstanceValidator.start(InstanceValidator.java:6980)
+	at org.hl7.fhir.validation.instance.InstanceValidator.validateResource(InstanceValidator.java:9153)
+	at org.hl7.fhir.validation.instance.InstanceValidator.validate(InstanceValidator.java:1062)
+	at org.hl7.fhir.validation.instance.InstanceValidator.validate(InstanceValidator.java:900)
+	at org.hl7.fhir.validation.ValidationEngine.validate(ValidationEngine.java:754)
+	at org.hl7.fhir.validation.ValidationEngine.validate(ValidationEngine.java:703)
+	... 13 common frames omitted
+Done. Times: Loading: 00:00.100, validation: 00:00.100 (#2). Max Memory = 1Gb

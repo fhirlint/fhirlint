@@ -1,0 +1,4 @@
+{
+  "error": "terminology server unreachable",
+  "stderr": "Cannot reach the terminology server https://tx.invalid.\nThe validator needs it to check codes and value sets. Either:\n  --proxy / --https-proxy       if this network requires a proxy\n  --terminology-server \u003curl\u003e    point at a reachable server\n  --no-terminology-server       validate without terminology checks\n"
+}

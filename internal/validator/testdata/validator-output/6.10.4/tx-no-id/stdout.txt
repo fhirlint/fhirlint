@@ -1,0 +1,27 @@
+FHIR Validation tool Version 6.10.4 (Git# 1b90fb13f77b). Built 2026-09-04T05:45:41.468Z (1 days old)
+  Java:   <java> from /usr/lib/jvm on amd64 (64bit). 1000MB available
+  Paths:  Current = /work, Package Cache = /home/user/.fhir/packages
+  Params: in/medication.json -version 4.0.1 -output-style json -output out.json -txCache /work/tx-cache
+  Locale: United States/US
+  Jurisdiction: United States of America
+Loading
+  Loading FHIR v4.0.1 from hl7.fhir.r4.core#4.0.1
+  Load hl7.terminology.r4#6.2.0 - 4288 resources (00:00.100)
+  Load hl7.fhir.uv.extensions.r4#5.2.0 - 759 resources (00:00.100)
+  Loaded FHIR - 8265 resources (00:00.100)
+  Terminology server https://tx.fhir.org - Version Connected to Terminology Server at https://tx.fhir.org (00:00.100)
+  Load hl7.terminology#7.5.0 - 4190 resources (00:00.100)
+  Load hl7.terminology.r5#7.5.0 - 4190 resources (00:00.100)
+  Load hl7.fhir.uv.extensions#5.4.0 - 885 resources (00:00.100)
+  Package Summary: [hl7.fhir.r4.core#4.0.1, hl7.fhir.xver-extensions#0.1.0, hl7.terminology.r4#6.2.0, hl7.fhir.uv.extensions.r4#5.2.0, hl7.terminology#7.5.0, hl7.terminology.r5#7.5.0, hl7.fhir.uv.extensions#5.4.0]
+  Terminology Cache at /work/tx-cache
+  Get set... 
+  ...go! (00:00.100)
+Cached new session. Cache size = 1
+Sources to validate: in/medication.json
+Validating
+  Validate in/medication.json
+ 00:00.100
+Done. Times: Loading: 00:00.100, validation: 00:00.100. Memory = 503Mb
+
+Done. Times: Loading: 00:00.100, validation: 00:00.100. Max Memory = 1Gb

@@ -1,0 +1,7 @@
+{
+  "paths": [
+    "in/patient.json",
+    "in/bad-gender.json"
+  ],
+  "failed": false
+}

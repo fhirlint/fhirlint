@@ -1,0 +1,46 @@
+{
+  "results": [
+    {
+      "file": "in/patient.json",
+      "valid": false,
+      "validatorBuild": "FHIR Validation tool Version 7.0.6 (Git# 86bf796ddc97). Built 2026-11-13T23:28:34.381Z",
+      "durationMs": 100,
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"
+        },
+        {
+          "severity": "error",
+          "message": "StructureDefinition http://example.org/fhir/StructureDefinition/Slice-nonrepeating|1.0.0 has no snapshot - validation is against the snapshot, so it must be provided",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "Validation_VAL_Profile_NoSnapshot",
+          "cause": "Attempt to a slice an element that does not repeat: Patient.maritalStatus/Patient.maritalStatus from http://hl7.org/fhir/StructureDefinition/Patient in Patient.maritalStatus, at element married (slice = {5})"
+        }
+      ]
+    },
+    {
+      "file": "in/patient2.json",
+      "valid": false,
+      "validatorBuild": "FHIR Validation tool Version 7.0.6 (Git# 86bf796ddc97). Built 2026-11-13T23:28:34.381Z",
+      "durationMs": 100,
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"
+        },
+        {
+          "severity": "error",
+          "message": "StructureDefinition http://example.org/fhir/StructureDefinition/Slice-nonrepeating|1.0.0 has no snapshot - validation is against the snapshot, so it must be provided",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "Validation_VAL_Profile_NoSnapshot",
+          "cause": "Attempt to a slice an element that does not repeat: Patient.maritalStatus/Patient.maritalStatus from http://hl7.org/fhir/StructureDefinition/Patient in Patient.maritalStatus, at element married (slice = {5})"
+        }
+      ]
+    }
+  ]
+}

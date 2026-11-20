@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "file": "in/patient.json",
+      "valid": true,
+      "validatorBuild": "FHIR Validation tool Version 7.0.6 (Git# 86bf796ddc97). Built 2026-11-13T23:28:34.381Z",
+      "durationMs": 100,
+      "issues": [
+        {
+          "severity": "warning",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"
+        }
+      ]
+    },
+    {
+      "file": "in/bad-gender.json",
+      "valid": false,
+      "validatorBuild": "FHIR Validation tool Version 7.0.6 (Git# 86bf796ddc97). Built 2026-11-13T23:28:34.381Z",
+      "durationMs": 100,
+      "issues": [
+        {
+          "severity": "error",
+          "message": "The System URI could not be determined for the code 'unknown-value' in the ValueSet 'http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1'",
+          "location": "Patient.gender (line 4, col 28)",
+          "messageId": "UNABLE_TO_INFER_CODESYSTEM"
+        },
+        {
+          "severity": "error",
+          "message": "The value provided ('unknown-value') was not found in the value set 'AdministrativeGender' (http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1), and a code is required from this value set  (error message = The System URI could not be determined for the code 'unknown-value' in the ValueSet 'http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1'; The provided code '#unknown-value' was not found in the value set 'http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1')",
+          "location": "Patient.gender (line 4, col 28)",
+          "messageId": "Terminology_TX_NoValid_16"
+        },
+        {
+          "severity": "error",
+          "message": "Not a valid date format: 'not-a-date'",
+          "location": "Patient.birthDate (line 5, col 28)",
+          "messageId": "Type_Specific_Checks_DT_Date_Valid"
+        },
+        {
+          "severity": "warning",
+          "message": "Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)",
+          "location": "Patient (line 1, col 2)",
+          "messageId": "http://hl7.org/fhir/StructureDefinition/DomainResource#dom-6"
+        }
+      ]
+    }
+  ]
+}

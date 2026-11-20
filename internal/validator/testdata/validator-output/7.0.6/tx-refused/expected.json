@@ -1,0 +1,4 @@
+{
+  "error": "terminology server refused by SSRF protection",
+  "stderr": "The validator refused to contact http://127.0.0.1:9.\n  Refusing to fetch from non-https URL: http://127.0.0.1:9/metadata\nThis is not a connection failure. Validator 6.10.0 and later block plain HTTP\nand private-network destinations, so a proxy or a different URL will not help.\n\nIf this is your own terminology server and you meant to use it over HTTP:\n  --allow-insecure-tx           exempt exactly this URL, nothing else\n  --no-terminology-server       validate without terminology checks\n"
+}
