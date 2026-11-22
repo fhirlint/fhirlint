@@ -40,6 +40,7 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 		TxLog:                    "/tmp/tx.log",
 		ExpansionParameters:      "/tmp/expansion-params.json",
 		Jurisdiction:             "urn:iso:std:iso:3166#DE",
+		SnomedEdition:            "de",
 		DisplayIssuesAreWarnings: true,
 		POFiles:                  []string{"validator-messages-de.po"},
 		JARPath:                  "/opt/validator.jar",
@@ -86,6 +87,9 @@ func TestToInternalOpts_AllFields(t *testing.T) {
 	}
 	if out.Jurisdiction != "urn:iso:std:iso:3166#DE" {
 		t.Errorf("Jurisdiction: got %q", out.Jurisdiction)
+	}
+	if out.SnomedEdition != "de" {
+		t.Errorf("SnomedEdition: got %q", out.SnomedEdition)
 	}
 	if !out.DisplayIssuesAreWarnings {
 		t.Error("DisplayIssuesAreWarnings should be true")

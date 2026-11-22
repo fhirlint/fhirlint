@@ -86,6 +86,7 @@ var (
 	flagExpansionParameters      string
 	flagPackageBaseline          bool
 	flagJurisdiction             string
+	flagSnomedEdition            string
 	flagDisplayIssuesAreWarnings bool
 	flagPO                       []string
 	flagMaxWarnings              int
@@ -202,6 +203,8 @@ func init() {
 		"Suppress warnings about example.org and similar placeholder URLs")
 	validateCmd.Flags().StringVar(&flagJurisdiction, "jurisdiction", "",
 		"Jurisdiction for country-specific bindings, e.g. urn:iso:std:iso:3166#DE (default: derived from locale)")
+	validateCmd.Flags().StringVar(&flagSnomedEdition, "snomed-edition", "",
+		"SNOMED CT edition assumed where none is stated, as in a ValueSet include: a name such as de, intl, uk, or a module id (default: international)")
 	validateCmd.Flags().BoolVar(&flagDisplayIssuesAreWarnings, "display-issues-are-warnings", false,
 		"Downgrade coded-display mismatch errors to warnings")
 	validateCmd.Flags().StringArrayVar(&flagPO, "po", nil,
@@ -331,6 +334,7 @@ func bindValidateConfig() {
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("jurisdiction", validateCmd.Flags().Lookup("jurisdiction"))
+	_ = viper.BindPFlag("snomed-edition", validateCmd.Flags().Lookup("snomed-edition"))
 	_ = viper.BindPFlag("display-issues-are-warnings", validateCmd.Flags().Lookup("display-issues-are-warnings"))
 	_ = viper.BindPFlag("po", validateCmd.Flags().Lookup("po"))
 	_ = viper.BindPFlag("watch", validateCmd.Flags().Lookup("watch"))
@@ -418,6 +422,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("jurisdiction") && viper.IsSet("jurisdiction") {
 		flagJurisdiction = viper.GetString("jurisdiction")
+	}
+	if !cmd.Flags().Changed("snomed-edition") && viper.IsSet("snomed-edition") {
+		flagSnomedEdition = viper.GetString("snomed-edition")
 	}
 	if !cmd.Flags().Changed("display-issues-are-warnings") && viper.IsSet("display-issues-are-warnings") {
 		flagDisplayIssuesAreWarnings = viper.GetBool("display-issues-are-warnings")
@@ -643,6 +650,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		TxLog:                    flagTxLog,
 		ExpansionParameters:      flagExpansionParameters,
 		Jurisdiction:             flagJurisdiction,
+		SnomedEdition:            flagSnomedEdition,
 		DisplayIssuesAreWarnings: flagDisplayIssuesAreWarnings,
 		POFiles:                  flagPO,
 		JARPath:                  viper.GetString("jar"),

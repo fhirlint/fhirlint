@@ -31,7 +31,9 @@ exclude = [
   '^https?://[^/]*@',
   # FHIR canonical identifiers of code systems: names, not pages. Some
   # resolve to a page, some answer 404, and neither says the doc is wrong.
-  '^http://snomed\.info/sct$',
+  # The SNOMED CT edition and concept URIs below sct/ are names too: the
+  # resolver forwards them to a browser that answers 405.
+  '^http://snomed\.info/sct([/#]|$)',
   '^http://fhir\.de/CodeSystem/',
   # A FHIR REST base, quoted in a validator message: it answers a plain GET
   # with 400 because it is not a page, only the root of the API.

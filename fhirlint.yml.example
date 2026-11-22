@@ -115,6 +115,11 @@ ignore:
 # Relevant for national profiles such as KBV / MII / DiGA
 # jurisdiction: urn:iso:std:iso:3166#DE
 
+# SNOMED CT edition assumed where none is stated, as in a ValueSet include
+# (default: international)
+# German examples code the German edition: set de, or the module id 11000274103
+# snomed-edition: de
+
 # Downgrade coded-display mismatch errors to warnings
 # Reduces noise when display strings drift from the terminology server
 # display-issues-are-warnings: true

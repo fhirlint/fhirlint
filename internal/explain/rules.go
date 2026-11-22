@@ -161,6 +161,29 @@ var rules = map[string]Rule{
 			"than believing a green run. fhirlint counts these separately in the\n" +
 			"summary for that reason.",
 	},
+	"valueset_value_mismatch_changed": {
+		ID:        "VALUESET_VALUE_MISMATCH_CHANGED",
+		Title:     "The coding's code system version differs from the one the ValueSet resolved to",
+		DefinedIn: "HL7 Validator (value set membership)",
+		Description: "The ValueSet include names the code system without a version (the\n" +
+			"empty '' in the message), so the validator filled one in, and the\n" +
+			"coding states a different one. The validator then does not accept\n" +
+			"the code as a member of the value set.\n\n" +
+			"For SNOMED CT the version names the edition. Without --snomed-edition\n" +
+			"the validator assumes the international edition\n" +
+			"(http://snomed.info/sct/900000000000207008), while German examples\n" +
+			"code the German one (http://snomed.info/sct/11000274103/version/...).\n" +
+			"The finding then says which edition the validator assumed, not that\n" +
+			"the code is wrong.",
+		HowToFix: "If the message names 900000000000207008 and the coding a national\n" +
+			"edition, tell the validator which edition the instances use:\n\n" +
+			"  fhirlint validate ./fhir/ --snomed-edition de\n\n" +
+			"or `snomed-edition: de` in fhirlint.yml. Other editions go by name\n" +
+			"(intl, uk, nl, ...) or by module id.\n\n" +
+			"For any other code system, the coding and the value set disagree on\n" +
+			"the version: pin the version the instances use with\n" +
+			"--expansion-parameters, or fix the coding.",
+	},
 	"validation_val_profile_unknown_error": {
 		ID:        "VALIDATION_VAL_PROFILE_UNKNOWN_ERROR",
 		Title:     "A profile named in meta.profile could not be found, so it was not checked",

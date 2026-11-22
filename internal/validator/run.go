@@ -168,6 +168,7 @@ type Options struct {
 	AllowInsecureTx          bool          // suppress HTTP terminology server warning
 	TxLog                    string        // path to write terminology server request log (-txLog)
 	Jurisdiction             string        // jurisdiction for country-specific bindings, e.g. "urn:iso:std:iso:3166#DE" (-jurisdiction)
+	SnomedEdition            string        // SNOMED CT edition assumed where none is stated, as in a ValueSet include: a name such as "de", or a module id (-sct)
 	DisplayIssuesAreWarnings bool          // downgrade coded-display mismatches to warnings (-display-issues-are-warnings)
 	POFiles                  []string      // .po translation override files loaded at runtime (-po, repeatable)
 	JARPath                  string        // override auto-downloaded JAR (--jar / FHIRLINT_JAR)
@@ -308,6 +309,11 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.Jurisdiction != "" {
 		args = append(args, "-jurisdiction", opts.Jurisdiction)
+	}
+	// The edition was checked by validateSnomedEdition; the JAR gets the
+	// module id, which every release reads the same way.
+	if sct, _ := snomedEditionModule(opts.SnomedEdition); sct != "" {
+		args = append(args, "-sct", sct)
 	}
 	if opts.DisplayIssuesAreWarnings {
 		args = append(args, "-display-issues-are-warnings")
@@ -692,6 +698,9 @@ func RunWatch(inputPaths []string, opts Options, w WatchConfig) error {
 	if err := validateExpansionParameters(opts.ExpansionParameters); err != nil {
 		return err
 	}
+	if err := validateSnomedEdition(opts.SnomedEdition); err != nil {
+		return err
+	}
 
 	if err := requireCachedJAR(opts.Offline, opts.JARPath); err != nil {
 		return err
@@ -742,6 +751,9 @@ func RunMultiple(inputPaths []string, opts Options) ([]*Result, error) {
 		return nil, err
 	}
 	if err := validateExpansionParameters(opts.ExpansionParameters); err != nil {
+		return nil, err
+	}
+	if err := validateSnomedEdition(opts.SnomedEdition); err != nil {
 		return nil, err
 	}
 

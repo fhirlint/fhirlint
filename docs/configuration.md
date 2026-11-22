@@ -110,6 +110,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |
 | `--jurisdiction` | — | Jurisdiction for country-specific bindings, e.g. `urn:iso:std:iso:3166#DE` |
+| `--snomed-edition` | — (international) | SNOMED CT edition assumed where none is stated, as in a ValueSet include: a name such as `de`, `intl`, `uk`, or a module id. See [German profiles](german-profiles.md#terminology-the-german-snomed-ct-edition) |
 | `--display-issues-are-warnings` | `false` | Downgrade coded-display mismatch errors to warnings |
 | `--po` | — | Load message translations from a `.po` file at runtime (repeatable) |
 | `--best-practice` | — | Best-practice constraint handling: `ignore`, `hint`, `warning`, `error` |
@@ -180,6 +181,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `locale` | string | `--locale` |
 | `allow-example-urls` | bool | `--allow-example-urls` |
 | `jurisdiction` | string | `--jurisdiction` |
+| `snomed-edition` | string | `--snomed-edition` |
 | `display-issues-are-warnings` | bool | `--display-issues-are-warnings` |
 | `po` | list | `--po` |
 | `best-practice` | string | `--best-practice` |
