@@ -8,6 +8,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [KBV — Kassenärztliche Bundesvereinigung](#kbv--kassenärztliche-bundesvereinigung)
 - [MII — Medizininformatik-Initiative](#mii--medizininformatik-initiative)
 - [Terminology: ICD-10-GM, OPS and ATC](#terminology-icd-10-gm-ops-and-atc-are-not-checked-by-default)
+- [Terminology: the German SNOMED CT edition](#terminology-the-german-snomed-ct-edition)
 - [ISiK — gematik hospital interoperability](#isik--gematik-hospital-interoperability)
 - [DiGA — Digitale Gesundheitsanwendungen](#diga--digitale-gesundheitsanwendungen)
 - [Combining profiles](#combining-profiles)
@@ -209,6 +210,57 @@ So a German project is in this state by default, and it is not a misconfiguratio
 
 ---
 
+## Terminology: the German SNOMED CT edition
+
+German instances code SNOMED CT from the German edition, and say so in `Coding.version`:
+
+```json
+{
+  "system": "http://snomed.info/sct",
+  "version": "http://snomed.info/sct/11000274103/version/20260515",
+  "code": "119376003",
+  "display": "Tissue specimen"
+}
+```
+
+The value sets they are bound to usually include SNOMED CT without a version. The validator then fills in the edition it was told to assume, and without `-sct` that is the international one (`900000000000207008`). The two disagree, and every such coding becomes an error:
+
+```text
+The code system 'http://snomed.info/sct' version 'http://snomed.info/sct/900000000000207008'
+resulting from the version '' in the ValueSet include is different to the one in the value
+('http://snomed.info/sct/11000274103/version/20260515')
+```
+
+Tell it which edition the instances use:
+
+```bash
+fhirlint validate ./fhir/ --snomed-edition de
+```
+
+or `snomed-edition: de` in `fhirlint.yml`. The flag takes the names the validator knows (`de`, `intl`, `at`, `ch`, `uk`, `nl`, ...; an unknown name lists them) or a module id such as `11000274103`, and passes the module id as `-sct`.
+
+Measured with validator 7.0.6 on the 41 examples of `de.gematik.epa.laboratory#1.0.0-ballot.1` (2026-11-22):
+
+| | errors | `VALUESET_VALUE_MISMATCH_CHANGED` |
+|---|---|---|
+| default (international edition) | 24 | 14 |
+| `--snomed-edition de` | 10 | 0 |
+
+The 14 errors go, and with them the "None of the codings provided are in the value set" messages they caused. In return the validator now gets far enough to report what it cannot check: two codings from a German edition release the terminology server does not have yet (`UNABLE_TO_CHECK_IF_THE_PROVIDED_CODES_ARE_IN_THE_VALUE_SET_CS`), and two NPU codes. No new error.
+
+On the 81 examples of `kbv.basis#1.10.0` the same holds, with a second form of the error. Where the binding is required, the mismatch arrives as `Terminology_TX_Confirm_4a`, `The code provided (http://snomed.info/sct#364075005) was not found in the value set ...`, with the edition clash only at the end of the message:
+
+| | errors | `VALUESET_VALUE_MISMATCH_CHANGED` | `Terminology_TX_Confirm_4a` |
+|---|---|---|---|
+| default (international edition) | 83 | 29 | 28 |
+| `--snomed-edition de` | 27 | 0 | 0 |
+
+One error is new, and it is real: an example's display `Clinical Finding` for 404684003, where SNOMED CT has `Clinical finding`. The edition clash had hidden it.
+
+fhirlint does not set the edition for the German aliases. The edition belongs to the instances, not to the package: a project that codes the international edition against a KBV profile would get the same false errors the other way round, from a default it did not choose.
+
+---
+
 ## ISiK — gematik hospital interoperability
 
 ISiK ("Informationstechnische Systeme im Krankenhaus") is the gematik profile
@@ -380,6 +432,9 @@ timeout: 15m
 
 # German locale for validation messages
 locale: de
+
+# German instances code the German SNOMED CT edition
+snomed-edition: de
 
 # dom-6 narrative warnings are accepted project-wide for M2M interfaces
 suppress:

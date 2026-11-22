@@ -518,6 +518,7 @@ func TestKeyedOptions_EveryFieldHasBeenConsidered(t *testing.T) {
 		"AllowExampleURLs":         "keyed",
 		"AllowInsecureTx":          "keyed",
 		"Jurisdiction":             "keyed",
+		"SnomedEdition":            "keyed (as written: de and 11000274103 key apart, which costs a hit, not a wrong answer)",
 		"DisplayIssuesAreWarnings": "keyed",
 		"ExtraArgs":                "keyed (unsorted: passed to the JAR verbatim)",
 		"Proxy":                    "keyed",

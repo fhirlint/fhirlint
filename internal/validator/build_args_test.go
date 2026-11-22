@@ -352,6 +352,19 @@ func TestBuildArgs_JurisdictionEmpty_Omitted(t *testing.T) {
 	mustNotContain(t, args, "-jurisdiction")
 }
 
+func TestBuildArgs_SnomedEdition(t *testing.T) {
+	for _, edition := range []string{"de", "DE", "11000274103"} {
+		args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1", SnomedEdition: edition})
+		// The JAR gets the module id, whichever way the edition was named.
+		mustContainPair(t, args, "-sct", "11000274103")
+	}
+}
+
+func TestBuildArgs_SnomedEditionEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-sct")
+}
+
 func TestBuildArgs_DisplayIssuesAreWarnings(t *testing.T) {
 	args := buildArgs("jar", []string{"input"}, "out", Options{
 		FHIRVersion:              "4.0.1",

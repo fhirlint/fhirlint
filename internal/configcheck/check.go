@@ -78,6 +78,7 @@ var topLevelKeys = map[string]keySpec{
 	"locale":                      {kind: kindString},
 	"allow-example-urls":          {kind: kindBool},
 	"jurisdiction":                {kind: kindString},
+	"snomed-edition":              {kind: kindString},
 	"display-issues-are-warnings": {kind: kindBool},
 	"po":                          {kind: kindStringList},
 	"watch":                       {kind: kindEnum, values: []string{"single", "all"}},

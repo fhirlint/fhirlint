@@ -74,6 +74,12 @@ type Options struct {
 	// e.g. "urn:iso:std:iso:3166#DE". Empty derives it from the locale.
 	Jurisdiction string
 
+	// SnomedEdition is the SNOMED CT edition the validator assumes where none
+	// is stated, as in a ValueSet include without a version: a name such as
+	// "de", "intl" or "uk", or a module id such as "11000274103". Empty keeps
+	// the validator's default, the international edition.
+	SnomedEdition string
+
 	// DisplayIssuesAreWarnings downgrades coded-display mismatch errors to warnings.
 	DisplayIssuesAreWarnings bool
 
@@ -343,6 +349,7 @@ func toInternalOpts(opts Options) validator.Options {
 		TxLog:                    opts.TxLog,
 		ExpansionParameters:      opts.ExpansionParameters,
 		Jurisdiction:             opts.Jurisdiction,
+		SnomedEdition:            opts.SnomedEdition,
 		DisplayIssuesAreWarnings: opts.DisplayIssuesAreWarnings,
 		POFiles:                  opts.POFiles,
 		JARPath:                  opts.JARPath,

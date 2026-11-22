@@ -62,7 +62,8 @@ and its profile vary per request.
 
 So **validation-semantic client flags are ignored** when using `--server`:
 `--fhir-version`, `--ig`, `--best-practice`, `--jurisdiction`,
-`--allow-example-urls`, `--display-issues-are-warnings`, `--locale`. fhirlint
+`--allow-example-urls`, `--display-issues-are-warnings`, `--locale`,
+`--snomed-edition`. fhirlint
 prints a note if you pass `--fhir-version`/`--ig` together with `--server`. To
 change any of these, restart `fhirlint serve` with the configuration you want.
 

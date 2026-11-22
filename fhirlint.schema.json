@@ -417,6 +417,12 @@
     "slowest": {
       "type": "integer"
     },
+    "snomed-edition": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "suppress": {
       "items": {
         "additionalProperties": false,
