@@ -33,6 +33,9 @@ exclude = [
   # resolve to a page, some answer 404, and neither says the doc is wrong.
   '^http://snomed\.info/sct$',
   '^http://fhir\.de/CodeSystem/',
+  # A FHIR REST base, quoted in a validator message: it answers a plain GET
+  # with 400 because it is not a page, only the root of the API.
+  '^https://tx\.fhir\.de/fhir/?$',
   # HAPI's public test server: its data is reset, so a sample resource URL
   # comes and goes.
   '^https://hapi\.fhir\.org/baseR4/',
