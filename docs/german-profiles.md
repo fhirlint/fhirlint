@@ -103,6 +103,30 @@ fhirlint validate patient.json \
   --terminology-server https://fhir.kbv.de/terminology
 ```
 
+**`Could not find the code system http://loinc.org|2.83` from tx.fhir.de** (#712). The examples of `kbv.basis#1.10.0` give their LOINC codings `"version": "2.83"`. The validator sends LOINC, through the terminology registry, to tx.fhir.de, and on 2026-11-22 that server had LOINC 2.82 only. For each such code it answers with an error, which the validator reports as:
+
+```text
+error  Error from https://tx.fhir.de/fhir: Error: [<request id>]: Could not find the code system http://loinc.org|2.83
+```
+
+The finding has no message id, and its text carries a new request id on every run. So neither a `messageId` suppression nor a baseline holds it. 6.10.4, 7.0.5 and 7.0.6 behave the same: it is not a validator regression, and the resource is not wrong. Resources of your own hit it in the same way when they state LOINC 2.83.
+
+You can do one of two things until tx.fhir.de serves 2.83:
+
+- **Suppress exactly this message.** Give the rule a date, so that it lapses on its own once the server has caught up:
+
+  ```yaml
+  # fhirlint.yml
+  suppress:
+    - pattern: 'Could not find the code system http://loinc\.org\|2\.83'
+      reason: "tx.fhir.de has no LOINC 2.83 yet (fhirlint#712)"
+      expires: 2027-03-31
+  ```
+
+  Put it in `fhirlint.yml` rather than on the command line: `--suppress` reads whatever follows a `|` as the reason, which would cut this pattern in two.
+
+- **Validate against tx.fhir.org alone** with `--terminology-server https://tx.fhir.org/r4`. An explicit server turns the registry off, so LOINC 2.83 resolves. In exchange, tx.fhir.org does not know BfArM's OPS, so OPS codes are no longer checked ("Code System unknown, so assuming value set expansion is correct").
+
 ---
 
 ## MII — Medizininformatik-Initiative
