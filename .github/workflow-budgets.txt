@@ -1,8 +1,9 @@
 # Duration budget per workflow run, in minutes (#551). duration-watch.yml opens
-# an issue when the 90th percentile of last week's successful runs is over it.
+# an issue when the 90th percentile of last week's successful runs is over it,
+# measured on each run's longest job, without the wait for a runner (#721).
 # Set from the runs of 2026-10-16 to 2026-11-13 (p90, wall time including
-# queueing), with room for a busy runner pool. Raise one on purpose, with the
-# reason in the commit, when a workflow grows by design.
+# queueing), so the longest job has room below them. Raise one on purpose, with
+# the reason in the commit, when a workflow grows by design.
 # Every workflow that runs on its own has a line here; TestWorkflowBudgets
 # (internal/workflows) checks it. Reusable workflows (workflow_call) don't.
 #

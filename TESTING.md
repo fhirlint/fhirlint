@@ -111,7 +111,7 @@ Whether the output stays readable for the tools that consume it, and the parts t
 | `jar-monitor.yml`: signing key expiry, advisories | Monday | opens an issue |
 | Docker image scan, govulncheck, zizmor | Monday | red run |
 | Fuzzing, 10 minutes per target | Sunday | red run, crash input as artifact |
-| `duration-watch.yml`: median and p90 of each workflow's runs against `.github/workflow-budgets.txt` (#551) | Monday | opens an issue |
+| `duration-watch.yml`: p90 of each workflow's longest job against `.github/workflow-budgets.txt`, with the wall time next to it (#551, #721) | Monday | opens an issue |
 
 ## Keeping this page current
 
