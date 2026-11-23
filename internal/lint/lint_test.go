@@ -126,14 +126,21 @@ func TestCanonicalURLPattern(t *testing.T) {
 func TestProfileNamePascalCase(t *testing.T) {
 	eng := newEngine(t, map[string]interface{}{"profile-name-pascalcase": "warning"})
 
-	bad := eng.Evaluate([]byte(`{"resourceType":"StructureDefinition","name":"my_profile"}`))
-	if len(bad) != 1 {
-		t.Fatalf("expected one name finding, got %+v", bad)
+	// What HL7's sdf-0 / cnl-0 reject: a lower-case start, spaces, hyphens,
+	// dots, a leading digit or underscore.
+	for _, name := range []string{"my_profile", "myProfile", "My Profile", "My-Profile", "My.Profile", "1Profile", "_Profile", ""} {
+		bad := eng.Evaluate([]byte(`{"resourceType":"StructureDefinition","name":"` + name + `"}`))
+		if len(bad) != 1 {
+			t.Errorf("%q: expected one name finding, got %+v", name, bad)
+		}
 	}
 
-	good := eng.Evaluate([]byte(`{"resourceType":"StructureDefinition","name":"MyProfile"}`))
-	if len(good) != 0 {
-		t.Fatalf("expected no finding for PascalCase name, got %+v", good)
+	// Underscores are allowed, as in HL7's invariant and in the German
+	// profiles (#594).
+	for _, name := range []string{"MyProfile", "KBV_PR_Base_Patient", "VitalSignDE_Blutdruck", "MII_LM_Labor", "P"} {
+		if good := eng.Evaluate([]byte(`{"resourceType":"StructureDefinition","name":"` + name + `"}`)); len(good) != 0 {
+			t.Errorf("%q: expected no finding, got %+v", name, good)
+		}
 	}
 
 	// The rule only applies to StructureDefinition.
