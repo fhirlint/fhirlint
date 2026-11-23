@@ -39,7 +39,9 @@ cat "$FAKE_GH_DIR/$wf" 2>/dev/null || true
 // exit code.
 func runDurationWatch(t *testing.T, budgets string, runs map[string]string, fails map[string]int) (string, string, int) {
 	t.Helper()
-	if runtime.GOOS == "windows" {
+	// The script runs on the ubuntu runner only and uses GNU date -d, which
+	// the BSD date on macOS does not have.
+	if runtime.GOOS != "linux" {
 		t.Skip("the script runs on the Linux runner")
 	}
 	for _, tool := range []string{"bash", "awk", "date"} {
