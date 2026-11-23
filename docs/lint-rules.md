@@ -36,7 +36,7 @@ lint:
 | Rule | Default severity | Parameters | Checks |
 |------|------------------|------------|--------|
 | `id-kebab-case` | `warning` | — | `Resource.id` is lowercase, hyphen-separated (`[a-z0-9]` words joined by `-`). |
-| `profile-name-pascalcase` | `warning` | — | `StructureDefinition.name` is PascalCase (starts uppercase; letters and digits only). |
+| `profile-name-pascalcase` | `warning` | — | `StructureDefinition.name` starts uppercase, then has letters, digits and underscores only: HL7's own name invariant (`sdf-0` in R4, `cnl-0` in R5). See [Underscores in profile names](#underscores-in-profile-names). |
 | `canonical-url-pattern` | `error` | `base` (required) | A resource's canonical `url` starts with the configured `base`. `Device` and `DeviceDefinition` are skipped: their `url` is a network address, not a canonical. |
 
 Rules only fire when the relevant element is present: a resource without an
@@ -48,6 +48,26 @@ flagged by the respective rule.
 The FHIR validator rejects an *invalid* id (e.g. one containing an underscore or
 exceeding 64 characters). It does **not** object to `ExamplePatient1` — a valid
 FHIR id that is not lowercase-hyphenated. Convention rules cover that gap.
+
+### Underscores in profile names
+
+`profile-name-pascalcase` allows underscores (#594). HL7's invariant allows
+them, so a name with one is usable as an identifier in generated code, which
+is what the invariant asks for. And the German profiles use them throughout. Of
+the StructureDefinition names in a local package cache on 2026-11-23, only
+underscores stood between these and strict PascalCase:
+
+| Packages | Names | With underscores |
+|---|---|---|
+| KBV | 143 | 143 (`KBV_PR_Base_Patient`) |
+| MII | 420 | 412 (`MII_PR_Labor_Laboranforderung`) |
+| gematik | 973 | 272 |
+| de.basisprofil | 302 | 40 (`VitalSignDE_Blutdruck`) |
+
+A rule that rejected underscores would flag nearly every profile in a KBV or
+MII project, and say nothing about whether the names work as identifiers.
+What it still reports is what HL7 warns about: a lower-case start (`boolean`,
+`myProfile`), spaces, hyphens and dots.
 
 How the rules are checked for false positives on real-world data, and what a
 new or changed rule has to go through, is in [corpus-scan.md](corpus-scan.md).

@@ -33,7 +33,12 @@ type builtinRule struct {
 
 var (
 	kebabRe  = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
-	pascalRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9]*$`)
+	// pascalRe is HL7's own name invariant, sdf-0 (R4) and cnl-0 (R5): an
+	// upper-case letter, then letters, digits and underscores, so the name can
+	// serve as an identifier in generated code. Underscores are allowed because
+	// KBV, MII and de.basisprofil name nearly every profile with them
+	// (KBV_PR_Base_Patient, VitalSignDE_Blutdruck) (#594).
+	pascalRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
 )
 
 // notCanonicalURL lists the resource types whose url element is not a
@@ -100,7 +105,7 @@ var registry = map[string]builtinRule{
 			}
 			if s := name.String(); !pascalRe.MatchString(s) {
 				return []rawFinding{{
-					message:  fmt.Sprintf("StructureDefinition.name %q is not PascalCase (start uppercase, letters and digits only)", s),
+					message:  fmt.Sprintf("StructureDefinition.name %q is not PascalCase (start uppercase, then letters, digits and underscores only)", s),
 					location: "name",
 				}}
 			}
