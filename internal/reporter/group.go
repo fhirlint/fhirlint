@@ -37,6 +37,7 @@ type findingGroup struct {
 	displayMessage string   // the message as first seen, escaped and capped for the terminal
 	cause          string   // the cause of the first occurrence that has one, escaped and capped
 	hint           string   // the package hint of the first occurrence that has one, escaped and capped
+	advice         string   // the advice of the first occurrence that has one (#734), escaped
 	occurrences    int      // total findings in the group, matching the summary counts
 	files          int      // distinct files, which is the number a reader acts on
 	examples       []string // up to maxGroupExamples of "path" or "path:line"
@@ -112,6 +113,9 @@ func groupFindings(results []*validator.Result, pick func(*validator.Result) []v
 			if g.hint == "" && issue.Hint != nil {
 				g.hint = termsafe.Message(HintText(issue.Hint))
 			}
+			if g.advice == "" && issue.Advice != "" {
+				g.advice = termsafe.Message(issue.Advice)
+			}
 			if !seenInFile[key] {
 				seenInFile[key] = true
 				g.files++
@@ -159,6 +163,9 @@ func printGroup(g findingGroup, showSource bool) {
 	}
 	if g.hint != "" {
 		fmt.Println("           ↳ " + g.hint)
+	}
+	if g.advice != "" {
+		fmt.Println("           ↳ " + g.advice)
 	}
 	fmt.Println(dimStyle.Render("           " + g.exampleLine()))
 	if showSource {

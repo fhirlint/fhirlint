@@ -977,6 +977,12 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// rather than the one of the run that filled it.
 	pkgindex.Annotate(results)
 
+	// Name --snomed-edition on the errors the edition clash caused (#734).
+	// With an edition given, the validator assumed what it was told.
+	if flagSnomedEdition == "" {
+		validator.AnnotateSnomedEdition(results)
+	}
+
 	// Say which profile-map entries applied to which file (#524).
 	profileMapApplied.attach(results)
 

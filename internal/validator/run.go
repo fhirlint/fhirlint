@@ -56,6 +56,11 @@ type Issue struct {
 	// Hint names the installed package that defines a canonical the validator
 	// could not find (#523). nil for every other issue.
 	Hint *PackageHint `json:"hint,omitempty"`
+
+	// Advice is a fhirlint option that would have avoided the issue, as one
+	// sentence: --snomed-edition for an issue the SNOMED CT edition clash
+	// caused (#734). Empty for every other issue.
+	Advice string `json:"advice,omitempty"`
 }
 
 // PackageHint says where a canonical the validator could not find is defined
