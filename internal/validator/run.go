@@ -400,12 +400,44 @@ func jarSourcePath(p string) string {
 //
 // A user.home already set through JAVA_TOOL_OPTIONS wins: someone who spelled
 // it out deliberately should not have it overruled.
+//
+// It also turns off the JVM's Base64 intrinsics (#743). On x86-64 with AVX-512
+// VBMI, the intrinsic decoder of JDK 17.0.6 and later overflows the heap
+// (CVE-2026-114938, "Java4Shell"), fixed in 17.0.21.1, 21.0.13.1, 25.0.5.1 and
+// 27.0.1.1. The validator decodes Attachment.data and Attachment.hash of the
+// file it validates with java.util.Base64, so a file fhirlint is asked to check
+// chooses the bytes. Outside the Docker image fhirlint runs whatever java is on
+// the PATH, patched or not; without the intrinsic, Base64 runs as plain Java,
+// which is correct on every JDK. Measured with 6.10.3 on 21.0.13.1 (an
+// AVX-512 VBMI machine): a 20 MB attachment and 30 kbv.basis examples took the
+// same time either way, with identical findings. HotSpot declares the flag on
+// every platform; OpenJ9 ignores -XX options it does not know.
+//
+// Someone who sets the flag themselves, either way, in one of the variables the
+// JVM reads keeps their choice: _JAVA_OPTIONS would win anyway, but
+// JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS are read before the command line, so
+// the command line would overrule them.
 func jvmArgs(jarPath string) []string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" || strings.Contains(os.Getenv("JAVA_TOOL_OPTIONS"), "-Duser.home") {
-		return []string{"-jar", jarPath}
+	var args []string
+	if !envSetsJVMOption("UseBASE64Intrinsics") {
+		args = append(args, "-XX:-UseBASE64Intrinsics")
 	}
-	return []string{"-Duser.home=" + home, "-jar", jarPath}
+	home, err := os.UserHomeDir()
+	if err == nil && home != "" && !strings.Contains(os.Getenv("JAVA_TOOL_OPTIONS"), "-Duser.home") {
+		args = append(args, "-Duser.home="+home)
+	}
+	return append(args, "-jar", jarPath)
+}
+
+// envSetsJVMOption reports whether one of the environment variables the JVM
+// reads its options from mentions option.
+func envSetsJVMOption(option string) bool {
+	for _, v := range []string{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+		if strings.Contains(os.Getenv(v), option) {
+			return true
+		}
+	}
+	return false
 }
 
 // UnsetCodeSystemSizeLimit is what a command-line int uses to say "not

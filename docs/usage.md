@@ -76,6 +76,17 @@ fhirlint therefore starts every validator process with `-Duser.home` set to the 
 
 If you set `user.home` yourself through `JAVA_TOOL_OPTIONS`, that wins; fhirlint does not override it.
 
+### Base64 intrinsics are off
+
+fhirlint starts every validator process with `-XX:-UseBASE64Intrinsics`.
+
+- **The flaw:** on x86-64 CPUs with AVX-512 VBMI, the hardware-accelerated Base64 decoder of JDK 17.0.6 and later overflows the heap. This is CVE-2026-114938, "Java4Shell".
+- **Why it matters here:** the validator decodes `Attachment.data` and `Attachment.hash` from the file it checks, so the file chooses the bytes that reach the decoder.
+- **The fix:** JDK 17.0.21.1, 21.0.13.1, 25.0.5.1 and 27.0.1.1, released 2026-11-17. Outside the Docker image fhirlint runs whatever `java` is on your `PATH`, so it turns the intrinsic off rather than relying on your JDK being patched.
+- **The cost:** without the intrinsic, Base64 runs as plain Java. A 20 MB attachment and 30 kbv.basis examples took the same time either way, with the same findings.
+
+Updating Java is still the fix. If you set the flag yourself in `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS` or `_JAVA_OPTIONS`, in either direction, fhirlint leaves it to you.
+
 ### Skipping non-FHIR files
 
 Pointed at a whole repo, fhirlint reports every unrelated `.json` as a hard failure:
