@@ -245,7 +245,7 @@ A report is read long after the run, and the validator changes what it finds fro
 
 | format | where |
 |---|---|
-| `json` | a top-level `meta` object: `{"fhirlint": "1.17.1", "validator": "6.10.4", "fhirVersion": "4.0.1"}` |
+| `json` | a top-level `meta` object: `{"fhirlint": "1.18.0", "validator": "6.10.4", "fhirVersion": "4.0.1"}` |
 | `sarif` | `tool.driver` stays fhirlint; the validator is a `tool.extensions[]` entry named `HL7 FHIR Validator` with its version |
 | `junit` | `<properties>` on the `<testsuite>`: `fhirlint.version`, `validator.version`, `fhir.version` |
 | `html` | the meta line under the heading |

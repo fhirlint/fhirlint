@@ -90,7 +90,7 @@ When a newer fhirlint release or validator JAR exists, `fhirlint version` and th
 
 ```text
 Updates available:
-  fhirlint   v1.17.0 → v1.17.1  https://github.com/fhirlint/fhirlint/releases
+  fhirlint   v1.17.1 → v1.18.0  https://github.com/fhirlint/fhirlint/releases
   validator  6.9.0 → 6.10.2     run: fhirlint update
 ```
 

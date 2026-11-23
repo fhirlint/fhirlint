@@ -7,7 +7,7 @@ fhirlint in a GitHub Actions workflow, as a pre-commit hook and as a Claude Code
 Use the action to validate FHIR resources in one step — it installs fhirlint and runs `validate`:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.17.1
+- uses: fhirlint/fhirlint@v1.18.0
   with:
     path: ./fhir/
     fail-on: error
@@ -25,7 +25,7 @@ Supported inputs: `path`, `url`, `profile`, `ig`, `severity`, `fail-on`, `format
   with:
     fetch-depth: 0          # required: the default shallow clone has no merge base
 
-- uses: fhirlint/fhirlint@v1.17.1
+- uses: fhirlint/fhirlint@v1.18.0
   with:
     path: ./fhir/
     since: origin/${{ github.base_ref }}
@@ -38,7 +38,7 @@ With `fetch-depth: 0` missing, the action stops with an error naming the fix rat
 `tx-offline` replays a recording made by `fhirlint tx warm`, so the run does not depend on `tx.fhir.org`:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.17.1
+- uses: fhirlint/fhirlint@v1.18.0
   with:
     path: ./fhir/
     tx-offline: true
@@ -51,7 +51,7 @@ Point `tx-dir` at the recording if it is not in the default `.fhirlint-tx/`. See
 `--format github` emits [workflow commands](https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions), which the runner turns into annotations shown directly on the offending lines in the PR's "Files changed" view:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.17.1
+- uses: fhirlint/fhirlint@v1.18.0
   with:
     path: ./fhir/
     format: github
@@ -100,7 +100,7 @@ fhirlint ships hook definitions for the [pre-commit](https://pre-commit.com/) fr
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/fhirlint/fhirlint
-    rev: v1.17.1
+    rev: v1.18.0
     hooks:
       - id: fhirlint
         files: ^input/resources/.*\.json$
