@@ -79,6 +79,7 @@ var (
 	flagBestPractice             string
 	flagTxCache                  string
 	flagLocale                   string
+	flagLanguage                 string
 	flagAllowExampleURLs         bool
 	flagAllowInsecureTx          bool
 	flagExclude                  []string
@@ -199,6 +200,8 @@ func init() {
 		"Trust an IG package's own QA baseline: resources it already records errors for do not fail the run")
 	validateCmd.Flags().StringVar(&flagLocale, "locale", "",
 		"Locale for validation messages, e.g. de, fr (default: system locale)")
+	validateCmd.Flags().StringVar(&flagLanguage, "language", "",
+		"Language that coding displays are checked against, e.g. de-DE (not the message language, see --locale)")
 	validateCmd.Flags().BoolVar(&flagAllowExampleURLs, "allow-example-urls", false,
 		"Suppress warnings about example.org and similar placeholder URLs")
 	validateCmd.Flags().StringVar(&flagJurisdiction, "jurisdiction", "",
@@ -332,6 +335,7 @@ func bindValidateConfig() {
 	_ = viper.BindPFlag("expansion-parameters", validateCmd.Flags().Lookup("expansion-parameters"))
 	_ = viper.BindPFlag("package-baseline", validateCmd.Flags().Lookup("package-baseline"))
 	_ = viper.BindPFlag("locale", validateCmd.Flags().Lookup("locale"))
+	_ = viper.BindPFlag("language", validateCmd.Flags().Lookup("language"))
 	_ = viper.BindPFlag("allow-example-urls", validateCmd.Flags().Lookup("allow-example-urls"))
 	_ = viper.BindPFlag("jurisdiction", validateCmd.Flags().Lookup("jurisdiction"))
 	_ = viper.BindPFlag("snomed-edition", validateCmd.Flags().Lookup("snomed-edition"))
@@ -416,6 +420,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 	if !cmd.Flags().Changed("locale") && viper.IsSet("locale") {
 		flagLocale = viper.GetString("locale")
+	}
+	if !cmd.Flags().Changed("language") && viper.IsSet("language") {
+		flagLanguage = viper.GetString("language")
 	}
 	if !cmd.Flags().Changed("allow-example-urls") && viper.IsSet("allow-example-urls") {
 		flagAllowExampleURLs = viper.GetBool("allow-example-urls")
@@ -645,6 +652,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		BestPractice:             flagBestPractice,
 		TxCache:                  flagTxCache,
 		Locale:                   flagLocale,
+		Language:                 flagLanguage,
 		AllowExampleURLs:         flagAllowExampleURLs,
 		AllowInsecureTx:          flagAllowInsecureTx,
 		TxLog:                    flagTxLog,

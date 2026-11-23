@@ -352,6 +352,18 @@ func TestBuildArgs_JurisdictionEmpty_Omitted(t *testing.T) {
 	mustNotContain(t, args, "-jurisdiction")
 }
 
+func TestBuildArgs_Language(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1", Language: "de-DE", Locale: "de"})
+	// Two different flags: displays in de-DE, messages in German.
+	mustContainPair(t, args, "-language", "de-DE")
+	mustContainPair(t, args, "-locale", "de")
+}
+
+func TestBuildArgs_LanguageEmpty_Omitted(t *testing.T) {
+	args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1"})
+	mustNotContain(t, args, "-language")
+}
+
 func TestBuildArgs_SnomedEdition(t *testing.T) {
 	for _, edition := range []string{"de", "DE", "11000274103"} {
 		args := buildArgs("jar", []string{"input"}, "out", Options{FHIRVersion: "4.0.1", SnomedEdition: edition})

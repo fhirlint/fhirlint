@@ -108,6 +108,7 @@ The schema is **generated from the same key definitions `config check` validates
 | `--tx-log` | — | Write terminology request log to file |
 | `--expansion-parameters` | — | `Parameters` resource pinning code system and value set versions |
 | `--locale` | — | Locale for validation messages, e.g. `de`, `fr` |
+| `--language` | — (English) | Language that coding displays are checked against, e.g. `de-DE`. Not the message language. See [German profiles](german-profiles.md#display-language---language-not---locale) |
 | `--allow-example-urls` | `false` | Suppress warnings about `example.org` placeholder URLs |
 | `--jurisdiction` | — | Jurisdiction for country-specific bindings, e.g. `urn:iso:std:iso:3166#DE` |
 | `--snomed-edition` | — (international) | SNOMED CT edition assumed where none is stated, as in a ValueSet include: a name such as `de`, `intl`, `uk`, or a module id. See [German profiles](german-profiles.md#terminology-the-german-snomed-ct-edition) |
@@ -179,6 +180,7 @@ All CLI flags have a corresponding config file key. The key is the long flag nam
 | `tx-log` | string | `--tx-log` |
 | `expansion-parameters` | string | `--expansion-parameters` |
 | `locale` | string | `--locale` |
+| `language` | string | `--language` |
 | `allow-example-urls` | bool | `--allow-example-urls` |
 | `jurisdiction` | string | `--jurisdiction` |
 | `snomed-edition` | string | `--snomed-edition` |

@@ -9,6 +9,7 @@ fhirlint ships with built-in aliases for the most common German FHIR profiles an
 - [MII — Medizininformatik-Initiative](#mii--medizininformatik-initiative)
 - [Terminology: ICD-10-GM, OPS and ATC](#terminology-icd-10-gm-ops-and-atc-are-not-checked-by-default)
 - [Terminology: the German SNOMED CT edition](#terminology-the-german-snomed-ct-edition)
+- [Display language: `--language`, not `--locale`](#display-language---language-not---locale)
 - [ISiK — gematik hospital interoperability](#isik--gematik-hospital-interoperability)
 - [DiGA — Digitale Gesundheitsanwendungen](#diga--digitale-gesundheitsanwendungen)
 - [Combining profiles](#combining-profiles)
@@ -269,6 +270,46 @@ fhirlint does not set the edition for the German aliases. The edition belongs to
 
 ---
 
+## Display language: `--language`, not `--locale`
+
+The two options sound alike and do different things:
+
+| Option | Validator flag | What it changes |
+|---|---|---|
+| `--locale de` | `-locale` | the language of the **messages** fhirlint shows you |
+| `--language de-DE` | `-language` | the language **coding displays are checked against** |
+
+Without `--language` the validator expects English displays. A German display that is the code system's own German designation is then an error, usually followed by a second one about value-set membership:
+
+```text
+Wrong Display Name 'Apfel' for https://…/CodeSystem/fruit#apple. Valid display is 'Apple' (for the language(s) 'en')
+```
+
+Use `de-DE`, not `de`. The validator accepts a designation when the requested language starts with the designation's tag (`LanguageUtils.langsMatch`), so:
+
+| Designation tagged | `--language de` | `--language de-DE` |
+|---|---|---|
+| `de` (KBV) | accepted | accepted |
+| `de-DE` (de.basisprofil, most of gematik) | **rejected** | accepted |
+
+Both forms are common. In a local package cache on 2026-11-23, KBV tagged its 4,080 German designations `de`, de.basisprofil its 2,966 `de-DE`, gematik 657 `de-DE` and 152 `de`. Measured with validator 6.10.4 and 7.0.6, `-tx n/a`. An English display stays valid with `--language de-DE` when the code system is local.
+
+A resource's own `language` element takes precedence over `--language`.
+
+### What it does not fix
+
+`--language` covers the code systems in your packages. For LOINC and SNOMED CT the validator passes the language to the terminology server, and the answer depends on what the server has. Measured on the 41 examples of `de.gematik.epa.laboratory#1.0.0-ballot.1` with 7.0.6:
+
+| | errors | wrong display |
+|---|---|---|
+| no `--language` | 24 | 8, all German LOINC displays (`Harnsäure [Masse/Volumen] in Serum oder Plasma`) |
+| `--language de` | 34 | 12 |
+| `--language de-DE` | 31 | 9 |
+
+With `de-DE`, the German LOINC displays pass, because tx.fhir.org has LOINC's `de-DE` designations. But other examples use English displays (`Laboratory report` for LOINC 11502-2), and the server now wants `Laborbericht`. SNOMED CT's German designations are tagged `de-x-sctlang-31000274-107`, which `de-DE` does not start with, so a German SNOMED display is not accepted either. These examples mix the two languages, so no single setting validates all of them. For your own instances, set `--language` to the language their displays are written in. If they are deliberately mixed, `--display-issues-are-warnings` keeps display mismatches out of the error count.
+
+---
+
 ## ISiK — gematik hospital interoperability
 
 ISiK ("Informationstechnische Systeme im Krankenhaus") is the gematik profile
@@ -438,8 +479,11 @@ tx-cache: .fhirlint-tx-cache/
 # Whole-IG runs take longer than the 5m default
 timeout: 15m
 
-# German locale for validation messages
+# German validation messages (not display checking, see language)
 locale: de
+
+# Check coding displays against German designations, tagged de-DE or de
+language: de-DE
 
 # German instances code the German SNOMED CT edition
 snomed-edition: de

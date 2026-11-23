@@ -515,6 +515,7 @@ func TestKeyedOptions_EveryFieldHasBeenConsidered(t *testing.T) {
 		"BestPractice":             "keyed",
 		"TxCache":                  "keyed",
 		"Locale":                   "keyed",
+		"Language":                 "keyed",
 		"AllowExampleURLs":         "keyed",
 		"AllowInsecureTx":          "keyed",
 		"Jurisdiction":             "keyed",

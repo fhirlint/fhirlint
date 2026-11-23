@@ -169,6 +169,7 @@ type Options struct {
 	BestPractice             string        // ignore | hint | warning | error (empty = JAR default)
 	TxCache                  string        // path to terminology cache dir, or "n/a" to disable
 	Locale                   string        // Java locale code, e.g. "de", "fr" (empty = JAR default)
+	Language                 string        // language codings' displays are checked against, e.g. "de-DE" (-language); not the message language
 	AllowExampleURLs         bool          // pass -allow-example-urls to suppress example.org warnings
 	AllowInsecureTx          bool          // suppress HTTP terminology server warning
 	TxLog                    string        // path to write terminology server request log (-txLog)
@@ -305,6 +306,9 @@ func buildArgs(jarPath string, inputPaths []string, outputPath string, opts Opti
 	}
 	if opts.Locale != "" {
 		args = append(args, "-locale", opts.Locale)
+	}
+	if opts.Language != "" {
+		args = append(args, "-language", opts.Language)
 	}
 	if opts.AllowExampleURLs {
 		args = append(args, "-allow-example-urls")

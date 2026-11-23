@@ -76,6 +76,7 @@ var topLevelKeys = map[string]keySpec{
 	"tx-cache":                    {kind: kindString},
 	"tx-log":                      {kind: kindString},
 	"locale":                      {kind: kindString},
+	"language":                    {kind: kindString},
 	"allow-example-urls":          {kind: kindBool},
 	"jurisdiction":                {kind: kindString},
 	"snomed-edition":              {kind: kindString},

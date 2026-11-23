@@ -149,6 +149,12 @@
         "null"
       ]
     },
+    "language": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "lint": {
       "type": "object"
     },
