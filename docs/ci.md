@@ -469,6 +469,8 @@ Set all of them explicitly in such a job:
 
 The values above are starting points, not recommendations for every repository: a large IG can legitimately need more time and memory than a handful of examples.
 
+Keep the runner's Java patched as well. Base64 in a pull request's attachments reaches the JDK's decoder, which CVE-2026-114938 affects on unpatched JDKs. fhirlint turns the vulnerable intrinsic off ([Base64 intrinsics are off](usage.md#base64-intrinsics-are-off)), and the Docker image ships a fixed JRE since 1.18.1.
+
 ### The pull request's own config
 
 fhirlint reads `fhirlint.yml` (searched in the working directory and the two above it) and `.fhirlintignore` from where it runs. In a pull request from a fork, those are the author's files, and they decide how the pull request is checked. They can:

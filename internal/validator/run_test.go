@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -501,13 +502,16 @@ func TestRequireCachedJAR(t *testing.T) {
 // job that exports a writable $HOME leaves fhirlint and the validator looking
 // at two different home directories (#351).
 func TestJVMArgs_PinsUserHome(t *testing.T) {
+	for _, v := range []string{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+		t.Setenv(v, "")
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Skipf("no home directory on this machine: %v", err)
 	}
 
 	args := jvmArgs("/tmp/validator_cli.jar")
-	want := []string{"-Duser.home=" + home, "-jar", "/tmp/validator_cli.jar"}
+	want := []string{"-XX:-UseBASE64Intrinsics", "-Duser.home=" + home, "-jar", "/tmp/validator_cli.jar"}
 	if len(args) != len(want) {
 		t.Fatalf("jvmArgs = %v, want %v", args, want)
 	}
@@ -520,6 +524,8 @@ func TestJVMArgs_PinsUserHome(t *testing.T) {
 
 // Someone who spelled out user.home themselves should not have it overruled.
 func TestJVMArgs_RespectsAnExplicitOverride(t *testing.T) {
+	t.Setenv("JDK_JAVA_OPTIONS", "")
+	t.Setenv("_JAVA_OPTIONS", "")
 	t.Setenv("JAVA_TOOL_OPTIONS", "-Duser.home=/somewhere/else -Xmx2g")
 
 	args := jvmArgs("/tmp/validator_cli.jar")
@@ -528,8 +534,42 @@ func TestJVMArgs_RespectsAnExplicitOverride(t *testing.T) {
 			t.Errorf("jvmArgs = %v, want no user.home when JAVA_TOOL_OPTIONS already sets one", args)
 		}
 	}
-	if len(args) != 2 || args[0] != "-jar" {
-		t.Errorf("jvmArgs = %v, want just the -jar pair", args)
+	if len(args) != 3 || args[1] != "-jar" {
+		t.Errorf("jvmArgs = %v, want the Base64 flag and the -jar pair", args)
+	}
+}
+
+// The Base64 intrinsic decoder of unpatched JDKs overflows the heap on input
+// the validated file chooses (CVE-2026-114938, #743), so every JVM fhirlint
+// starts runs without it.
+func TestJVMArgs_TurnsOffBase64Intrinsics(t *testing.T) {
+	for _, v := range []string{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+		t.Setenv(v, "")
+	}
+	args := jvmArgs("/tmp/validator_cli.jar")
+	if !slices.Contains(args, "-XX:-UseBASE64Intrinsics") {
+		t.Errorf("jvmArgs = %v, want -XX:-UseBASE64Intrinsics", args)
+	}
+	if j := slices.Index(args, "-jar"); j < 0 || slices.Index(args, "-XX:-UseBASE64Intrinsics") > j {
+		t.Errorf("jvmArgs = %v, want the flag before -jar, where the JVM reads its options", args)
+	}
+}
+
+// Whoever sets the flag in the JVM's own variables, either way, keeps their
+// choice: JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS lose to the command line.
+func TestJVMArgs_LeavesAnExplicitBase64ChoiceAlone(t *testing.T) {
+	for _, v := range []string{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+		t.Run(v, func(t *testing.T) {
+			for _, other := range []string{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"} {
+				t.Setenv(other, "")
+			}
+			t.Setenv(v, "-Xmx2g -XX:+UseBASE64Intrinsics")
+			for _, a := range jvmArgs("/tmp/validator_cli.jar") {
+				if strings.Contains(a, "UseBASE64Intrinsics") {
+					t.Errorf("jvmArgs sets %q although %s already chooses", a, v)
+				}
+			}
+		})
 	}
 }
 
