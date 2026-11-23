@@ -12,8 +12,9 @@ import (
 // MessageWithNotes is the issue message with what fhirlint adds to it, each on
 // a line of its own, for the reports that have one text field per issue: the
 // cause the validator logged only on its console (#521) and the package that
-// defines a canonical it could not find (#523). The terminal reports print
-// them as lines of their own; JSON carries them as "cause" and "hint".
+// defines a canonical it could not find (#523), and an option that would have
+// avoided the issue (#734). The terminal reports print them as lines of their
+// own; JSON carries them as "cause", "hint" and "advice".
 //
 // The notes come last, so the length cap, which keeps the start and the end
 // of a message, keeps them.
@@ -24,6 +25,9 @@ func MessageWithNotes(iss validator.Issue) string {
 	}
 	if h := HintText(iss.Hint); h != "" {
 		msg += "\nHint: " + h
+	}
+	if iss.Advice != "" {
+		msg += "\nHint: " + iss.Advice
 	}
 	return msg
 }

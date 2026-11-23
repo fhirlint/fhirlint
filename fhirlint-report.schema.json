@@ -73,6 +73,7 @@
         "originalSeverity": { "$ref": "#/definitions/severity" },
         "redacted": { "type": "boolean" },
         "cause": { "type": "string" },
+        "advice": { "type": "string", "description": "A fhirlint option that would have avoided the issue (#734)" },
         "hint": {
           "type": "object",
           "additionalProperties": false,

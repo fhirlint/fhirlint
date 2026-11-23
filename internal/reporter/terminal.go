@@ -68,6 +68,7 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 	}
 
 	hinted := map[string]bool{}
+	advised := map[string]bool{}
 	for _, issue := range filtered {
 		prefix, style := severityPrefix(issue.Severity)
 		fmt.Println(style.Render(prefix) + issueHeadline(issue))
@@ -85,6 +86,11 @@ func Terminal(result *validator.Result, minSeverity string, showSuppressed, quie
 		}
 		if h := HintText(issue.Hint); h != "" {
 			fmt.Println("           ↳ " + termsafe.Message(h))
+		}
+		// Once per file: on kbv.basis one cause gives a dozen per file (#734).
+		if issue.Advice != "" && !advised[issue.Advice] {
+			advised[issue.Advice] = true
+			fmt.Println("           ↳ " + termsafe.Message(issue.Advice))
 		}
 		if showSource {
 			// Resolved against SourcePath, not Filename: for preprocessed input

@@ -149,3 +149,12 @@ func TestApplyRemovesHint(t *testing.T) {
 		t.Error("hint survived --redact")
 	}
 }
+
+func TestApplyRemovesAdvice(t *testing.T) {
+	results := sampleResults()
+	results[0].Issues[0].Advice = "add --snomed-edition de"
+	redact.Apply(results)
+	if results[0].Issues[0].Advice != "" {
+		t.Error("advice survived --redact")
+	}
+}

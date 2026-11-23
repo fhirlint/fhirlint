@@ -55,6 +55,8 @@ func redactIssues(issues []validator.Issue) {
 		// The canonical is quoted from the message, and for a canonical
 		// element it is a value from the resource.
 		issues[i].Hint = nil
+		// Derived from the message too: the edition a coding states.
+		issues[i].Advice = ""
 		issues[i].Redacted = true
 	}
 }

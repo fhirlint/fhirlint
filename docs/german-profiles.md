@@ -237,7 +237,15 @@ Tell it which edition the instances use:
 fhirlint validate ./fhir/ --snomed-edition de
 ```
 
-or `snomed-edition: de` in `fhirlint.yml`. The flag takes the names the validator knows (`de`, `intl`, `at`, `ch`, `uk`, `nl`, ...; an unknown name lists them) or a module id such as `11000274103`, and passes the module id as `-sct`.
+or `snomed-edition: de` in `fhirlint.yml`. A run without it names the flag on these errors, once per file in the terminal:
+
+```text
+  ✗ ERROR  The code system 'http://snomed.info/sct' version 'http://snomed.info/sct/900000000000207008' resulting from …
+           @ Condition.severity.coding[0].version (line 89, col 4)
+           ↳ the validator assumed the international SNOMED CT edition, the coding states another: add --snomed-edition de
+```
+
+The flag takes the names the validator knows (`de`, `intl`, `at`, `ch`, `uk`, `nl`, ...; an unknown name lists them) or a module id such as `11000274103`, and passes the module id as `-sct`.
 
 Measured with validator 7.0.6 on the 41 examples of `de.gematik.epa.laboratory#1.0.0-ballot.1` (2026-11-22):
 

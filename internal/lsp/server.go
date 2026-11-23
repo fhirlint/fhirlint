@@ -381,6 +381,7 @@ func (s *Server) validate(uri string) {
 		return
 	}
 	s.hints.Annotate([]*validator.Result{res})
+	validator.AnnotateSnomedEdition([]*validator.Result{res})
 	diags := toDiagnostics(res, text)
 
 	s.mu.Lock()

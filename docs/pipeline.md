@@ -168,6 +168,16 @@ Each re-run costs a JVM start. After three crashes in one run, or when `--timeou
 
 It suggests the highest final release, lists every installed version, and never picks one silently. When no installed package defines the canonical, the hint says so and points to the [package registry](https://registry.fhir.org). The same applies to extensions and value sets that could not be found. JSON carries the hint as `"hint": {"canonical", "package", "packages", "alias"}`, the other reports add a `Hint:` line, and the language server shows it on the diagnostic. The index is read only when a run has such a finding. `--redact` removes it.
 
+### When the SNOMED CT edition clashes
+
+A value set that includes SNOMED CT without a version makes the validator assume an edition, the international one unless `--snomed-edition` says otherwise. A coding from a national edition then fails, as `VALUESET_VALUE_MISMATCH_CHANGED` or, on a required binding, inside `Terminology_TX_Confirm_4a`. fhirlint recognises the clash in the message and names the edition the coding states:
+
+```text
+           ↳ the validator assumed the international SNOMED CT edition, the coding states another: add --snomed-edition de
+```
+
+A module id no name maps to is given as the id. The terminal says it once per file. JSON carries it on each issue as `"advice"`, the other reports add a `Hint:` line, and the language server shows it on the diagnostic. A run with `--snomed-edition` gets none: the validator then assumed what it was told. `--redact` removes it. See [German profiles](german-profiles.md#terminology-the-german-snomed-ct-edition) for what the flag changes.
+
 ### When a profile has no snapshot
 
 When the validator cannot generate a profile's snapshot, its report says only that the profile "has no snapshot". The reason is printed on the validator's console. fhirlint reads it from there and attaches it to the finding:

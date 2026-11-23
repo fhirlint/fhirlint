@@ -90,3 +90,22 @@ func TestHintText(t *testing.T) {
 		t.Errorf("MessageWithNotes = %q", MessageWithNotes(iss))
 	}
 }
+
+// One cause gives a dozen issues in a file on kbv.basis, so the terminal says
+// it once per file (#734); every other report keeps it on each issue.
+func TestAdvice_OncePerFileInTerminal(t *testing.T) {
+	const advice = "the validator assumed the international SNOMED CT edition, the coding states another: add --snomed-edition de"
+	issues := []validator.Issue{
+		{Severity: "error", Message: "a", Advice: advice},
+		{Severity: "error", Message: "b", Advice: advice},
+	}
+	out := captureStdout(t, func() {
+		Terminal(&validator.Result{Label: "p", Issues: issues}, "information", false, false, false)
+	})
+	if n := strings.Count(out, "↳ "+advice); n != 1 {
+		t.Errorf("advice printed %d times, want once:\n%s", n, out)
+	}
+	if got := MessageWithNotes(issues[0]); got != "a\nHint: "+advice {
+		t.Errorf("MessageWithNotes = %q", got)
+	}
+}
