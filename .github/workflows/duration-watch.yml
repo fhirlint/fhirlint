@@ -40,8 +40,10 @@ jobs:
             echo "All workflows within budget."
             exit 0
           fi
-          if [ "$code" != 1 ]; then
-            echo "::error::the duration watch failed (exit $code)"
+          # 3 is "over budget"; anything else means the table is incomplete,
+          # and filing it as an overrun would raise a false alarm (#736).
+          if [ "$code" != 3 ]; then
+            echo "::error::the duration watch failed (exit $code); the table above is incomplete"
             exit "$code"
           fi
           title="Workflow duration over budget"
