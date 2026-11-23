@@ -1,10 +1,12 @@
 name: Duration watch
 
-# Weekly: the median and 90th percentile wall time of each workflow's
+# Weekly: the 90th percentile of each workflow's longest job over its
 # successful runs in the last 7 days, against its budget in
-# .github/workflow-budgets.txt. Opens an issue (or comments on the open one)
-# when a workflow's p90 is over budget, so a suite that slowly grows shows up
-# before it hits its job timeouts (#551).
+# .github/workflow-budgets.txt, with the wall time next to it. Opens an issue
+# (or comments on the open one) when a workflow's p90 is over budget, so a
+# suite that slowly grows shows up before it hits its job timeouts (#551).
+# The longest job leaves out the time spent waiting for a runner, which a
+# burst of pull requests multiplies without anything getting slower (#721).
 
 on:
   schedule:
@@ -47,7 +49,7 @@ jobs:
             exit "$code"
           fi
           title="Workflow duration over budget"
-          body=$(printf '%s\n\n%s\n' "The 90th percentile of last week's successful runs is over its budget in \`.github/workflow-budgets.txt\` for at least one workflow. Find what made it slower, or raise the budget on purpose (#551)." "$(cat report.md)")
+          body=$(printf '%s\n\n%s\n' "The 90th percentile of the longest job in last week's successful runs is over its budget in \`.github/workflow-budgets.txt\` for at least one workflow. Find what made it slower, or raise the budget on purpose (#551)." "$(cat report.md)")
           existing=$(gh issue list --repo "$REPO" --state open --search "\"$title\" in:title" --json number --jq '.[0].number // ""')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$REPO" --body "$body"
