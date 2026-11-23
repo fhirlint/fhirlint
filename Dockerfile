@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
 
 # Download the validator JAR at image build time so containers start immediately
 # without a ~250 MB network fetch on first use.
-FROM eclipse-temurin:25-jre-alpine@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918 AS jar-downloader
+FROM eclipse-temurin:25-jre-alpine@sha256:69c2a26e9894016e274c880fa542956d005b3755f84db765145185e87405bd89 AS jar-downloader
 # pipefail so a failing command inside the pipes below (e.g. curl erroring) fails
 # the build rather than being masked by the exit status of the last stage.
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
@@ -50,7 +50,7 @@ RUN apk add --no-cache curl && \
     # Fail the build rather than shipping an unparsed version file.
     grep -qE '^[0-9]+\.[0-9]+' /out/validator_version.txt
 
-FROM eclipse-temurin:25-jre-alpine@sha256:e1898fd6a11fc965a994d8ace186fd3585aeb636cf8f05f47a723fcfee0b0918 AS runtime
+FROM eclipse-temurin:25-jre-alpine@sha256:69c2a26e9894016e274c880fa542956d005b3755f84db765145185e87405bd89 AS runtime
 # Pull in base-image package fixes that are published upstream but not yet in a
 # temurin release, so the shipped image does not carry known HIGH/CRITICAL CVEs.
 # The reproducibility cost is accepted deliberately: shipping known-vulnerable
