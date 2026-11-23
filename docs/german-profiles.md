@@ -282,7 +282,7 @@ The two options sound alike and do different things:
 Without `--language` the validator expects English displays. A German display that is the code system's own German designation is then an error, usually followed by a second one about value-set membership:
 
 ```text
-Wrong Display Name 'Apfel' for https://…/CodeSystem/fruit#apple. Valid display is 'Apple' (for the language(s) 'en')
+Wrong Display Name 'Apfel' for http://example.org/fhir/CodeSystem/fruit#apple. Valid display is 'Apple' (for the language(s) 'en')
 ```
 
 Use `de-DE`, not `de`. The validator accepts a designation when the requested language starts with the designation's tag (`LanguageUtils.langsMatch`), so:
