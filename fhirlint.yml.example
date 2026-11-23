@@ -107,6 +107,11 @@ ignore:
 # Default: system locale
 # locale: de
 
+# Language that coding displays are checked against (default: English).
+# Not the message language: that is locale. de-DE accepts designations tagged
+# de-DE and de; de accepts only de. See docs/german-profiles.md.
+# language: de-DE
+
 # Suppress warnings about example.org and similar placeholder URLs
 # Useful for test fixtures and documentation examples
 # allow-example-urls: true

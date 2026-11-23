@@ -61,6 +61,11 @@ type Options struct {
 	// Locale sets the locale for validation messages (Java locale format, e.g. "de").
 	Locale string
 
+	// Language is the language coding displays are checked against, e.g.
+	// "de-DE" (-language). It does not change the message language, which is
+	// Locale. A resource's own language element takes precedence.
+	Language string
+
 	// AllowExampleURLs suppresses warnings about example.org placeholder URLs.
 	AllowExampleURLs bool
 
@@ -344,6 +349,7 @@ func toInternalOpts(opts Options) validator.Options {
 		BestPractice:             opts.BestPractice,
 		TxCache:                  opts.TxCache,
 		Locale:                   opts.Locale,
+		Language:                 opts.Language,
 		AllowExampleURLs:         opts.AllowExampleURLs,
 		AllowInsecureTx:          opts.AllowInsecureTx,
 		TxLog:                    opts.TxLog,

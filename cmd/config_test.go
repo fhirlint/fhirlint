@@ -212,6 +212,23 @@ func TestConfigFile_JurisdictionFromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFile_LanguageFromConfig(t *testing.T) {
+	resetViper(t)
+	dir := t.TempDir()
+	writeConfigFile(t, dir, "language: de-DE\nlocale: de\n")
+
+	viper.SetConfigFile(filepath.Join(dir, "fhirlint.yml"))
+	if err := viper.ReadInConfig(); err != nil {
+		t.Fatalf("ReadInConfig: %v", err)
+	}
+	if got := viper.GetString("language"); got != "de-DE" {
+		t.Errorf("language = %q, want %q", got, "de-DE")
+	}
+	if got := viper.GetString("locale"); got != "de" {
+		t.Errorf("locale = %q, want %q", got, "de")
+	}
+}
+
 func TestConfigFile_SnomedEditionFromConfig(t *testing.T) {
 	resetViper(t)
 	dir := t.TempDir()
