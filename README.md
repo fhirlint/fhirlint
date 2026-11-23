@@ -47,7 +47,7 @@ Files: 1  Valid: 0  Errors: 1  Warnings: 1
 In a GitHub Actions workflow:
 
 ```yaml
-- uses: fhirlint/fhirlint@v1.18.0
+- uses: fhirlint/fhirlint@v1.18.1
   with:
     path: ./fhir/
     fail-on: error
@@ -57,7 +57,7 @@ In GitLab CI, with the [CI/CD Catalog component](https://gitlab.com/explore/cata
 
 ```yaml
 include:
-  - component: gitlab.com/fhirlint/fhirlint/fhirlint@v1.18.0
+  - component: gitlab.com/fhirlint/fhirlint/fhirlint@v1.18.1
     inputs:
       path: ./fhir/
 ```
@@ -89,7 +89,7 @@ The HL7 validator is the reference for FHIR validation, and fhirlint doesn't rep
 ```bash
 brew install fhirlint/tap/fhirlint                  # Homebrew, brings a JRE
 go install github.com/fhirlint/fhirlint@latest      # Go
-docker run --rm -v "$PWD:/work" ghcr.io/fhirlint/fhirlint:1.18.0 validate /work/fhir/
+docker run --rm -v "$PWD:/work" ghcr.io/fhirlint/fhirlint:1.18.1 validate /work/fhir/
 ```
 
 Pre-built binaries for Linux, macOS and Windows are on the [releases page](https://github.com/fhirlint/fhirlint/releases). Every way to install is described in [Installing fhirlint](docs/install.md), and how to check a download before you run it is in [Verifying a release](docs/verifying-releases.md).
