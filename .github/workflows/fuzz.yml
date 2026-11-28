@@ -77,7 +77,7 @@ jobs:
       # `err == ctx.Err() ||`). Go back to go-version-file: go.mod once go.mod is
       # on a go1.26.x that has it; the next step warns from 1.26.12 on, so check
       # the source of that release before switching.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: "1.27.4"
           cache: true
